@@ -1,0 +1,289 @@
+import { DataBoundary } from "../../account/AccountInfo.js";
+/**
+ * State of the performance event.
+ *
+ * @export
+ * @enum {number}
+ */
+export declare const PerformanceEventStatus: {
+    readonly NotStarted: 0;
+    readonly InProgress: 1;
+    readonly Completed: 2;
+};
+export type PerformanceEventStatus = (typeof PerformanceEventStatus)[keyof typeof PerformanceEventStatus];
+export type SubMeasurement = {
+    name: string;
+    startTimeMs: number;
+};
+/**
+ * Performance measurement taken by the library, including metadata about the request and application.
+ *
+ * @export
+ * @typedef {PerformanceEvent}
+ */
+export type PerformanceEvent = {
+    /**
+     * Unique id for the event
+     *
+     * @type {string}
+     */
+    eventId: string;
+    /**
+     * State of the perforance measure.
+     *
+     * @type {PerformanceEventStatus}
+     */
+    status: PerformanceEventStatus;
+    /**
+     * Login authority used for the request
+     *
+     * @type {string}
+     */
+    authority: string;
+    /**
+     * Client id for the application
+     *
+     * @type {string}
+     */
+    clientId: string;
+    /**
+     * Correlation ID used for the request
+     *
+     * @type {string}
+     */
+    correlationId: string;
+    /**
+     * End-to-end duration in milliseconds.
+     * @date 3/22/2022 - 3:40:05 PM
+     *
+     * @type {number}
+     */
+    durationMs?: number;
+    /**
+     * Visibility of the page when the event completed.
+     * Read from: https://developer.mozilla.org/docs/Web/API/Page_Visibility_API
+     *
+     * @type {?(string | null)}
+     */
+    endPageVisibility?: string | null;
+    /**
+     * Whether the result was retrieved from the cache.
+     *
+     * @type {(boolean | null)}
+     */
+    fromCache?: boolean | null;
+    /**
+     * Event name (usually in the form of classNameFunctionName)
+     *
+     * @type {string}
+     */
+    name: string;
+    /**
+     * Visibility of the page when the event completed.
+     * Read from: https://developer.mozilla.org/docs/Web/API/Page_Visibility_API
+     *
+     * @type {?(string | null)}
+     */
+    startPageVisibility?: string | null;
+    /**
+     * Unix millisecond timestamp when the event was initiated.
+     *
+     * @type {number}
+     */
+    startTimeMs: number;
+    /**
+     * Whether or the operation completed successfully.
+     *
+     * @type {(boolean | null)}
+     */
+    success?: boolean | null;
+    /**
+     * Add specific error code in case of failure
+     *
+     * @type {string}
+     */
+    errorCode?: string;
+    /**
+     * Add specific sub error code in case of failure
+     *
+     * @type {string}
+     */
+    subErrorCode?: string;
+    /**
+     * Server error number
+     */
+    serverErrorNo?: string;
+    /**
+     * Name of the library used for the operation.
+     *
+     * @type {string}
+     */
+    libraryName: string;
+    /**
+     * Version of the library used for the operation.
+     *
+     * @type {string}
+     */
+    libraryVersion: string;
+    /**
+     * Version of the library used last. Used to track upgrades and downgrades
+     */
+    previousLibraryVersion?: string;
+    /**
+     * Whether the response is from a native component (e.g., WAM)
+     *
+     * @type {?boolean}
+     */
+    isNativeBroker?: boolean;
+    /**
+     * Request ID returned from the response
+     *
+     * @type {?string}
+     */
+    requestId?: string;
+    /**
+     * Cache lookup policy
+     *
+     * @type {?number}
+     */
+    cacheLookupPolicy?: number | undefined;
+    /**
+     * Cache Outcome
+     * @type {?number}
+     */
+    cacheOutcome?: number;
+    /**
+     * Sub-measurements for internal use. To be deleted before flushing.
+     */
+    incompleteSubMeasurements?: Map<string, SubMeasurement>;
+    visibilityChangeCount?: number;
+    incompleteSubsCount?: number;
+    /**
+     * CorrelationId of the in progress iframe request that was awaited
+     */
+    awaitIframeCorrelationId?: string;
+    /**
+     * Size of the id token
+     *
+     * @type {number}
+     */
+    idTokenSize?: number;
+    /**
+     *
+     * Size of the access token
+     *
+     * @type {number}
+     */
+    accessTokenSize?: number;
+    /**
+     *
+     * Size of the refresh token
+     *
+     * @type {number}
+     */
+    refreshTokenSize?: number | undefined;
+    /**
+     * Application name as specified by the app.
+     *
+     * @type {?string}
+     */
+    appName?: string;
+    /**
+     * Application version as specified by the app.
+     *
+     * @type {?string}
+     */
+    appVersion?: string;
+    /**
+     * The following are fields that may be emitted in native broker scenarios
+     */
+    extensionId?: string;
+    extensionVersion?: string;
+    matsBrokerVersion?: string;
+    matsAccountJoinOnStart?: string;
+    matsAccountJoinOnEnd?: string;
+    matsDeviceJoin?: string;
+    matsPromptBehavior?: string;
+    matsApiErrorCode?: number;
+    matsUiVisible?: boolean;
+    matsSilentCode?: number;
+    matsSilentBiSubCode?: number;
+    matsSilentMessage?: string;
+    matsSilentStatus?: number;
+    matsHttpStatus?: number;
+    matsHttpEventCount?: number;
+    /**
+     * Http POST metadata
+     */
+    httpVerToken?: string;
+    httpStatus?: number;
+    contentTypeHeader?: string;
+    contentLengthHeader?: string;
+    /**
+     * Platform broker fields
+     */
+    allowPlatformBroker?: boolean;
+    extensionInstalled?: boolean;
+    extensionHandshakeTimeoutMs?: number;
+    extensionHandshakeTimedOut?: boolean;
+    /**
+     * Nested App Auth Fields
+     */
+    nestedAppAuthRequest?: boolean;
+    /**
+     * Multiple matched access/id/refresh tokens in the cache
+     */
+    multiMatchedAT?: number;
+    multiMatchedID?: number;
+    multiMatchedRT?: number;
+    errorName?: string;
+    errorStack?: string[];
+    context?: string;
+    cacheLocation?: string;
+    cacheRetentionDays?: number;
+    accountCachedBy?: string;
+    acntLoggedOut?: boolean;
+    cacheRtCount?: number;
+    cacheIdCount?: number;
+    cacheAtCount?: number;
+    scenarioId?: string;
+    accountType?: "AAD" | "MSA" | "B2C";
+    /**
+     * Server error that triggers a request retry
+     *
+     * @type {string}
+     */
+    retryError?: string;
+    embeddedClientId?: string;
+    embeddedRedirectUri?: string;
+    isAsyncPopup?: boolean;
+    cacheRtExpiresOnSeconds?: number;
+    ntwkRtExpiresOnSeconds?: number;
+    extRtExpiresOnSeconds?: number;
+    rtOffsetSeconds?: number;
+    sidFromClaims?: boolean;
+    sidFromRequest?: boolean;
+    loginHintFromRequest?: boolean;
+    loginHintFromUpn?: boolean;
+    loginHintFromClaim?: boolean;
+    domainHintFromRequest?: boolean;
+    prompt?: string;
+    usePreGeneratedPkce?: boolean;
+    msalInstanceCount?: number;
+    sameClientIdInstanceCount?: number;
+    navigateCallbackResult?: boolean;
+    dataBoundary?: DataBoundary;
+    logs?: string;
+};
+export type PerformanceEventContext = {
+    dur?: number;
+    err?: string;
+    subErr?: string;
+    fail?: number;
+};
+export type PerformanceEventStackedContext = PerformanceEventContext & {
+    name?: string;
+    childErr?: string;
+};
+export declare const IntFields: ReadonlySet<string>;
+//# sourceMappingURL=PerformanceEvent.d.ts.map

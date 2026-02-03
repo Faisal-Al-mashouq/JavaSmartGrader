@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+# Learn more about building a configuration: https://promptfoo.dev/docs/configuration/guide
+
+description: "Evaluates the outputs of different LLM providers on Java code test cases"
+
+prompts: file://system_prompt/sys_prompt.json
+  
+providers: 
+- id: anthropic:messages:claude-sonnet-4-5-20250929
+  config:
+    temperature: 0.3
+    max_tokens: 100
+- id: openai:gpt-5
+  config:
+    temperature: 0.3
+    max_tokens: 100
+- id: openai:gpt-5.1
+  config:
+    temperature: 0.3
+    max_tokens: 100
+- id: openai:gpt-5-mini
+  config:
+    temperature: 0.3
+    max_tokens: 100
+- id: google:gemini-2.5-pro
+  config:
+    temperature: 0.3
+    max_tokens: 100
+- id: vertex:gemini-2.5-pro
+  config:
+    temperature: 0.3
+    max_tokens: 100
+  
+# defaultTest:
+#   - options:
+#       rubricPrompt: file://system_prompt/rubric_prompt.json
+
+tests:
+  - description: "Tests all providers on Java code test cases and evaluates them using a rubric"
+    vars:
+      context: file://test_cases/java_case_*.json
+    assert:
+      - type: llm-rubric
+        value: "Check if output is correct, mark it as 'GOOD' or 'BAD'"
+        # file://test_cases/java_case_*.expected.json
