@@ -234,6 +234,21 @@ Exit the [alternative screen](https://terminalguide.namepad.de/mode/p47/), assum
 export const exitAlternativeScreen: string;
 
 /**
+Begin [synchronized output](https://contour-terminal.org/vt-extensions/synchronized-output/) to reduce flicker during renders.
+*/
+export const beginSynchronizedOutput: string;
+
+/**
+End [synchronized output](https://contour-terminal.org/vt-extensions/synchronized-output/).
+*/
+export const endSynchronizedOutput: string;
+
+/**
+Wrap output in [synchronized output](https://contour-terminal.org/vt-extensions/synchronized-output/) sequences to reduce flicker during renders.
+*/
+export function synchronizedOutput(text: string): string;
+
+/**
 Output a beeping sound.
 */
 export const beep: string;

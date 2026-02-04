@@ -132,6 +132,10 @@ export const clearTerminal = isOldWindows()
 export const enterAlternativeScreen = ESC + '?1049h';
 export const exitAlternativeScreen = ESC + '?1049l';
 
+export const beginSynchronizedOutput = ESC + '?2026h';
+export const endSynchronizedOutput = ESC + '?2026l';
+export const synchronizedOutput = text => beginSynchronizedOutput + text + endSynchronizedOutput;
+
 export const beep = BEL;
 
 export const link = (text, url) => {

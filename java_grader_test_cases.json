@@ -1,0 +1,425 @@
+{
+  "metadata": {
+    "project": "Java Smart Grader - LLM Evaluation Test Suite",
+    "version": "1.0",
+    "ocr_simulation": "Microsoft Azure OCR",
+    "total_test_cases": 10,
+    "difficulty_distribution": {
+      "java_1": 3,
+      "java_2": 4,
+      "data_structures": 3
+    }
+  },
+  "test_cases": [
+    {
+      "id": "TC001",
+      "difficulty": "Java 1",
+      "topic": "Basic Method Implementation",
+      "question": {
+        "prompt": "Write a Java method called 'isEven' that takes an integer parameter and returns true if the number is even, false otherwise.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 20,
+          "correct_return_type": 15,
+          "correct_logic": 45,
+          "proper_syntax": 20
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static boolean isEven(int num) {\n    if (nurn % 2 == O) {\n        return true;\n    } e1se {\n        return fa1se;\n    }\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "num", "ocr_result": "nurn", "note": "m/rn confusion"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion"},
+          {"type": "char_confusion", "original": "else", "ocr_result": "e1se", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "false", "ocr_result": "fa1se", "note": "l/1 confusion"}
+        ],
+        "intended_answer": "public static boolean isEven(int num) {\n    if (num % 2 == 0) {\n        return true;\n    } else {\n        return false;\n    }\n}"
+      },
+      "expected_result": {
+        "score": 95,
+        "feedback": "The solution demonstrates correct understanding of the problem. Method signature is correct (public static boolean with int parameter). Logic correctly uses modulo operator to check evenness. Minor note: Could be simplified to 'return num % 2 == 0;' but the verbose approach is acceptable. Full marks for correctness; slight deduction for not using the more concise form.",
+        "errors_detected": "None (OCR artifacts should be recognized as noise)",
+        "grade_breakdown": {
+          "correct_signature": 20,
+          "correct_return_type": 15,
+          "correct_logic": 45,
+          "proper_syntax": 15
+        }
+      }
+    },
+    {
+      "id": "TC002",
+      "difficulty": "Java 1",
+      "topic": "For Loop - Sum Calculation",
+      "question": {
+        "prompt": "Write a Java method called 'sumArray' that takes an integer array as a parameter and returns the sum of all elements in the array.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 15,
+          "loop_structure": 30,
+          "accumulator_logic": 30,
+          "return_statement": 15,
+          "edge_cases": 10
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pubIic static int sumArray(int[] arr) {\n    int surn = O;\n    for (int i = O; i < arr.1ength; i++) {\n        surn = surn + arr[i];\n    }\n    retrun surn;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pubIic", "note": "l/I confusion"},
+          {"type": "char_confusion", "original": "sum", "ocr_result": "surn", "note": "m/rn confusion"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion (twice)"},
+          {"type": "char_confusion", "original": "length", "ocr_result": "1ength", "note": "l/1 confusion"},
+          {"type": "char_swap", "original": "return", "ocr_result": "retrun", "note": "character transposition"}
+        ],
+        "intended_answer": "public static int sumArray(int[] arr) {\n    int sum = 0;\n    for (int i = 0; i < arr.length; i++) {\n        sum = sum + arr[i];\n    }\n    return sum;\n}"
+      },
+      "expected_result": {
+        "score": 100,
+        "feedback": "Excellent solution. Correct method signature with int[] parameter. Proper initialization of accumulator to 0. For loop correctly iterates through array indices. Accumulator properly updated with each element. Returns the final sum. No edge case handling for null array, but this wasn't explicitly required.",
+        "errors_detected": "None (OCR artifacts recognized)",
+        "grade_breakdown": {
+          "correct_signature": 15,
+          "loop_structure": 30,
+          "accumulator_logic": 30,
+          "return_statement": 15,
+          "edge_cases": 10
+        }
+      }
+    },
+    {
+      "id": "TC003",
+      "difficulty": "Java 1",
+      "topic": "Conditional Statements - Grade Calculator",
+      "question": {
+        "prompt": "Write a Java method called 'getLetterGrade' that takes an integer score (0-100) and returns the letter grade as a String: A (90-100), B (80-89), C (70-79), D (60-69), F (below 60).",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 15,
+          "correct_conditions": 50,
+          "correct_returns": 25,
+          "boundary_handling": 10
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static String getLetterGrade(int score) {\n    if (score >= 9O) {\n        return \"A\";\n    } else if (score >= 8O) {\n        return \"B\";\n    } else if (score >= 7O) {\n        return \"C\";\n    } else if (score > 6O) {\n        return \"D\";\n    } else {\n        return \"F\";\n    }\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "90", "ocr_result": "9O", "note": "0/O confusion"},
+          {"type": "char_confusion", "original": "80", "ocr_result": "8O", "note": "0/O confusion"},
+          {"type": "char_confusion", "original": "70", "ocr_result": "7O", "note": "0/O confusion"},
+          {"type": "char_confusion", "original": "60", "ocr_result": "6O", "note": "0/O confusion"}
+        ],
+        "intended_answer": "public static String getLetterGrade(int score) {\n    if (score >= 90) {\n        return \"A\";\n    } else if (score >= 80) {\n        return \"B\";\n    } else if (score >= 70) {\n        return \"C\";\n    } else if (score > 60) {\n        return \"D\";\n    } else {\n        return \"F\";\n    }\n}",
+        "logic_error": "Student used > 60 instead of >= 60 for D grade boundary"
+      },
+      "expected_result": {
+        "score": 72,
+        "feedback": "Good structure and approach using if-else chain. However, there is a logic error: the condition for grade D uses '> 60' instead of '>= 60', meaning a score of exactly 60 would incorrectly receive an F instead of a D. All other boundaries are handled correctly. Method signature and return statements are correct.",
+        "errors_detected": "Boundary error at D/F threshold (score of 60 incorrectly classified)",
+        "grade_breakdown": {
+          "correct_signature": 15,
+          "correct_conditions": 35,
+          "correct_returns": 25,
+          "boundary_handling": -3
+        }
+      }
+    },
+    {
+      "id": "TC004",
+      "difficulty": "Java 2",
+      "topic": "String Manipulation - Palindrome Check",
+      "question": {
+        "prompt": "Write a Java method called 'isPalindrome' that takes a String parameter and returns true if the string is a palindrome (reads the same forwards and backwards), false otherwise. Ignore case differences.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 10,
+          "case_handling": 20,
+          "comparison_logic": 50,
+          "edge_cases": 20
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "public static boo1ean isPa1indrome(String str) {\n    String lower = str.to LowerCase();\n    int 1eft = O;\n    int right = 1ower.1ength() - 1;\n    whi1e (1eft < right) {\n        if (1ower.charAt(1eft) != lower.charAt(right)) {\n            return fa1se;\n        }\n        1eft++;\n        right--;\n    }\n    return true;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "boolean", "ocr_result": "boo1ean", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "isPalindrome", "ocr_result": "isPa1indrome", "note": "l/1 confusion"},
+          {"type": "spacing", "original": "toLowerCase", "ocr_result": "to LowerCase", "note": "inserted space"},
+          {"type": "char_confusion", "original": "left", "ocr_result": "1eft", "note": "l/1 confusion (multiple)"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion"},
+          {"type": "char_confusion", "original": "lower.length", "ocr_result": "1ower.1ength", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "while", "ocr_result": "whi1e", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "false", "ocr_result": "fa1se", "note": "l/1 confusion"}
+        ],
+        "intended_answer": "public static boolean isPalindrome(String str) {\n    String lower = str.toLowerCase();\n    int left = 0;\n    int right = lower.length() - 1;\n    while (left < right) {\n        if (lower.charAt(left) != lower.charAt(right)) {\n            return false;\n        }\n        left++;\n        right--;\n    }\n    return true;\n}"
+      },
+      "expected_result": {
+        "score": 88,
+        "feedback": "Excellent two-pointer approach for palindrome checking. Correctly converts to lowercase for case-insensitive comparison. Logic correctly compares characters from both ends moving inward. However, no null check is present - calling toLowerCase() on null would throw NullPointerException. The algorithm is efficient O(n) time complexity.",
+        "errors_detected": "Missing null check for input string",
+        "grade_breakdown": {
+          "correct_signature": 10,
+          "case_handling": 20,
+          "comparison_logic": 50,
+          "edge_cases": 8
+        }
+      }
+    },
+    {
+      "id": "TC005",
+      "difficulty": "Java 2",
+      "topic": "Array Processing - Find Maximum",
+      "question": {
+        "prompt": "Write a Java method called 'findMax' that takes an integer array and returns the maximum value. If the array is empty, return Integer.MIN_VALUE.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 10,
+          "initialization": 20,
+          "loop_and_comparison": 40,
+          "empty_array_handling": 20,
+          "return_statement": 10
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static int findMax(int[] arr) {\n    if (arr.1ength == O) {\n        return Integer.MIN_VALUE;\n    }\n    int max = O;\n    for (int i = O; i < arr.1ength; i++) {\n        if (arr[i] > rnax) {\n            rnax = arr[i];\n        }\n    }\n    return rnax;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "length", "ocr_result": "1ength", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion (multiple)"},
+          {"type": "char_confusion", "original": "max", "ocr_result": "rnax", "note": "m/rn confusion (multiple)"}
+        ],
+        "intended_answer": "public static int findMax(int[] arr) {\n    if (arr.length == 0) {\n        return Integer.MIN_VALUE;\n    }\n    int max = 0;\n    for (int i = 0; i < arr.length; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+        "logic_error": "Student initialized max to 0 instead of arr[0] or Integer.MIN_VALUE"
+      },
+      "expected_result": {
+        "score": 58,
+        "feedback": "The method correctly handles the empty array case. However, there is a significant logic error: max is initialized to 0 instead of arr[0] or Integer.MIN_VALUE. This causes incorrect results when all array elements are negative (e.g., findMax([-5, -3, -8]) would return 0 instead of -3). The loop structure and comparison logic are otherwise correct.",
+        "errors_detected": "Incorrect initialization of max variable - fails for all-negative arrays",
+        "grade_breakdown": {
+          "correct_signature": 10,
+          "initialization": 0,
+          "loop_and_comparison": 30,
+          "empty_array_handling": 20,
+          "return_statement": -2
+        }
+      }
+    },
+    {
+      "id": "TC006",
+      "difficulty": "Java 2",
+      "topic": "Object-Oriented Programming - Class Design",
+      "question": {
+        "prompt": "Write a Java class called 'Rectangle' with private fields 'width' and 'height' (both double), a constructor that initializes both fields, and methods 'getArea()' and 'getPerimeter()' that return the area and perimeter respectively.",
+        "max_points": 100,
+        "rubric": {
+          "class_declaration": 10,
+          "private_fields": 15,
+          "constructor": 25,
+          "getArea_method": 25,
+          "getPerimeter_method": 25
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic c1ass Rectang1e {\n    private doub1e width;\n    private doub1e height;\n    \n    pub1ic Rectang1e(doub1e w, doub1e h) {\n        width = w;\n        height = h;\n    }\n    \n    pub1ic doub1e getArea() {\n        return width + height;\n    }\n    \n    pub1ic doub1e getPerimeter() {\n        return 2 * width + 2 * height;\n    }\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion (multiple)"},
+          {"type": "char_confusion", "original": "class", "ocr_result": "c1ass", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "Rectangle", "ocr_result": "Rectang1e", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "double", "ocr_result": "doub1e", "note": "l/1 confusion (multiple)"}
+        ],
+        "intended_answer": "public class Rectangle {\n    private double width;\n    private double height;\n    \n    public Rectangle(double w, double h) {\n        width = w;\n        height = h;\n    }\n    \n    public double getArea() {\n        return width + height;\n    }\n    \n    public double getPerimeter() {\n        return 2 * width + 2 * height;\n    }\n}",
+        "logic_error": "Student used addition (width + height) instead of multiplication (width * height) in getArea()"
+      },
+      "expected_result": {
+        "score": 65,
+        "feedback": "Good class structure with proper encapsulation (private fields). Constructor correctly initializes both fields. However, getArea() contains a critical error: it returns width + height instead of width * height. This is a fundamental mathematical error - area of a rectangle is length times width, not their sum. getPerimeter() is correctly implemented as 2*width + 2*height.",
+        "errors_detected": "getArea() uses addition instead of multiplication",
+        "grade_breakdown": {
+          "class_declaration": 10,
+          "private_fields": 15,
+          "constructor": 25,
+          "getArea_method": 0,
+          "getPerimeter_method": 25
+        }
+      }
+    },
+    {
+      "id": "TC007",
+      "difficulty": "Java 2",
+      "topic": "Exception Handling",
+      "question": {
+        "prompt": "Write a Java method called 'safeDivide' that takes two integers (numerator and denominator) and returns the result as a double. If the denominator is zero, throw an IllegalArgumentException with the message 'Cannot divide by zero'.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 15,
+          "zero_check": 30,
+          "exception_throwing": 30,
+          "correct_division": 25
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static doub1e safeDivide(int nurnerator, int denorninator) {\n    if (denorninator == O) {\n        throw new I11ega1NrgurnentException(\"Cannot divide by zer0\");\n    }\n    return (doub1e) nurnerator / denorninator;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "double", "ocr_result": "doub1e", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "numerator", "ocr_result": "nurnerator", "note": "m/rn confusion"},
+          {"type": "char_confusion", "original": "denominator", "ocr_result": "denorninator", "note": "m/rn confusion"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion"},
+          {"type": "char_confusion", "original": "IllegalArgumentException", "ocr_result": "I11ega1NrgurnentException", "note": "l/1, A/N, m/rn confusion"},
+          {"type": "char_confusion", "original": "zero", "ocr_result": "zer0", "note": "o/0 confusion in string"}
+        ],
+        "intended_answer": "public static double safeDivide(int numerator, int denominator) {\n    if (denominator == 0) {\n        throw new IllegalArgumentException(\"Cannot divide by zero\");\n    }\n    return (double) numerator / denominator;\n}"
+      },
+      "expected_result": {
+        "score": 100,
+        "feedback": "Excellent implementation. Method signature correctly returns double and takes two int parameters. Zero check is properly implemented before division. IllegalArgumentException is correctly thrown with the required message. The cast to double before division ensures floating-point arithmetic rather than integer division. Complete and correct solution.",
+        "errors_detected": "None (OCR artifacts recognized)",
+        "grade_breakdown": {
+          "correct_signature": 15,
+          "zero_check": 30,
+          "exception_throwing": 30,
+          "correct_division": 25
+        }
+      }
+    },
+    {
+      "id": "TC008",
+      "difficulty": "Data Structures",
+      "topic": "Linked List - Node Insertion",
+      "question": {
+        "prompt": "Given a singly linked list Node class with 'int data' and 'Node next' fields, write a method called 'insertAtEnd' that takes a head node and a value, and inserts a new node with that value at the end of the list. Return the head of the list.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 10,
+          "new_node_creation": 15,
+          "empty_list_handling": 20,
+          "traversal_logic": 30,
+          "insertion_logic": 15,
+          "return_statement": 10
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static Node insertAtEnd(Node head, int va1ue) {\n    Node newNode = new Node(va1ue);\n    if (head == nu11) {\n        return newNode;\n    }\n    Node current = head;\n    whi1e (current.next != nu11) {\n        current = current.next;\n    }\n    current.next = newNode;\n    return head;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "value", "ocr_result": "va1ue", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "null", "ocr_result": "nu11", "note": "l/1 confusion (multiple)"},
+          {"type": "char_confusion", "original": "while", "ocr_result": "whi1e", "note": "l/1 confusion"}
+        ],
+        "intended_answer": "public static Node insertAtEnd(Node head, int value) {\n    Node newNode = new Node(value);\n    if (head == null) {\n        return newNode;\n    }\n    Node current = head;\n    while (current.next != null) {\n        current = current.next;\n    }\n    current.next = newNode;\n    return head;\n}"
+      },
+      "expected_result": {
+        "score": 100,
+        "feedback": "Perfect implementation of linked list insertion at end. Correctly creates new node first. Properly handles the empty list edge case by returning the new node as the new head. Traversal logic correctly finds the last node by checking current.next != null. Correctly links the new node and returns the original head. Clean, efficient O(n) solution.",
+        "errors_detected": "None (OCR artifacts recognized)",
+        "grade_breakdown": {
+          "correct_signature": 10,
+          "new_node_creation": 15,
+          "empty_list_handling": 20,
+          "traversal_logic": 30,
+          "insertion_logic": 15,
+          "return_statement": 10
+        }
+      }
+    },
+    {
+      "id": "TC009",
+      "difficulty": "Data Structures",
+      "topic": "Binary Search",
+      "question": {
+        "prompt": "Write a Java method called 'binarySearch' that takes a sorted integer array and a target value. Return the index of the target if found, or -1 if not found. Use the binary search algorithm.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 10,
+          "pointer_initialization": 15,
+          "loop_condition": 15,
+          "mid_calculation": 15,
+          "comparison_logic": 30,
+          "return_statements": 15
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static int binarySearch(int[] arr, int target) {\n    int 1eft = O;\n    int right = arr.1ength - 1;\n    whi1e (1eft < right) {\n        int rnid = 1eft + (right - 1eft) / 2;\n        if (arr[rnid] == target) {\n            return rnid;\n        } e1se if (arr[rnid] < target) {\n            1eft = rnid + 1;\n        } e1se {\n            right = rnid - 1;\n        }\n    }\n    return -1;\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "left", "ocr_result": "1eft", "note": "l/1 confusion (multiple)"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion"},
+          {"type": "char_confusion", "original": "length", "ocr_result": "1ength", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "while", "ocr_result": "whi1e", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "mid", "ocr_result": "rnid", "note": "m/rn confusion"},
+          {"type": "char_confusion", "original": "else", "ocr_result": "e1se", "note": "l/1 confusion"}
+        ],
+        "intended_answer": "public static int binarySearch(int[] arr, int target) {\n    int left = 0;\n    int right = arr.length - 1;\n    while (left < right) {\n        int mid = left + (right - left) / 2;\n        if (arr[mid] == target) {\n            return mid;\n        } else if (arr[mid] < target) {\n            left = mid + 1;\n        } else {\n            right = mid - 1;\n        }\n    }\n    return -1;\n}",
+        "logic_error": "Student used 'left < right' instead of 'left <= right' in while condition"
+      },
+      "expected_result": {
+        "score": 75,
+        "feedback": "Good binary search structure with correct mid-point calculation (avoiding overflow). However, there is a subtle but important bug: the while condition uses 'left < right' instead of 'left <= right'. This means when the target is the last remaining element (left == right), the loop exits without checking it, returning -1 incorrectly. For example, searching for 5 in [5] would return -1 instead of 0. The comparison logic and pointer updates are otherwise correct.",
+        "errors_detected": "Off-by-one error in loop condition - misses single-element case",
+        "grade_breakdown": {
+          "correct_signature": 10,
+          "pointer_initialization": 15,
+          "loop_condition": 0,
+          "mid_calculation": 15,
+          "comparison_logic": 30,
+          "return_statements": 5
+        }
+      }
+    },
+    {
+      "id": "TC010",
+      "difficulty": "Data Structures",
+      "topic": "Recursion - Fibonacci",
+      "question": {
+        "prompt": "Write a recursive Java method called 'fibonacci' that takes an integer n and returns the nth Fibonacci number. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2) for n > 1.",
+        "max_points": 100,
+        "rubric": {
+          "correct_signature": 10,
+          "base_case_0": 20,
+          "base_case_1": 20,
+          "recursive_case": 40,
+          "correct_formula": 10
+        }
+      },
+      "student_answer": {
+        "raw_ocr_output": "pub1ic static int fibonacci(int n) {\n    if (n == O) {\n        return 1;\n    }\n    if (n == 1) {\n        return 1;\n    }\n    return fibonacci(n - 1) * fibonacci(n - 2);\n}",
+        "ocr_errors_injected": [
+          {"type": "char_confusion", "original": "public", "ocr_result": "pub1ic", "note": "l/1 confusion"},
+          {"type": "char_confusion", "original": "0", "ocr_result": "O", "note": "zero/O confusion"}
+        ],
+        "intended_answer": "public static int fibonacci(int n) {\n    if (n == 0) {\n        return 1;\n    }\n    if (n == 1) {\n        return 1;\n    }\n    return fibonacci(n - 1) * fibonacci(n - 2);\n}",
+        "logic_errors": [
+          "F(0) should return 0, not 1",
+          "Recursive case uses multiplication (*) instead of addition (+)"
+        ]
+      },
+      "expected_result": {
+        "score": 35,
+        "feedback": "The method has correct structure with two base cases and a recursive case, showing understanding of recursion. However, there are two critical errors: (1) F(0) should return 0, not 1 - this is part of the standard Fibonacci definition given in the problem. (2) The recursive formula uses multiplication (fibonacci(n-1) * fibonacci(n-2)) instead of addition (fibonacci(n-1) + fibonacci(n-2)). These errors make the function compute something entirely different from Fibonacci numbers.",
+        "errors_detected": "Wrong base case value for F(0); multiplication instead of addition in recursive formula",
+        "grade_breakdown": {
+          "correct_signature": 10,
+          "base_case_0": 5,
+          "base_case_1": 20,
+          "recursive_case": 0,
+          "correct_formula": 0
+        }
+      }
+    }
+  ],
+  "usage_notes": {
+    "ocr_preprocessing": "Before passing to LLM grader, consider implementing OCR error correction (e.g., regex patterns for common substitutions like 1->l, O->0, rn->m) or instruct the LLM to be tolerant of such artifacts.",
+    "evaluation_metrics": [
+      "Accuracy: Does the LLM score match expected score within ±5 points?",
+      "Error Detection: Does the LLM identify the same logical errors?",
+      "Feedback Quality: Is the feedback constructive and accurate?",
+      "OCR Tolerance: Does the LLM correctly ignore OCR artifacts vs actual errors?"
+    ],
+    "recommended_llm_prompt_components": [
+      "Explicit instruction to ignore common OCR artifacts (1/l, 0/O, rn/m confusion)",
+      "Rubric provided with point allocations",
+      "Request for structured output (score, feedback, errors_detected)",
+      "Examples of OCR noise vs actual code errors"
+    ]
+  }
+}
