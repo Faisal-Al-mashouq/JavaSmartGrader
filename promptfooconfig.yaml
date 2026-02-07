@@ -5,7 +5,6 @@ description: "Evaluates LLM providers on Java code grading accuracy"
 prompts: file://system_prompt/sys_prompt.json
 
 x-shared-config: &shared_config
-  temperature: 0.3
   max_tokens: 2000
 
 providers:
@@ -62,7 +61,7 @@ providers:
       <<: *shared_config
 
 defaultTest:
-  transform: "output.includes('{') ? output.substring(output.indexOf('{'), output.lastIndexOf('}') + 1) : output"
+  transform: "var clean = output.replace(/```json/g, '').replace(/```/g, '').trim(); clean.includes('{') ? clean.substring(clean.indexOf('{'), clean.lastIndexOf('}') + 1) : clean"
   assert:
     - type: is-json
       metric: valid_json_output
@@ -91,8 +90,9 @@ tests:
           The student's code is logically CORRECT - it properly checks evenness using modulo.
           Only minor style issue: could simplify to 'return num % 2 == 0'.
 
-          PASS if: total score is 90-100 AND no major bugs incorrectly identified.
-          FAIL if: score below 90 OR grader claims logic errors exist.
+          PASS (score: 1.0) if: total score is 90-100 AND no major bugs incorrectly identified.
+          FAIL (score: 0.0) if: score below 90 OR grader claims logic errors exist.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -149,8 +149,9 @@ tests:
         value: &tc002_score |
           Score should be 95-100. Code correctly sums array elements.
 
-          PASS if: total score 95-100.
-          FAIL if: score below 95 OR non-existent bugs found.
+          PASS (score: 1.0) if: total score 95-100.
+          FAIL (score: 0.0) if: score below 95 OR non-existent bugs found.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -213,8 +214,9 @@ tests:
           Score should be 65-80. Real bug exists:
           'score > 60' should be 'score >= 60' (score=60 gets F instead of D).
 
-          PASS if: score 65-80 AND boundary bug identified.
-          FAIL if: score 90+ (missed bug) OR score below 60 (too harsh).
+          PASS (score: 1.0) if: score 65-80 AND boundary bug identified.
+          FAIL (score: 0.0) if: score 90+ (missed bug) OR score below 60 (too harsh).
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -277,8 +279,9 @@ tests:
           Score should be 80-95. Algorithm is correct.
           Minor issue: no null check (NullPointerException on null input).
 
-          PASS if: score 80-95, algorithm praised.
-          FAIL if: score below 75 or claims algorithm is wrong.
+          PASS (score: 1.0) if: score 80-95, algorithm praised.
+          FAIL (score: 0.0) if: score below 75 or claims algorithm is wrong.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -342,8 +345,9 @@ tests:
           'int max = 0' should be 'arr[0]' or 'Integer.MIN_VALUE'.
           Fails for all-negative arrays: [-5,-3,-8] returns 0 instead of -3.
 
-          PASS if: score 50-70 AND initialization bug identified.
-          FAIL if: score 85+ (missed bug) OR bug not mentioned.
+          PASS (score: 1.0) if: score 50-70 AND initialization bug identified.
+          FAIL (score: 0.0) if: score 85+ (missed bug) OR bug not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -413,8 +417,9 @@ tests:
           getArea() uses 'width + height' instead of 'width * height'.
           getPerimeter() is correct.
 
-          PASS if: score 55-75, area bug identified, perimeter correct.
-          FAIL if: score 90+ OR area bug missed.
+          PASS (score: 1.0) if: score 55-75, area bug identified, perimeter correct.
+          FAIL (score: 0.0) if: score 90+ OR area bug missed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -471,8 +476,9 @@ tests:
           Score should be 95-100. Implementation is CORRECT:
           - Zero check, correct exception, proper cast to double.
 
-          PASS if: score 95-100, no bugs identified.
-          FAIL if: score below 90 OR incorrect bugs claimed.
+          PASS (score: 1.0) if: score 95-100, no bugs identified.
+          FAIL (score: 0.0) if: score below 90 OR incorrect bugs claimed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -535,8 +541,9 @@ tests:
           Score should be 95-100. Perfect implementation:
           Creates node, handles empty list, traverses, links, returns head.
 
-          PASS if: score 95-100.
-          FAIL if: score below 90 or bugs incorrectly identified.
+          PASS (score: 1.0) if: score 95-100.
+          FAIL (score: 0.0) if: score below 90 or bugs incorrectly identified.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -602,8 +609,9 @@ tests:
           'while (left < right)' should be 'while (left <= right)'.
           Misses when target is last element: binarySearch([5], 5) returns -1.
 
-          PASS if: score 65-80 AND loop condition bug identified.
-          FAIL if: score 90+ (missed) OR bug not mentioned.
+          PASS (score: 1.0) if: score 65-80 AND loop condition bug identified.
+          FAIL (score: 0.0) if: score 90+ (missed) OR bug not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -665,8 +673,9 @@ tests:
           1. F(0) returns 1 instead of 0
           2. Uses * instead of +
 
-          PASS if: score 25-45 AND both bugs identified.
-          FAIL if: score 70+ OR either bug missed.
+          PASS (score: 1.0) if: score 25-45 AND both bugs identified.
+          FAIL (score: 0.0) if: score 70+ OR either bug missed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -730,8 +739,9 @@ tests:
         value: &tc011_score |
           Score should be 90-100. Code is correct with no bugs and no OCR artifacts.
 
-          PASS if: score 90-100, no bugs found.
-          FAIL if: score below 90 OR any bugs incorrectly claimed.
+          PASS (score: 1.0) if: score 90-100, no bugs found.
+          FAIL (score: 0.0) if: score below 90 OR any bugs incorrectly claimed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -789,8 +799,9 @@ tests:
           1. Always swaps with the LAST element instead of the mirrored position (should be arr.length - 1 - i)
           2. Loop should only go to arr.length / 2 to avoid re-swapping
 
-          PASS if: score 30-55 AND swap logic bugs identified.
-          FAIL if: score 75+ (missed bugs) OR bugs not mentioned.
+          PASS (score: 1.0) if: score 30-55 AND swap logic bugs identified.
+          FAIL (score: 0.0) if: score 75+ (missed bugs) OR bugs not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
         metric: score_accuracy_gpt4o
       - type: llm-rubric
         provider: anthropic:messages:claude-haiku-4-5-20251001
@@ -827,7 +838,7 @@ tests:
         value: *tc012_ocr
         metric: ocr_recognition_claude
 
-outputPath: ./results/grader_evaluation.json
+outputPath: ./results/grader_evaluation2.json
 
 evaluateOptions:
   maxConcurrency: 3
