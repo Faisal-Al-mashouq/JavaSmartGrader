@@ -1,0 +1,845 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "Evaluates LLM providers on Java code grading accuracy"
+
+prompts: file://system_prompt/sys_prompt.json
+
+x-shared-config: &shared_config
+  max_tokens: 2000
+
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    config:
+      <<: *shared_config
+  - id: anthropic:messages:claude-opus-4-5-20251101
+    config:
+      <<: *shared_config
+  - id: openai:gpt-5.2
+    config:
+      <<: *shared_config
+  - id: openai:gpt-5.1
+    config:
+      <<: *shared_config
+  - id: google:gemini-3-pro-preview
+    config:
+      <<: *shared_config
+  - id: google:gemini-3-flash-preview
+    config:
+      <<: *shared_config
+  - id: google:gemini-2.5-pro
+    config:
+      <<: *shared_config
+  - id: groq:llama-3.3-70b-versatile
+    config:
+      <<: *shared_config
+  - id: groq:meta-llama/llama-4-scout-17b-16e-instruct
+    config:
+      <<: *shared_config
+  - id: mistral:mistral-large-latest
+    config:
+      <<: *shared_config
+  - id: mistral:codestral-latest
+    config:
+      <<: *shared_config
+  - id: xai:grok-4-1-fast
+    config:
+      <<: *shared_config
+  - id: xai:grok-4-latest
+    config:
+      <<: *shared_config
+  - id: deepseek:deepseek-chat
+    config:
+      <<: *shared_config
+  - id: deepseek:deepseek-reasoner
+    config:
+      <<: *shared_config
+  - id: alibaba:qwen3-max
+    config:
+      <<: *shared_config
+  - id: alibaba:qwen3-coder-plus
+    config:
+      <<: *shared_config
+
+defaultTest:
+  transform: "var clean = output.replace(/```json/g, '').replace(/```/g, '').trim(); clean.includes('{') ? clean.substring(clean.indexOf('{'), clean.lastIndexOf('}') + 1) : clean"
+  assert:
+    - type: is-json
+      metric: valid_json_output
+
+tests:
+  # ============================================================
+  # TC001 - isEven: Correct logic with OCR artifacts
+  # ============================================================
+  - description: "TC001 - isEven: Correct logic with OCR artifacts"
+    vars:
+      question: "Write a Java method called 'isEven' that takes an integer parameter and returns true if the number is even, false otherwise."
+      student_code_ocr: |
+        pub1ic static boolean isEven(int num) {
+            if (nurn % 2 == O) {
+                return true;
+            } e1se {
+                return fa1se;
+            }
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc001_score |
+          The grader's total score should be between 90-100 points.
+          The student's code is logically CORRECT - it properly checks evenness using modulo.
+          Only minor style issue: could simplify to 'return num % 2 == 0'.
+
+          PASS (score: 1.0) if: total score is 90-100 AND no major bugs incorrectly identified.
+          FAIL (score: 0.0) if: score below 90 OR grader claims logic errors exist.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc001_score
+        metric: score_accuracy_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc001_ocr |
+          Grader must recognize these as OCR artifacts (NOT bugs):
+          - 'pub1ic' -> 'public', 'nurn' -> 'num', 'O' -> '0', 'e1se' -> 'else', 'fa1se' -> 'false'
+
+          PASS if: listed in ocr_artifacts, not heavily penalized.
+          FAIL if: treated as logic bugs.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc001_ocr
+        metric: ocr_recognition_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc001_bug |
+          This code has NO logic bugs. The grader's bugs_found should be empty or contain only style suggestions.
+
+          PASS if: no incorrect bugs identified.
+          FAIL if: grader claims logic/correctness issues.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc001_bug
+        metric: bug_detection_claude
+
+  # ============================================================
+  # TC002 - sumArray: Perfect implementation with OCR noise
+  # ============================================================
+  - description: "TC002 - sumArray: Perfect implementation with OCR noise"
+    vars:
+      question: "Write a Java method called 'sumArray' that takes an integer array as a parameter and returns the sum of all elements in the array."
+      student_code_ocr: |
+        pubIic static int sumArray(int[] arr) {
+            int surn = O;
+            for (int i = O; i < arr.1ength; i++) {
+                surn = surn + arr[i];
+            }
+            retrun surn;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc002_score |
+          Score should be 95-100. Code correctly sums array elements.
+
+          PASS (score: 1.0) if: total score 95-100.
+          FAIL (score: 0.0) if: score below 95 OR non-existent bugs found.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc002_score
+        metric: score_accuracy_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc002_ocr |
+          OCR artifacts: 'pubIic', 'surn', 'O', '1ength', 'retrun'.
+
+          PASS if: recognized as OCR noise.
+          FAIL if: penalized as logic errors.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc002_ocr
+        metric: ocr_recognition_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc002_bug |
+          This code has NO logic bugs. After correcting OCR artifacts, the implementation correctly sums array elements.
+
+          PASS if: no bugs identified or bugs_found is empty.
+          FAIL if: grader claims logic/correctness issues exist.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc002_bug
+        metric: bug_detection_claude
+
+  # ============================================================
+  # TC003 - getLetterGrade: Boundary condition bug
+  # ============================================================
+  - description: "TC003 - getLetterGrade: Boundary condition bug"
+    vars:
+      question: "Write a Java method called 'getLetterGrade' that takes an integer score (0-100) and returns the letter grade as a String: A (90-100), B (80-89), C (70-79), D (60-69), F (below 60)."
+      student_code_ocr: |
+        pub1ic static String getLetterGrade(int score) {
+            if (score >= 9O) {
+                return "A";
+            } else if (score >= 8O) {
+                return "B";
+            } else if (score >= 7O) {
+                return "C";
+            } else if (score > 6O) {
+                return "D";
+            } else {
+                return "F";
+            }
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc003_score |
+          Score should be 65-80. Real bug exists:
+          'score > 60' should be 'score >= 60' (score=60 gets F instead of D).
+
+          PASS (score: 1.0) if: score 65-80 AND boundary bug identified.
+          FAIL (score: 0.0) if: score 90+ (missed bug) OR score below 60 (too harsh).
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc003_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc003_bug |
+          MUST identify: 'score > 60' should be 'score >= 60'.
+
+          PASS if: boundary error explicitly mentioned.
+          FAIL if: bug not identified.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc003_bug
+        metric: bug_detection_claude
+
+      # ocr_vs_bug_distinction
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc003_distinction |
+          OCR artifacts (9O, 8O, 7O, 6O where O is capital-O for zero) must be distinguished from the REAL bug (> vs >=).
+
+          PASS if: OCR noise separated from logic error.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc003_distinction
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC004 - isPalindrome: Good logic, missing null check
+  # ============================================================
+  - description: "TC004 - isPalindrome: Good logic, missing null check"
+    vars:
+      question: "Write a Java method called 'isPalindrome' that takes a String parameter and returns true if the string is a palindrome (reads the same forwards and backwards), false otherwise. Ignore case differences."
+      student_code_ocr: |
+        public static boo1ean isPa1indrome(String str) {
+            String lower = str.to LowerCase();
+            int 1eft = O;
+            int right = 1ower.1ength() - 1;
+            whi1e (1eft < right) {
+                if (1ower.charAt(1eft) != lower.charAt(right)) {
+                    return fa1se;
+                }
+                1eft++;
+                right--;
+            }
+            return true;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc004_score |
+          Score should be 80-95. Algorithm is correct.
+          Minor issue: no null check (NullPointerException on null input).
+
+          PASS (score: 1.0) if: score 80-95, algorithm praised.
+          FAIL (score: 0.0) if: score below 75 or claims algorithm is wrong.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc004_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc004_bug |
+          Should identify: missing null check.
+          Should NOT claim palindrome logic is wrong.
+
+          PASS if: null check mentioned, core logic acknowledged correct.
+          FAIL if: algorithm incorrectly criticized.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc004_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc004_ocr |
+          OCR artifacts: 'boo1ean', 'isPa1indrome', 'to LowerCase' (space), '1eft', 'O', '1ower', '1ength', 'whi1e', 'fa1se'.
+
+          PASS if: recognized as OCR noise, not penalized as bugs.
+          FAIL if: treated as logic errors.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc004_ocr
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC005 - findMax: Critical initialization bug
+  # ============================================================
+  - description: "TC005 - findMax: Critical initialization bug"
+    vars:
+      question: "Write a Java method called 'findMax' that takes an integer array and returns the maximum value. If the array is empty, return Integer.MIN_VALUE."
+      student_code_ocr: |
+        pub1ic static int findMax(int[] arr) {
+            if (arr.1ength == O) {
+                return Integer.MIN_VALUE;
+            }
+            int max = O;
+            for (int i = O; i < arr.1ength; i++) {
+                if (arr[i] > rnax) {
+                    rnax = arr[i];
+                }
+            }
+            return rnax;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc005_score |
+          Score should be 50-70. CRITICAL bug:
+          'int max = 0' should be 'arr[0]' or 'Integer.MIN_VALUE'.
+          Fails for all-negative arrays: [-5,-3,-8] returns 0 instead of -3.
+
+          PASS (score: 1.0) if: score 50-70 AND initialization bug identified.
+          FAIL (score: 0.0) if: score 85+ (missed bug) OR bug not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc005_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc005_bug |
+          MUST identify: max initialized to 0 fails for negative arrays.
+
+          PASS if: bug clearly identified with example.
+          FAIL if: missed or misidentified.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc005_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc005_ocr |
+          OCR artifacts: 'pub1ic', '1ength', 'O' (in loop init and length check), 'rnax'.
+          The initialization bug ('max = 0' instead of 'arr[0]') is a REAL bug, not OCR.
+          Note: 'O' in 'int max = O' is OCR for '0', but initializing to 0 is the actual logic bug.
+
+          PASS if: OCR artifacts distinguished from the real initialization bug.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc005_ocr
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC006 - Rectangle: getArea formula error
+  # ============================================================
+  - description: "TC006 - Rectangle: getArea formula error"
+    vars:
+      question: "Write a Java class called 'Rectangle' with private fields 'width' and 'height' (both double), a constructor that initializes both fields, and methods 'getArea()' and 'getPerimeter()' that return the area and perimeter respectively."
+      student_code_ocr: |
+        pub1ic c1ass Rectang1e {
+            private doub1e width;
+            private doub1e height;
+
+            pub1ic Rectang1e(doub1e w, doub1e h) {
+                width = w;
+                height = h;
+            }
+
+            pub1ic doub1e getArea() {
+                return width + height;
+            }
+
+            pub1ic doub1e getPerimeter() {
+                return 2 * width + 2 * height;
+            }
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc006_score |
+          Score should be 55-75. Critical error:
+          getArea() uses 'width + height' instead of 'width * height'.
+          getPerimeter() is correct.
+
+          PASS (score: 1.0) if: score 55-75, area bug identified, perimeter correct.
+          FAIL (score: 0.0) if: score 90+ OR area bug missed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc006_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc006_bug |
+          MUST identify: getArea() uses + instead of *.
+
+          PASS if: formula error explicitly identified.
+          FAIL if: missed.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc006_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc006_ocr |
+          OCR artifacts: 'pub1ic', 'c1ass', 'Rectang1e', 'doub1e'.
+          The getArea() formula error (+ instead of *) is a REAL bug, not OCR.
+
+          PASS if: OCR artifacts distinguished from the formula bug.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc006_ocr
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC007 - safeDivide: Perfect exception handling
+  # ============================================================
+  - description: "TC007 - safeDivide: Perfect exception handling"
+    vars:
+      question: "Write a Java method called 'safeDivide' that takes two integers (numerator and denominator) and returns the result as a double. If the denominator is zero, throw an IllegalArgumentException with the message 'Cannot divide by zero'."
+      student_code_ocr: |
+        pub1ic static doub1e safeDivide(int nurnerator, int denorninator) {
+            if (denorninator == O) {
+                throw new I11ega1NrgurnentException("Cannot divide by zer0");
+            }
+            return (doub1e) nurnerator / denorninator;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc007_score |
+          Score should be 95-100. Implementation is CORRECT:
+          - Zero check, correct exception, proper cast to double.
+
+          PASS (score: 1.0) if: score 95-100, no bugs identified.
+          FAIL (score: 0.0) if: score below 90 OR incorrect bugs claimed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc007_score
+        metric: score_accuracy_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc007_ocr |
+          Heavy OCR noise but NO bugs. All artifacts:
+          'pub1ic', 'doub1e', 'I11ega1NrgurnentException', 'nurnerator', 'denorninator', 'zer0'
+
+          PASS if: recognized as OCR noise.
+          FAIL if: penalized as bugs.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc007_ocr
+        metric: ocr_recognition_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc007_bug |
+          This code has NO logic bugs. After correcting OCR artifacts, the implementation is correct.
+
+          PASS if: no bugs identified or bugs_found is empty.
+          FAIL if: grader claims logic issues exist.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc007_bug
+        metric: bug_detection_claude
+
+  # ============================================================
+  # TC008 - insertAtEnd: Perfect linked list insertion
+  # ============================================================
+  - description: "TC008 - insertAtEnd: Perfect linked list insertion"
+    vars:
+      question: "Given a singly linked list Node class with 'int data' and 'Node next' fields, write a method called 'insertAtEnd' that takes a head node and a value, and inserts a new node with that value at the end of the list. Return the head of the list."
+      student_code_ocr: |
+        pub1ic static Node insertAtEnd(Node head, int va1ue) {
+            Node newNode = new Node(va1ue);
+            if (head == nu11) {
+                return newNode;
+            }
+            Node current = head;
+            whi1e (current.next != nu11) {
+                current = current.next;
+            }
+            current.next = newNode;
+            return head;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc008_score |
+          Score should be 95-100. Perfect implementation:
+          Creates node, handles empty list, traverses, links, returns head.
+
+          PASS (score: 1.0) if: score 95-100.
+          FAIL (score: 0.0) if: score below 90 or bugs incorrectly identified.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc008_score
+        metric: score_accuracy_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc008_ocr |
+          OCR artifacts: 'pub1ic', 'va1ue', 'nu11', 'whi1e'.
+
+          PASS if: recognized as OCR noise.
+          FAIL if: penalized as bugs.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc008_ocr
+        metric: ocr_recognition_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc008_bug |
+          This code has NO logic bugs. The linked list insertion is correct.
+
+          PASS if: no bugs identified.
+          FAIL if: grader claims logic issues exist.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc008_bug
+        metric: bug_detection_claude
+
+  # ============================================================
+  # TC009 - binarySearch: Off-by-one error in loop
+  # ============================================================
+  - description: "TC009 - binarySearch: Off-by-one error in loop"
+    vars:
+      question: "Write a Java method called 'binarySearch' that takes a sorted integer array and a target value. Return the index of the target if found, or -1 if not found. Use the binary search algorithm."
+      student_code_ocr: |
+        pub1ic static int binarySearch(int[] arr, int target) {
+            int 1eft = O;
+            int right = arr.1ength - 1;
+            whi1e (1eft < right) {
+                int rnid = 1eft + (right - 1eft) / 2;
+                if (arr[rnid] == target) {
+                    return rnid;
+                } e1se if (arr[rnid] < target) {
+                    1eft = rnid + 1;
+                } e1se {
+                    right = rnid - 1;
+                }
+            }
+            return -1;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc009_score |
+          Score should be 65-80. Off-by-one bug:
+          'while (left < right)' should be 'while (left <= right)'.
+          Misses when target is last element: binarySearch([5], 5) returns -1.
+
+          PASS (score: 1.0) if: score 65-80 AND loop condition bug identified.
+          FAIL (score: 0.0) if: score 90+ (missed) OR bug not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc009_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc009_bug |
+          MUST identify: 'left < right' should be 'left <= right'.
+          Mid calculation (overflow-safe) is CORRECT.
+
+          PASS if: off-by-one error identified.
+          FAIL if: missed or wrong bug.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc009_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc009_ocr |
+          OCR artifacts: 'pub1ic', '1eft', 'O', '1ength', 'whi1e', 'rnid', 'e1se'.
+          The loop condition bug (< vs <=) is a REAL bug, not OCR.
+
+          PASS if: OCR distinguished from the real bug.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc009_ocr
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC010 - fibonacci: Multiple critical errors
+  # ============================================================
+  - description: "TC010 - fibonacci: Multiple critical errors"
+    vars:
+      question: "Write a recursive Java method called 'fibonacci' that takes an integer n and returns the nth Fibonacci number. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2) for n > 1."
+      student_code_ocr: |
+        pub1ic static int fibonacci(int n) {
+            if (n == O) {
+                return 1;
+            }
+            if (n == 1) {
+                return 1;
+            }
+            return fibonacci(n - 1) * fibonacci(n - 2);
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc010_score |
+          Score should be 25-45. TWO critical bugs:
+          1. F(0) returns 1 instead of 0
+          2. Uses * instead of +
+
+          PASS (score: 1.0) if: score 25-45 AND both bugs identified.
+          FAIL (score: 0.0) if: score 70+ OR either bug missed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc010_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc010_bug |
+          MUST identify BOTH:
+          1. F(0) should return 0, not 1
+          2. Uses multiplication instead of addition
+
+          PASS if: both explicitly mentioned.
+          FAIL if: either missed.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc010_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc010_ocr |
+          OCR artifacts: 'pub1ic', 'O' (in 'n == O').
+          The bugs (F(0) returns 1 instead of 0, and * instead of +) are REAL bugs, not OCR.
+          Note: 'O' in 'n == O' is OCR for 'n == 0', but the return value 1 is the actual bug.
+
+          PASS if: OCR distinguished from real bugs.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc010_ocr
+        metric: ocr_recognition_claude
+
+  # ============================================================
+  # TC011 - countVowels: Perfect code with no OCR noise
+  # ============================================================
+  - description: "TC011 - countVowels: Perfect code with no OCR noise"
+    vars:
+      question: "Write a Java method called 'countVowels' that takes a String and returns the number of vowels (a, e, i, o, u, case-insensitive) in it."
+      student_code_ocr: |
+        public static int countVowels(String str) {
+            int count = 0;
+            String lower = str.toLowerCase();
+            for (int i = 0; i < lower.length(); i++) {
+                char c = lower.charAt(i);
+                if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
+                    count++;
+                }
+            }
+            return count;
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc011_score |
+          Score should be 90-100. Code is correct with no bugs and no OCR artifacts.
+
+          PASS (score: 1.0) if: score 90-100, no bugs found.
+          FAIL (score: 0.0) if: score below 90 OR any bugs incorrectly claimed.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc011_score
+        metric: score_accuracy_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc011_ocr |
+          There are NO OCR artifacts in this code. The ocr_artifacts list should be empty.
+
+          PASS if: ocr_artifacts is empty.
+          FAIL if: grader claims OCR artifacts exist.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc011_ocr
+        metric: ocr_recognition_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc011_bug |
+          This code has NO logic bugs. It correctly counts vowels.
+
+          PASS if: no bugs identified.
+          FAIL if: grader claims logic issues.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc011_bug
+        metric: bug_detection_claude
+
+  # ============================================================
+  # TC012 - reverseArray: Swap logic uses wrong index
+  # ============================================================
+  - description: "TC012 - reverseArray: Swap logic uses wrong index"
+    vars:
+      question: "Write a Java method called 'reverseArray' that takes an integer array and reverses it in-place."
+      student_code_ocr: |
+        pub1ic static void reverseArray(int[] arr) {
+            for (int i = O; i < arr.1ength; i++) {
+                int temp = arr[i];
+                arr[i] = arr[arr.1ength - 1];
+                arr[arr.1ength - 1] = temp;
+            }
+        }
+    assert:
+      # score_accuracy
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc012_score |
+          Score should be 30-55. Multiple critical bugs:
+          1. Always swaps with the LAST element instead of the mirrored position (should be arr.length - 1 - i)
+          2. Loop should only go to arr.length / 2 to avoid re-swapping
+
+          PASS (score: 1.0) if: score 30-55 AND swap logic bugs identified.
+          FAIL (score: 0.0) if: score 75+ (missed bugs) OR bugs not mentioned.
+          IMPORTANT: Your score must be exactly 1.0 or 0.0, not the grading total.
+        metric: score_accuracy_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc012_score
+        metric: score_accuracy_claude
+
+      # bug_detection
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc012_bug |
+          MUST identify: arr[arr.length - 1] should be arr[arr.length - 1 - i].
+          Should also note: loop iterates through the full array instead of half.
+
+          PASS if: at least the index bug is identified.
+          FAIL if: core swap bug missed.
+        metric: bug_detection_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc012_bug
+        metric: bug_detection_claude
+
+      # ocr_recognition
+      - type: llm-rubric
+        provider: openai:gpt-4o
+        value: &tc012_ocr |
+          OCR artifacts: 'pub1ic', 'O', '1ength'.
+          The swap logic errors are REAL bugs, not OCR.
+
+          PASS if: OCR distinguished from real bugs.
+          FAIL if: confused.
+        metric: ocr_recognition_gpt4o
+      - type: llm-rubric
+        provider: anthropic:messages:claude-haiku-4-5-20251001
+        value: *tc012_ocr
+        metric: ocr_recognition_claude
+
+outputPath: ./results/grader_evaluation_final.json
+
+evaluateOptions:
+  maxConcurrency: 3
+  showProgressBar: true
