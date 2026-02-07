@@ -1,1 +1,11 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
 .env
+
+# macOS
+.DS_Store
+
+# Promptfoo results
+results/
