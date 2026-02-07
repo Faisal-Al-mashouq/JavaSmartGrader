@@ -53,12 +53,12 @@ providers:
   - id: deepseek:deepseek-reasoner
     config:
       <<: *shared_config
-  # - id: alibaba:qwen3-max
-  #   config:
-  #     <<: *shared_config
-  # - id: alibaba:qwen3-coder-plus
-  #   config:
-  #     <<: *shared_config
+  - id: alibaba:qwen3-max
+    config:
+      <<: *shared_config
+  - id: alibaba:qwen3-coder-plus
+    config:
+      <<: *shared_config
 
 defaultTest:
   transform: "var clean = output.replace(/```json/g, '').replace(/```/g, '').trim(); clean.includes('{') ? clean.substring(clean.indexOf('{'), clean.lastIndexOf('}') + 1) : clean"
