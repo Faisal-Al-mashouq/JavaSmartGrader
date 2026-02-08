@@ -60,25 +60,36 @@ An additional `valid_json_output` metric verifies that every response is valid J
 npm install
 ```
 
+```bash
+npm install -g promptfoo
+```
+
 ### 2. Set API keys
 
-Export the keys for the providers you want to evaluate:
+Set the API keys for the providers you want to evaluate:
 
 ```bash
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export GOOGLE_API_KEY=...
-export GROQ_API_KEY=...
-export MISTRAL_API_KEY=...
-export XAI_API_KEY=...
-export DEEPSEEK_API_KEY=...
-export ALIBABA_API_KEY=...
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+GOOGLE_API_KEY=...
+GROQ_API_KEY=...
+MISTRAL_API_KEY=...
+XAI_API_KEY=...
+DEEPSEEK_API_KEY=...
+ALIBABA_API_KEY=...
 ```
+Set it in .env in ./dataset/LLM/Test
 
 ### 3. Run the evaluation
 
+If in directory ./dataset/LLM/Test :
 ```bash
-npx promptfoo eval
+promptfoo eval
+```
+or if in Root directory :
+
+```bash
+promptfoo eval -c dataset/LLM/Test/promptfooconfig.yaml --env-file dataset/LLM/Test/.env
 ```
 
 Results are saved to `./results/grader_evaluation_final.json`.
@@ -86,7 +97,7 @@ Results are saved to `./results/grader_evaluation_final.json`.
 ### 4. View results
 
 ```bash
-npx promptfoo view
+promptfoo view
 ```
 
 ## Directory Structure
