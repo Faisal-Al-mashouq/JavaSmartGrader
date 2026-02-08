@@ -1,0 +1,47 @@
+# top-most EditorConfig file
+root = true
+
+# Default for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Java
+[*.java]
+indent_size = 4
+
+# Python
+[*.py]
+indent_size = 4
+
+# JavaScript / TypeScript / JSX / TSX
+[*.{js,jsx,ts,tsx,mjs,cjs}]
+indent_size = 2
+
+# Web markup and styles
+[*.{html,css,scss,less}]
+indent_size = 2
+
+# Config files
+[*.{json,yml,yaml,toml}]
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles require tabs
+[Makefile]
+indent_style = tab
+
+# Gradle
+[*.gradle]
+indent_size = 4
+
+# Shell scripts
+[*.sh]
+indent_size = 2
