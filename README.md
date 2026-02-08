@@ -54,11 +54,30 @@ The frontend runs at http://localhost:3000
 
 ## Contributing
 
+### Setup
+
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+2. Install the pre-commit hooks (one-time):
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+### Workflow
+
+1. Create a feature branch (`git checkout -b feature/your-feature`)
+2. Commit your changes (`git commit -m 'Add your feature'`)
+3. Push to the branch (`git push origin feature/your-feature`)
+4. Open a Pull Request
+
+### Code Style
+
+This project uses [EditorConfig](https://editorconfig.org/) to enforce consistent formatting (indentation, line endings, charset, final newline). Most editors support it natively or via a plugin.
+
+**Backend (Python)** uses [Ruff](https://docs.astral.sh/ruff/) for linting and [Black](https://black.readthedocs.io/) for formatting. Both are configured in `backend/pyproject.toml`.
+
+- **Pre-commit hooks** — Automatically run Ruff, Black, and EditorConfig checks before each commit. Install with the setup steps above.
+- **CI checks** — A GitHub Action runs all linters on every PR and push to `main`. PRs that violate the rules will show a failing check.
 
 ## License
 
