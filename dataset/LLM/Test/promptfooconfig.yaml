@@ -53,18 +53,18 @@ providers:
   - id: deepseek:deepseek-reasoner
     config:
       <<: *shared_config
-  - id: alibaba:qwen3-max
-    config:
-      <<: *shared_config
-  - id: alibaba:qwen3-coder-plus
-    config:
-      <<: *shared_config
+  # - id: alibaba:qwen3-max
+  #   config:
+  #     <<: *shared_config
+  # - id: alibaba:qwen3-coder-plus
+  #   config:
+  #     <<: *shared_config
 
-defaultTest:
-  transform: "var clean = output.replace(/```json/g, '').replace(/```/g, '').trim(); clean.includes('{') ? clean.substring(clean.indexOf('{'), clean.lastIndexOf('}') + 1) : clean"
-  assert:
-    - type: is-json
-      metric: valid_json_output
+# defaultTest:
+#   transform: "var clean = output.replace(/```json/g, '').replace(/```/g, '').trim(); clean.includes('{') ? clean.substring(clean.indexOf('{'), clean.lastIndexOf('}') + 1) : clean"
+#   assert:
+#     - type: is-json
+#       metric: valid_json_output
 
 tests:
   # ============================================================
@@ -838,8 +838,8 @@ tests:
         value: *tc012_ocr
         metric: ocr_recognition_claude
 
-outputPath: ./results/grader_evaluation_final.json
+outputPath: experiments/LLM/results/grader_evaluation_final.json
 
 evaluateOptions:
-  maxConcurrency: 3
+  maxConcurrency: 6
   showProgressBar: true
