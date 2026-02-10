@@ -1,4 +1,5 @@
 FROM eclipse-temurin:21-jdk-alpine
-WORKDIR /app
-COPY . /scripts/run.sh
-CMD ["python", "-c", "print('Okay, I am running in a container!')"]
+WORKDIR /tmp
+COPY /scripts/run.sh
+RUN chmod +x /tmp/run.sh
+CMD ["bash"]

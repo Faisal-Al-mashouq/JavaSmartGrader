@@ -1,6 +1,7 @@
 #!/bin/sh
+set -e
 
 MAIN_CLASS="${1:?Usage: run.sh <MainClassName>}"
-TIMEOUT="${2: -10}"
+TIMEOUT="${2:-10}"
 
-timeout "{$TIMEOUT}s" java -cp /workspace/out "$MAIN_CLASS" < /workspace/input.txt
+timeout "${TIMEOUT}s" java -cp /workspace/out "$MAIN_CLASS" < /workspace/input.txt
