@@ -1,4 +1,5 @@
-FROM python:3.8-slim
+FROM eclipse-temurin:21
 WORKDIR /app
 COPY . /app
-CMD ["python", "-c", "print('Okay, I am running in a container!')"]
+RUN chmod +x /app/app/app.sh
+CMD ["bash"]
