@@ -1,0 +1,4 @@
+FROM eclipse-temurin:21-jdk-alpine
+WORKDIR /app
+COPY . /scripts/compile.sh
+CMD ["python", "-c", "print('Okay, I am running in a container!')"]
