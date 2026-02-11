@@ -1,5 +1,5 @@
 FROM eclipse-temurin:21-jdk-alpine
-WORKDIR /tmp
-COPY /scripts/compile.sh
-RUN chmod +x /tmp/compile.sh
-CMD ["bash"]
+WORKDIR /workspace
+COPY scripts/compile.sh /scripts/compile.sh
+RUN chmod +x /scripts/compile.sh
+CMD ["sh"]
