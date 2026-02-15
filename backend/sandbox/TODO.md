@@ -16,5 +16,5 @@ Docker run container:
 docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --network=none --pids-limit=50 --read-only runner-image sh /scripts/run.sh {CLASS_NAME} > $(pwd)/backend/sandbox/tmp/test/out/output.txt 2> $(pwd)/backend/sandbox/tmp/test/out/errors.txt
 
 # TODO
-- Implement them in python
-- Implement the job queue interface
+- Implement them in python - In progress
+- Implement the job queue interface - In progress

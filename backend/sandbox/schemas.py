@@ -47,7 +47,7 @@ class JobStatus(enum):
     FAILED = "FAILED"
 
 
-class SandboxJob(BaseModel):
+class SandboxJobRequest(BaseModel):
     job_id: uuid.UUID
     status: JobStatus
     created_at: datetime.datetime
