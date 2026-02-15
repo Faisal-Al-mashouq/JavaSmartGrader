@@ -1,16 +1,15 @@
-import os
-
-from azure.ai.formrecognizer import AnalysisFeature, DocumentAnalysisClient
-from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
+import os
+import cv2
+import numpy as np
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.formrecognizer import DocumentAnalysisClient, AnalysisFeature
 from google import genai
 
 load_dotenv()
-
-GEMINI_KEY = os.getenv("GEMINI_KEY")
-AZURE_KEY = os.getenv("AZURE_KEY")
+GEMINI_KEY = os.getenv("API_GEMINI")
 AZURE_ENDPOINT = "https://gpfirsttrydoc.cognitiveservices.azure.com/"
-
+AZURE_KEY = os.getenv("API_AZURE")
 
 def get_azure_word_map(image_path):
     print(f" Analyzing {image_path} with Azure High-Res Layout...")
