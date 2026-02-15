@@ -1,12 +1,15 @@
-import cv2
-import numpy as np
+import os
+
+from azure.ai.formrecognizer import AnalysisFeature, DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.formrecognizer import DocumentAnalysisClient, AnalysisFeature
+from dotenv import load_dotenv
 from google import genai
 
-GEMINI_KEY = "AIzaSyA316Sqv-aYXAuStEnAz5gd2ihjCblRNt4"
+load_dotenv()
+
+GEMINI_KEY = os.getenv("GEMINI_KEY")
+AZURE_KEY = os.getenv("AZURE_KEY")
 AZURE_ENDPOINT = "https://gpfirsttrydoc.cognitiveservices.azure.com/"
-AZURE_KEY = "03i8j74fh19EzxuSAhntzflSQJRL97SfP7Dfk1swG4EsBKHwhhzkJQQJ99CBACFcvJRXJ3w3AAALACOGgDL1"
 
 
 def get_azure_word_map(image_path):
@@ -32,10 +35,7 @@ def get_azure_word_map(image_path):
             line_end = line_start + line.spans[0].length
 
             line_words = [
-                w
-                for w in page.words
-                if w.span.offset >= line_start
-                and (w.span.offset + w.span.length) <= line_end
+                w for w in page.words if w.span.offset >= line_start and (w.span.offset + w.span.length) <= line_end
             ]
 
             # Create the "Annotated String"
@@ -47,9 +47,7 @@ def get_azure_word_map(image_path):
                 annotated_line += f"{word.content}[{conf_int}] "
 
             detailed_lines.append(annotated_line.strip())
-            print(
-                f"Captured: {annotated_line}"
-            )  # this will show the ocr result before going to LLm model
+            print(f"Captured: {annotated_line}")  # this will show the ocr result before going to LLm model
 
     return detailed_lines
 
@@ -58,31 +56,31 @@ def fix_with_gemini_word_level(annotated_lines):
     print("\n Sending Word-Level Data to Gemini...")
     client = genai.Client(api_key=GEMINI_KEY)
 
-    # PROMPT: Teach Gemini how to read the [score] tags, the prompt needs more work 
+    # PROMPT: Teach Gemini how to read the [score] tags, the prompt needs more work
     system_instruction = """
     ROLE: You are a strict OCR Post-Processing Engine. You are NOT a coding tutor.
     INPUT: Java code where every word has a confidence score (e.g., public[99], vold[45]).
-    
+
     YOUR PRIME DIRECTIVE:
     Preserve the student's logic exactly as written, even if it is wrong.
-    
+
     --- RULES OF ENGAGEMENT ---
-    
+
     1. FIX OCR NOISE (High Certainty of Machine Error):
-       - '1' looking like 'l' or 'I' (e.g., 'System.out.print1n' -> 'println')
-       - '0' looking like 'o' inside numbers (e.g., 'int x = 1o;' -> '10')
-       - Missing semicolons at the end of lines IF the confidence of the last word was low.
-       - Typos in standard keywords (e.g., 'publIc' -> 'public', 'viod' -> 'void').
-    
+        - '1' looking like 'l' or 'I' (e.g., 'System.out.print1n' -> 'println')
+        - '0' looking like 'o' inside numbers (e.g., 'int x = 1o;' -> '10')
+        - Missing semicolons at the end of lines IF the confidence of the last word was low.
+        - Typos in standard keywords (e.g., 'publIc' -> 'public', 'viod' -> 'void').
+
     2. DO NOT FIX STUDENT LOGIC (High Certainty of Human Error):
-       - Infinite loops (e.g., 'for(int i=0; i>10; i++)'). KEEP IT.
-       - Assignment instead of equality (e.g., 'if (x = 5)'). KEEP IT.
-       - Logic bugs (e.g., 'System.out.print(x)' where 'x' is undefined). KEEP IT.
-       - Wrong variable names (e.g., 'String argss'). KEEP IT.
-       
+        - Infinite loops (e.g., 'for(int i=0; i>10; i++)'). KEEP IT.
+        - Assignment instead of equality (e.g., 'if (x = 5)'). KEEP IT.
+        - Logic bugs (e.g., 'System.out.print(x)' where 'x' is undefined). KEEP IT.
+        - Wrong variable names (e.g., 'String argss'). KEEP IT.
+
     3. USE CONFIDENCE SCORES:
-       - If a word is 'while[99]' but the syntax is wrong, TRUST THE SCORE. The student wrote it wrong.
-       - If a word is 'wh1le[40]', FIX IT. It's an OCR error.
+        - If a word is 'while[99]' but the syntax is wrong, TRUST THE SCORE. The student wrote it wrong.
+        - If a word is 'wh1le[40]', FIX IT. It's an OCR error.
 
     OUTPUT:
     Return ONLY the raw Java code. Do not add markdown like ```java. Do not add comments explaining your fixes.
@@ -103,9 +101,7 @@ def fix_with_gemini_word_level(annotated_lines):
 
 
 if __name__ == "__main__":
-    annotated_data = get_azure_word_map(
-        "page_105.png"
-    )  # this method requires the image path
+    annotated_data = get_azure_word_map("page_105.png")  # this method requires the image path
 
     if annotated_data:
         fixed_code = fix_with_gemini_word_level(annotated_data)
