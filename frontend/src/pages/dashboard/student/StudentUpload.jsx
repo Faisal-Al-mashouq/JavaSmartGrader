@@ -51,12 +51,7 @@ export default function StudentUpload() {
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="block w-full mb-4 text-sm text-gray-300
-                     file:mr-4 file:py-2 file:px-4
-                     file:rounded file:border-0
-                     file:text-sm file:font-semibold
-                     file:bg-blue-600 file:text-white
-                     hover:file:bg-blue-700"
+          className="block w-full mb-4 text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
         />
 
         {preview && (
