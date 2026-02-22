@@ -6,7 +6,6 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen flex bg-gray-900 text-white">
-
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800 p-6 space-y-6">
         <h2 className="text-xl font-bold">JavaSmartGrader</h2>
@@ -25,10 +24,7 @@ export default function DashboardLayout() {
           </Link>
         </nav>
 
-        <button
-          onClick={logout}
-          className="mt-6 bg-red-600 px-3 py-1 rounded"
-        >
+        <button onClick={logout} className="mt-6 bg-red-600 px-3 py-1 rounded">
           Logout
         </button>
       </aside>

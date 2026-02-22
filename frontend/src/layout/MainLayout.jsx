@@ -10,10 +10,7 @@ export default function MainLayout() {
         <span>JavaSmartGrader</span>
 
         {user && (
-          <button
-            onClick={logout}
-            className="bg-red-600 px-3 py-1 rounded"
-          >
+          <button onClick={logout} className="bg-red-600 px-3 py-1 rounded">
             Logout
           </button>
         )}

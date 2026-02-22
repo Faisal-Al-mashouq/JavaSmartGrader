@@ -3,7 +3,6 @@ import { Outlet, Link } from "react-router-dom";
 export default function InstructorLayout() {
   return (
     <div className="flex min-h-screen bg-slate-900 text-white">
-
       {/* Sidebar */}
       <div className="w-64 bg-slate-800 p-6">
         <h2 className="text-xl font-bold mb-8">Instructor Panel</h2>

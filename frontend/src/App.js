@@ -23,7 +23,6 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-
           {/* Public routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -37,9 +36,9 @@ function App() {
               </ProtectedRoute>
             }
           >
-           <Route index element={<StudentHome />} />
-              <Route path="submissions" element={<StudentSubmissions />} />
-              <Route path="upload" element={<StudentUpload />} />
+            <Route index element={<StudentHome />} />
+            <Route path="submissions" element={<StudentSubmissions />} />
+            <Route path="upload" element={<StudentUpload />} />
           </Route>
 
           {/*  INSTRUCTOR DASHBOARD */}
@@ -55,7 +54,6 @@ function App() {
             <Route path="submissions" element={<InstructorSubmissions />} />
             <Route path="grading" element={<InstructorGrading />} />
           </Route>
-
         </Routes>
       </AuthProvider>
     </Router>
@@ -63,3 +61,5 @@ function App() {
 }
 
 export default App;
+test;
+test;

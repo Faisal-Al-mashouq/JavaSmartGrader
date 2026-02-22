@@ -47,7 +47,6 @@ export default function StudentUpload() {
       <h1 className="text-2xl font-bold mb-6">Upload Image</h1>
 
       <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-
         <input
           type="file"
           accept="image/*"
@@ -75,11 +74,7 @@ export default function StudentUpload() {
           Submit
         </button>
 
-        {message && (
-          <p className="mt-4 text-sm text-yellow-400">
-            {message}
-          </p>
-        )}
+        {message && <p className="mt-4 text-sm text-yellow-400">{message}</p>}
       </div>
     </div>
   );
