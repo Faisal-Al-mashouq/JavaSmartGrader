@@ -6,56 +6,73 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class CompilationRequest(BaseModel):
-    java_code: str
-    language: str
-
-
-class TestCasesRequest(BaseModel):
-    test_inputs: list[str]
-    expected_outputs: list[str]
-
-
-class SandboxRequest(BaseModel):
-    java_code: str
-    language: str
-    test_inputs: list[str]
-    expected_outputs: list[str]
-
-
-class CompilationResult(BaseModel):
-    success: bool
-    outputs: list[str]
-
-
-class TestCaseResult(BaseModel):
-    success: bool
-    outputs: list[str]
-    expected_outputs: list[str]
-
-
-class SandboxResult(BaseModel):
-    compilation_result: CompilationResult
-    test_case_results: list[TestCaseResult]
-    assertions_results: dict[str, Any]
-
-
-class JobStatus(enum):
+class JobStatus(enum.Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
 
+class CompilationJobRequest(BaseModel):
+    java_code: str
+
+
+class CompilationJobResult(BaseModel):
+    success: bool
+    errors: list[str] | None
+
+
+class TestCaseRequest(BaseModel):
+    input: Any
+    expected_output: Any
+
+
+class TestCasesRequest(BaseModel):
+    test_cases: list[TestCaseRequest] | None
+
+
+class TestCaseResult(BaseModel):
+    input: Any
+    expected_output: Any
+    actual_output: Any
+    passed: bool
+
+
+class TestCasesResult(BaseModel):
+    results: list[TestCaseResult] | None
+
+
+class ExecutionJobRequest(BaseModel):
+    compiled_code: str
+    test_cases: TestCasesRequest | None
+
+
+class ExecutionJobResult(BaseModel):
+    success: bool
+    errors: list[str] | None
+
+
 class SandboxJobRequest(BaseModel):
+    job_id: uuid.UUID
+    java_code: str
+    test_cases: TestCasesRequest | None
+
+
+class SandboxResult(BaseModel):
+    compilation_result: CompilationJobResult | None
+    execution_result: ExecutionJobResult | None
+    test_cases_results: TestCasesResult | None
+
+
+class SandboxJob(BaseModel):
     job_id: uuid.UUID
     status: JobStatus
     created_at: datetime.datetime
-    request: SandboxRequest
+    request: SandboxJobRequest| CompilationJobRequest | ExecutionJobRequest | TestCasesRequest | None
+    result: SandboxResult | None
 
 
 class SandboxJobResult(BaseModel):
     job_id: uuid.UUID
     status: JobStatus
     result: SandboxResult | None
-    error: str | None

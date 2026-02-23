@@ -8,12 +8,12 @@ docker build -f backend/sandbox/Dockerfile.compiler -t compiler-image backend/sa
 Docker run container: 
 docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --network=none --pids-limit=50 compiler-image sh /scripts/compile.sh {CLASS_NAME}
 
-### Runner
+### Executer
 Docker build image:
 docker
 
 Docker run container:
-docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --network=none --pids-limit=50 --read-only runner-image sh /scripts/run.sh {CLASS_NAME} > $(pwd)/backend/sandbox/tmp/test/out/output.txt 2> $(pwd)/backend/sandbox/tmp/test/out/errors.txt
+docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --network=none --pids-limit=50 --read-only executer-image sh /scripts/execute.sh {CLASS_NAME} > $(pwd)/backend/sandbox/tmp/test/out/output.txt 2> $(pwd)/backend/sandbox/tmp/test/out/errors.txt
 
 # TODO
 - Implement them in python - In progress
