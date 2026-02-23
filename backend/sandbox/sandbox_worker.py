@@ -6,9 +6,11 @@ import re
 import shutil
 import uuid
 from pathlib import Path
+import sys
 
 import redis.asyncio as redis
-from backend.sandbox.schemas import (
+
+from .schemas import (
     CompilationJobResult,
     ExecutionJobResult,
     JobStatus,
@@ -22,6 +24,11 @@ from backend.sandbox.schemas import (
 from dotenv import load_dotenv
 
 load_dotenv()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 SANDBOX_TMP_DIR = Path(__file__).parent / "tmp"
 
@@ -32,14 +39,14 @@ class Sandbox:
         self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
 
 
-def extract_class_name(java_code: str) -> str:
+def ـextract_class_name(java_code: str) -> str:
     match = re.search(r"public\s+class\s+(\w+)", java_code)
     if not match:
         raise ValueError("Could not find public class name in Java code")
     return match.group(1)
 
 
-def create_workspace(job_id: uuid.UUID) -> Path:
+def ـcreate_workspace(job_id: uuid.UUID) -> Path:
     workspace = SANDBOX_TMP_DIR / str(job_id)
     (workspace / "src").mkdir(parents=True, exist_ok=True)
     (workspace / "compiled").mkdir(exist_ok=True)
@@ -48,7 +55,7 @@ def create_workspace(job_id: uuid.UUID) -> Path:
     return workspace
 
 
-def cleanup_workspace(job_id: uuid.UUID):
+def ـcleanup_workspace(job_id: uuid.UUID):
     workspace = SANDBOX_TMP_DIR / str(job_id)
     if workspace.exists():
         shutil.rmtree(workspace)
@@ -72,7 +79,11 @@ async def start():
 
 async def main_loop(client: Sandbox):
     while True:
-        result = await client.redis_client.blpop("SandboxJobQueue", timeout=0)
+        try:
+            logger.info("Waiting for job in SandboxJobQueue...")
+            result = await client.redis_client.blpop("SandboxJobQueue", timeout=0)
+        except asyncio.CancelledError:
+            return
         logger.info(f"SandboxJob received: {result}")
         if result:
             _, job_request = result
@@ -136,12 +147,12 @@ async def process_job(job: SandboxJob) -> SandboxJobResult:
         logger.error(f"SandboxJob error: {e}")
         return await set_result(job, JobStatus.FAILED)
     finally:
-        cleanup_workspace(job.job_id)
+        ـcleanup_workspace(job.job_id)
 
 
 async def compile_job(job: SandboxJob) -> SandboxJob | None:
-    class_name = extract_class_name(job.request.java_code)
-    workspace = create_workspace(job.job_id)
+    class_name = ـextract_class_name(job.request.java_code)
+    workspace = ـcreate_workspace(job.job_id)
 
     src_file = workspace / "src" / f"{class_name}.java"
     src_file.write_text(job.request.java_code)
@@ -182,7 +193,7 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
 
 
 async def execute_job(job: SandboxJob) -> SandboxJob | None:
-    class_name = extract_class_name(job.request.java_code)
+    class_name = ـextract_class_name(job.request.java_code)
     workspace = SANDBOX_TMP_DIR / str(job.job_id)
 
     input_file = workspace / "input" / "input.txt"
@@ -222,7 +233,7 @@ async def run_test_cases(job: SandboxJob) -> SandboxJob | None:
         logger.info(f"Job {job.job_id} has no test cases, skipping")
         return job
 
-    class_name = extract_class_name(job.request.java_code)
+    class_name = ـextract_class_name(job.request.java_code)
     workspace = SANDBOX_TMP_DIR / str(job.job_id)
     input_file = workspace / "input" / "input.txt"
     results = []
@@ -279,4 +290,7 @@ async def save_result(job: SandboxJobResult):
 
 
 if __name__ == "__main__":
-    asyncio.run(start())
+    try:
+        asyncio.run(start())
+    except KeyboardInterrupt:
+        logger.info("Sandbox Worker shut down gracefully")
