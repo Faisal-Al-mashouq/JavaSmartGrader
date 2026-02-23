@@ -8,19 +8,18 @@ import uuid
 from pathlib import Path
 
 import redis.asyncio as redis
-from dotenv import load_dotenv
-
 from backend.sandbox.schemas import (
-    SandboxJobRequest,
-    SandboxJob,
-    SandboxJobResult,
-    SandboxResult,
     CompilationJobResult,
     ExecutionJobResult,
+    JobStatus,
+    SandboxJob,
+    SandboxJobRequest,
+    SandboxJobResult,
+    SandboxResult,
     TestCaseResult,
     TestCasesResult,
-    JobStatus
 )
+from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -77,12 +76,12 @@ async def main_loop(client: Sandbox):
         logger.info(f"SandboxJob received: {result}")
         if result:
             _, job_request = result
-            
+
             initialized_job = await initialize_job(job_request)
             if not initialized_job:
                 logger.error("Failed to initialize job, skipping")
                 continue
-            
+
             processed_job = await process_job(initialized_job)
             if processed_job.status != JobStatus.COMPLETED:
                 logger.error("Failed to process job, skipping")
@@ -112,27 +111,27 @@ async def initialize_job(job_request: str) -> SandboxJob | None:
 async def process_job(job: SandboxJob) -> SandboxJobResult:
     logger.info(f"Processing Job: {job.job_id}")
     try:
-        logger.info(f"Job {job.job_id} compilation started")    
+        logger.info(f"Job {job.job_id} compilation started")
         compiled_job = await compile_job(job)
         if not compiled_job:
             logger.error(f"Compilation failed for Job: {job.job_id}")
             return await set_result(job, JobStatus.FAILED)
-        
+
         logger.info(f"Job {job.job_id} execution started")
         executed_job = await execute_job(compiled_job)
         if not executed_job:
             logger.error(f"Execution failed for Job: {job.job_id}")
             return await set_result(compiled_job, JobStatus.FAILED)
-        
+
         logger.info(f"Job {job.job_id} test cases execution started")
         tested_job = await run_test_cases(executed_job)
         if not tested_job:
             logger.error(f"Test cases failed for Job: {job.job_id}")
             return await set_result(executed_job, JobStatus.FAILED)
-    
+
         logger.info(f"Job {job.job_id} completed successfully")
         return await set_result(tested_job, JobStatus.COMPLETED)
-    
+
     except Exception as e:
         logger.error(f"SandboxJob error: {e}")
         return await set_result(job, JobStatus.FAILED)
@@ -244,7 +243,7 @@ async def set_result(job: SandboxJob, status: JobStatus) -> SandboxJobResult:
 
 async def save_result(job: SandboxJobResult):
     # Placeholder for result saving logic (e.g., storing in Redis, database)
-    logger.info(f"Job result saved successfully")
+    logger.info("Job result saved successfully")
 
 
 if __name__ == "__main__":

@@ -68,7 +68,13 @@ class SandboxJob(BaseModel):
     job_id: uuid.UUID
     status: JobStatus
     created_at: datetime.datetime
-    request: SandboxJobRequest| CompilationJobRequest | ExecutionJobRequest | TestCasesRequest | None
+    request: (
+        SandboxJobRequest |
+        CompilationJobRequest |
+        ExecutionJobRequest |
+        TestCasesRequest |
+        None
+    )
     result: SandboxResult | None
 
 
