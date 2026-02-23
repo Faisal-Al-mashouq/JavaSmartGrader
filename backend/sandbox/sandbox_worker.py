@@ -99,7 +99,7 @@ async def initialize_job(job_request: str) -> SandboxJob | None:
             status=JobStatus.PENDING,
             created_at=datetime.datetime.now(),
             request=sandbox_job_request,
-            result=None
+            result=None,
         )
         logger.info(f"Job initialized successfully: {job.job_id}")
         return job
@@ -146,12 +146,22 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
     src_file = workspace / "src" / f"{class_name}.java"
     src_file.write_text(job.request.java_code)
 
-    returncode, stdout, stderr = await run_container([
-        "docker", "run", "--rm",
-        "-v", f"{workspace}:/workspace",
-        "--memory=256m", "--network=none", "--pids-limit=50",
-        "compiler-image", "sh", "/scripts/compile.sh", class_name
-    ])
+    returncode, stdout, stderr = await run_container(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{workspace}:/workspace",
+            "--memory=256m",
+            "--network=none",
+            "--pids-limit=50",
+            "compiler-image",
+            "sh",
+            "/scripts/compile.sh",
+            class_name,
+        ]
+    )
 
     if returncode != 0:
         logger.error(f"Compilation failed for Job {job.job_id}: {stderr}")
@@ -178,12 +188,23 @@ async def execute_job(job: SandboxJob) -> SandboxJob | None:
     input_file = workspace / "input" / "input.txt"
     input_file.write_text("")
 
-    returncode, stdout, stderr = await run_container([
-        "docker", "run", "--rm",
-        "-v", f"{workspace}:/workspace",
-        "--memory=256m", "--network=none", "--pids-limit=50", "--read-only",
-        "executer-image", "sh", "/scripts/execute.sh", class_name
-    ])
+    returncode, stdout, stderr = await run_container(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{workspace}:/workspace",
+            "--memory=256m",
+            "--network=none",
+            "--pids-limit=50",
+            "--read-only",
+            "executer-image",
+            "sh",
+            "/scripts/execute.sh",
+            class_name,
+        ]
+    )
 
     if returncode != 0:
         logger.error(f"Execution failed for Job {job.job_id}: {stderr}")
@@ -209,23 +230,36 @@ async def run_test_cases(job: SandboxJob) -> SandboxJob | None:
     for test_case in job.request.test_cases.test_cases:
         input_file.write_text(str(test_case.input))
 
-        returncode, stdout, stderr = await run_container([
-            "docker", "run", "--rm",
-            "-v", f"{workspace}:/workspace",
-            "--memory=256m", "--network=none", "--pids-limit=50", "--read-only",
-            "executer-image", "sh", "/scripts/execute.sh", class_name
-        ])
+        returncode, stdout, stderr = await run_container(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{workspace}:/workspace",
+                "--memory=256m",
+                "--network=none",
+                "--pids-limit=50",
+                "--read-only",
+                "executer-image",
+                "sh",
+                "/scripts/execute.sh",
+                class_name,
+            ]
+        )
 
         actual_output = stdout.strip() if returncode == 0 else stderr.strip()
         expected = str(test_case.expected_output).strip()
         passed = returncode == 0 and actual_output == expected
 
-        results.append(TestCaseResult(
-            input=test_case.input,
-            expected_output=test_case.expected_output,
-            actual_output=actual_output,
-            passed=passed,
-        ))
+        results.append(
+            TestCaseResult(
+                input=test_case.input,
+                expected_output=test_case.expected_output,
+                actual_output=actual_output,
+                passed=passed,
+            )
+        )
 
     job.result.test_cases_results = TestCasesResult(results=results)
     logger.info(f"Job {job.job_id} test cases executed successfully")
@@ -234,9 +268,7 @@ async def run_test_cases(job: SandboxJob) -> SandboxJob | None:
 
 async def set_result(job: SandboxJob, status: JobStatus) -> SandboxJobResult:
     sandbox_result = SandboxJobResult(
-        job_id=job.job_id,
-        status=status,
-        result=job.result
+        job_id=job.job_id, status=status, result=job.result
     )
     return sandbox_result
 

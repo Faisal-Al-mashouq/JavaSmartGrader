@@ -69,11 +69,11 @@ class SandboxJob(BaseModel):
     status: JobStatus
     created_at: datetime.datetime
     request: (
-        SandboxJobRequest |
-        CompilationJobRequest |
-        ExecutionJobRequest |
-        TestCasesRequest |
-        None
+        SandboxJobRequest
+        | CompilationJobRequest
+        | ExecutionJobRequest
+        | TestCasesRequest
+        | None
     )
     result: SandboxResult | None
 
