@@ -11,6 +11,7 @@ class JobStatus(enum.Enum):
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    ERROR = "ERROR"
 
 
 class CompilationJobRequest(BaseModel):
@@ -47,9 +48,17 @@ class ExecutionJobRequest(BaseModel):
     test_cases: TestCasesRequest | None
 
 
+class ExecutionOutput(BaseModel):
+    returncode: int
+    stdout: str
+    stderr: str
+    test_case: TestCaseRequest | None
+
+
 class ExecutionJobResult(BaseModel):
     success: bool
     errors: list[str] | None
+    outputs: list[ExecutionOutput] | None
 
 
 class SandboxJobRequest(BaseModel):

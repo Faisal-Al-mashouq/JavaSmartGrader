@@ -27,12 +27,15 @@ backend/
 ├── pyproject.toml       # Project configuration and dependencies
 ├── sandbox/
 │   ├── __init__.py
-│   ├── sandbox_worker.py  # Async worker that processes Java compile/execute jobs
+│   ├── sandbox_worker.py  # Async worker orchestrator (main loop, job lifecycle)
+│   ├── jobs.py            # Job processing (compile, execute, test case evaluation)
+│   ├── helpers.py         # Workspace management, Docker container commands
 │   ├── schemas.py         # Pydantic models for jobs, results, and test cases
+│   ├── test_jobs.py       # Script to push test payloads to Redis queue
 │   ├── TODO.md
 │   ├── Dockerfile.compiler
 │   ├── Dockerfile.executer
-│   └── tmp/               # Temporary workspaces (created at runtime)
+│   └── tmp/               # Temporary workspaces and test results (created at runtime)
 └── README.md            # This file
 ```
 
@@ -90,7 +93,9 @@ The worker supports graceful shutdown via Ctrl+C (SIGINT).
 
 ### Docker Images
 
-Build from the project root:
+Docker images (`compiler-image` and `executer-image`) are built automatically when the worker starts.
+
+To build them manually from the project root:
 
 ```bash
 # Compiler image
