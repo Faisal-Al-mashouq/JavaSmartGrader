@@ -1,5 +1,4 @@
 import redis.asyncio as redis
-import time
 import uuid
 
 class RedisSandbox:

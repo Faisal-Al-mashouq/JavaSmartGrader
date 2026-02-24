@@ -74,13 +74,13 @@ async def run_container(cmd: list[str]) -> tuple[int, str, str]:
 async def start():
     client = Sandbox(os.getenv("REDIS_ENDPOINT"), max_concurrency=4)
     logger.info("Sandbox Worker started")
-    await asyncio.gather(*(main_loop(client) for _ in range(client.max_concurrency)))
+    await asyncio.gather(*(main_loop(client, _) for _ in range(client.max_concurrency)))
 
 
-async def main_loop(client: Sandbox):
+async def main_loop(client: Sandbox, process_id: int = 0):
     while True:
         try:
-            logger.info("Waiting for job in SandboxJobQueue...")
+            logger.info(f"Process #{process_id}: Waiting for job in SandboxJobQueue...")
             result = await client.redis_client.blpop("SandboxJobQueue", timeout=0)
         except asyncio.CancelledError:
             return
@@ -285,12 +285,47 @@ async def set_result(job: SandboxJob, status: JobStatus) -> SandboxJobResult:
 
 
 async def save_result(job: SandboxJobResult):
-    # Placeholder for result saving logic (e.g., storing in Redis, database)
-    logger.info("Job result saved successfully")
+    results_dir = SANDBOX_TMP_DIR / "test_results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    result_file = results_dir / f"{job.job_id}.txt"
+    result_file.write_text(job.model_dump_json(indent=2))
+    logger.info(f"Job result saved to {result_file}")
 
 
 if __name__ == "__main__":
     try:
+        # This should be used only for testing the worker locally, in production we will push jobs to the queue from the API server
+        import redis as sync_redis
+        import json
+        import uuid
+        logger.info("Starting Test Sandbox Worker...")
+        r = sync_redis.Redis.from_url(os.getenv("REDIS_ENDPOINT"), decode_responses=True)
+        payload = json.dumps(
+            {
+                "job_id": str(uuid.uuid4()),
+                "java_code": "public class Main { public static void main(String[] args) { System.out.println(\"Hello, World!\"); } }",
+                "test_cases": {
+                    "test_cases": [
+                        {"input": "", "expected_output": "Hello, World!"}
+                    ]
+                },
+            }
+        )
+        r.lpush("SandboxJobQueue", payload)
+        logger.info("Test job 1 pushed to SandboxJobQueue")
+        payload2 = json.dumps(
+            {
+                "job_id": str(uuid.uuid4()),
+                "java_code": "public class HelloWorld { public static void main(String[] args) { System.out.println(\"Hello All World!\"); } }",
+                "test_cases": {
+                    "test_cases": [
+                        {"input": "", "expected_output": "Hello, World!"}
+                    ]
+                },
+            }
+        )
+        r.lpush("SandboxJobQueue", payload2)
+        logger.info("Test job 2 pushed to SandboxJobQueue")
         asyncio.run(start())
     except KeyboardInterrupt:
         logger.info("Sandbox Worker shut down gracefully")

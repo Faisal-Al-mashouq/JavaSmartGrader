@@ -10,7 +10,7 @@ docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --ne
 
 ### Executer
 Docker build image:
-docker
+docker build -f backend/sandbox/Dockerfile.runner -t executer-image backend/sandbox/
 
 Docker run container:
 docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --network=none --pids-limit=50 --read-only executer-image sh /scripts/execute.sh {CLASS_NAME} > $(pwd)/backend/sandbox/tmp/test/out/output.txt 2> $(pwd)/backend/sandbox/tmp/test/out/errors.txt
