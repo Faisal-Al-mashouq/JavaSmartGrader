@@ -1,6 +1,7 @@
 import redis.asyncio as redis
 import uuid
 
+
 class RedisSandbox:
     def __init__(self, redis_url: str):
         self.redis_url = redis_url
@@ -44,4 +45,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

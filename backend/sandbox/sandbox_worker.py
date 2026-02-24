@@ -294,20 +294,27 @@ async def save_result(job: SandboxJobResult):
 
 if __name__ == "__main__":
     try:
-        # This should be used only for testing the worker locally, in production we will push jobs to the queue from the API server
-        import redis as sync_redis
+        # This should be used only for testing the worker locally
+        # In production we will push jobs to the queue from the API server
         import json
         import uuid
+
+        import redis as sync_redis
+
         logger.info("Starting Test Sandbox Worker...")
-        r = sync_redis.Redis.from_url(os.getenv("REDIS_ENDPOINT"), decode_responses=True)
+        r = sync_redis.Redis.from_url(
+            os.getenv("REDIS_ENDPOINT"),
+            decode_responses=True,
+        )
         payload = json.dumps(
             {
                 "job_id": str(uuid.uuid4()),
-                "java_code": "public class Main { public static void main(String[] args) { System.out.println(\"Hello, World!\"); } }",
+                "java_code": """
+                public class Main { public static void main(String[] args) {
+                System.out.println(\"Hello, World!\"); } }
+                """,
                 "test_cases": {
-                    "test_cases": [
-                        {"input": "", "expected_output": "Hello, World!"}
-                    ]
+                    "test_cases": [{"input": "", "expected_output": "Hello, World!"}]
                 },
             }
         )
@@ -316,11 +323,12 @@ if __name__ == "__main__":
         payload2 = json.dumps(
             {
                 "job_id": str(uuid.uuid4()),
-                "java_code": "public class HelloWorld { public static void main(String[] args) { System.out.println(\"Hello All World!\"); } }",
+                "java_code": """public class HelloWorld {
+                public static void main(String[] args) {
+                System.out.println(\"Hello All World!\"); } }
+                """,
                 "test_cases": {
-                    "test_cases": [
-                        {"input": "", "expected_output": "Hello, World!"}
-                    ]
+                    "test_cases": [{"input": "", "expected_output": "Hello, World!"}]
                 },
             }
         )
