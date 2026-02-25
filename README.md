@@ -7,6 +7,7 @@ An automated grading system for Java programming assignments, featuring a Python
 ```
 JavaSmartGrader/
 ├── backend/          # Python API server
+│   └── sandbox/      # Async sandbox worker (Docker-based Java compile & execute)
 ├── frontend/         # React web application
 ├── dataset/          # Training and test datasets
 ├── experiments/      # Experiment logs and results
@@ -20,6 +21,8 @@ JavaSmartGrader/
 - Python 3.12+
 - Node.js 18+
 - npm or yarn
+- Docker (for sandbox worker)
+- Redis (for job queue)
 
 ### Backend Setup
 

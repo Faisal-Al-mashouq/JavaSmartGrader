@@ -1,0 +1,5 @@
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /workspace
+COPY scripts/execute.sh /scripts/execute.sh
+RUN chmod +x /scripts/execute.sh
+CMD ["sh"]

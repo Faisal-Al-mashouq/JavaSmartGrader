@@ -1,10 +1,25 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "This is the full dependencies list for the backend subdirectory."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "azure-ai-formrecognizer>=3.3.3",
+    "docker>=7.1.0",
+    "google-genai>=1.63.0",
+    "httpx>=0.28.1",
+    "opencv-python>=4.13.0.92",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "redis>=7.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.1.0",
+    "ruff>=0.15.1",
+]
 
 [tool.ruff]
 target-version = "py312"
