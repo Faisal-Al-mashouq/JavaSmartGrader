@@ -1,12 +1,23 @@
 from .base import Base
 from .main_db import (
-    User,
+    AIFeedback,
     Assignment,
+    CompileResult,
+    Grade,
     Submission,
     Testcase,
-    AIFeedback,
-    CompileResult,
     Transcription,
-    Grade,
+    User,
 )
 
+__all__ = [
+    "Base",
+    "User",
+    "Assignment",
+    "Submission",
+    "Testcase",
+    "AIFeedback",
+    "CompileResult",
+    "Transcription",
+    "Grade",
+]
