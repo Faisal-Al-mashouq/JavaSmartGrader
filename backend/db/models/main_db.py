@@ -36,6 +36,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     role: Mapped[UserRole] = mapped_column(
         SAEnum(UserRole), name="user_role", nullable=False
     )
@@ -67,6 +68,12 @@ class Assignment(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     instructor_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     suggested_grade: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     feedback_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -76,6 +83,12 @@ class Assignment(Base):
         back_populates="assignments",
         foreign_keys=[instructor_id],
     )
+
+    testcases: Mapped[list["Testcase"]] = relationship(
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+    )
+
     submissions: Mapped[list["Submission"]] = relationship(
         back_populates="assignment",
         cascade="all, delete-orphan",
@@ -103,18 +116,13 @@ class Submission(Base):
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.now(),
+        default=datetime.now,
     )
 
     assignment: Mapped["Assignment"] = relationship(back_populates="submissions")
     student: Mapped["User"] = relationship(
         back_populates="submissions",
         foreign_keys=[student_id],
-    )
-
-    testcases: Mapped[list["Testcase"]] = relationship(
-        back_populates="submission",
-        cascade="all, delete-orphan",
     )
 
     ai_feedback: Mapped[Optional["AIFeedback"]] = relationship(
@@ -149,14 +157,14 @@ class Testcase(Base):
     __tablename__ = "testcases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    submission_id: Mapped[int] = mapped_column(
-        ForeignKey("submissions.id"), nullable=False
+    assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("assignments.id"), nullable=False
     )
 
     input: Mapped[str] = mapped_column(Text, nullable=False)
-    suggested_output: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_output: Mapped[str] = mapped_column(Text, nullable=False)
 
-    submission: Mapped["Submission"] = relationship(back_populates="testcases")
+    assignment: Mapped["Assignment"] = relationship(back_populates="testcases")
 
 
 class AIFeedback(Base):
@@ -189,6 +197,7 @@ class CompileResult(Base):
 
     compiled_ok: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     compile_errors: Mapped[str | None] = mapped_column(Text, nullable=True)
+    runtime_errors: Mapped[str | None] = mapped_column(Text, nullable=True)
     runtime_output: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     submission: Mapped["Submission"] = relationship(back_populates="compile_results")

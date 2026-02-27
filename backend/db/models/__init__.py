@@ -5,12 +5,16 @@ from .main_db import (
     CompileResult,
     Grade,
     Submission,
+    SubmissionState,
     Testcase,
     Transcription,
     User,
+    UserRole,
 )
 
 __all__ = [
+    "UserRole",
+    "SubmissionState",
     "Base",
     "User",
     "Assignment",
