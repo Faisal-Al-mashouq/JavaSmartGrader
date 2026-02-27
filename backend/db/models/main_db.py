@@ -214,7 +214,7 @@ class Transcription(Base):
         ForeignKey("submissions.id"), nullable=False
     )
 
-    feedback_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    transcribed_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     submission: Mapped["Submission"] = relationship(back_populates="transcription")
 
