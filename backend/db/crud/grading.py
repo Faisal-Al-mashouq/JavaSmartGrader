@@ -66,11 +66,11 @@ async def get_compile_result_by_submission_id(
 
 
 async def create_transcription(
-    session: AsyncSession, submission_id: int, feedback_text: str | None
+    session: AsyncSession, submission_id: int, transcription: str | None
 ) -> Transcription:
     transcription = Transcription(
         submission_id=submission_id,
-        feedback_text=feedback_text,
+        transcription=transcription,
     )
     session.add(transcription)
     await session.commit()
