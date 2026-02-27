@@ -92,6 +92,7 @@ model/*.bin
 *.parquet
 !dataset/.gitkeep
 experiments/LLM/results/
+experiments/db-basics/
 
 # Misc
 .cache/

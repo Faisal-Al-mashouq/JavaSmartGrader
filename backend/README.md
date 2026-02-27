@@ -25,6 +25,20 @@ python main.py
 backend/
 ├── main.py              # Application entry point
 ├── pyproject.toml       # Project configuration and dependencies
+├── db/
+│   ├── models/
+│   │   ├── base.py          # Declarative base
+│   │   ├── main_db.py       # ORM models (User, Assignment, Submission, etc.)
+│   │   └── __init__.py      # Re-exports models
+│   ├── crud/
+│   │   ├── users.py         # User CRUD
+│   │   ├── assignments.py   # Assignment CRUD
+│   │   ├── submissions.py   # Submission CRUD
+│   │   ├── grading.py       # Testcase, CompileResult, Transcription, AIFeedback, Grade CRUD
+│   │   └── __init__.py      # Re-exports all CRUD functions
+│   ├── alembic/             # Migration versions
+│   ├── alembic.ini          # Alembic configuration
+│   └── session.py           # Async engine and session factory
 ├── sandbox/
 │   ├── __init__.py
 │   ├── sandbox_worker.py  # Async worker orchestrator (main loop, job lifecycle)
@@ -78,6 +92,34 @@ Environment variables:
 | `PORT` | Server port | `8000` |
 | `DEBUG` | Enable debug mode | `false` |
 | `REDIS_ENDPOINT` | Redis connection URL for sandbox job queue | — |
+| `DATABASE_URL` | PostgreSQL async connection URL | — |
+
+## Database
+
+Async PostgreSQL database using SQLAlchemy 2.0 ORM with Alembic migrations.
+
+### Models
+
+- **User** - Students and instructors (role-based)
+- **Assignment** - Questions, test cases, due dates, rubrics
+- **Submission** - Student work linked to assignments (state: submitted/processing/graded/failed)
+- **Testcase** - Input/output pairs per assignment
+- **CompileResult** - Compilation and runtime results per submission
+- **Transcription** - OCR/transcription output per submission
+- **AIFeedback** - AI-suggested grade and feedback per submission
+- **Grade** - Final instructor grade per submission
+
+### Migrations
+
+```bash
+# Generate migration after model changes
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+```
+
+See [db/README.md](db/README.md) for full details.
 
 ## Sandbox Worker
 
