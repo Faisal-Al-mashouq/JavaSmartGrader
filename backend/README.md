@@ -5,6 +5,9 @@ Python backend service for the JavaSmartGrader application.
 ## Requirements
 
 - Python 3.12+
+- PostgreSQL
+- Redis
+- Docker (for sandbox worker)
 
 ## Installation
 
@@ -16,15 +19,25 @@ pip install -e .
 ## Running the Server
 
 ```bash
-python main.py
+uvicorn main:app --reload
 ```
+
+The API runs at http://localhost:8000. Interactive docs are available at http://localhost:8000/docs.
 
 ## Project Structure
 
 ```
 backend/
-├── main.py              # Application entry point
+├── main.py              # FastAPI application entry point and router registration
 ├── pyproject.toml       # Project configuration and dependencies
+├── api/
+│   ├── auth.py          # JWT creation, token verification, role enforcement
+│   ├── dependencies.py  # Shared FastAPI dependencies (DB session)
+│   └── routes/
+│       ├── users.py         # /users — register, login, profile
+│       ├── assignments.py   # /assignments — CRUD + testcase management
+│       ├── submissions.py   # /submissions — student submission lifecycle
+│       └── grading.py       # /grading — compile results, AI feedback, grades
 ├── db/
 │   ├── models/
 │   │   ├── base.py          # Declarative base
@@ -40,63 +53,49 @@ backend/
 │   ├── alembic.ini          # Alembic configuration
 │   └── session.py           # Async engine and session factory
 ├── sandbox/
-│   ├── __init__.py
 │   ├── sandbox_worker.py  # Async worker orchestrator (main loop, job lifecycle)
 │   ├── jobs.py            # Job processing (compile, execute, test case evaluation)
 │   ├── helpers.py         # Workspace management, Docker container commands
 │   ├── schemas.py         # Pydantic models for jobs, results, and test cases
 │   ├── test_jobs.py       # Script to push test payloads to Redis queue
-│   ├── TODO.md
 │   ├── Dockerfile.compiler
 │   ├── Dockerfile.executer
 │   └── tmp/               # Temporary workspaces and test results (created at runtime)
 └── README.md            # This file
 ```
 
-## Development
-
-### Adding Dependencies
-
-Edit `pyproject.toml` to add new dependencies:
-
-```toml
-[project]
-dependencies = [
-    "fastapi",
-    "uvicorn",
-]
-```
-
-Then reinstall:
-
-```bash
-pip install -e .
-```
-
-### Running Tests
-
-```bash
-pytest
-```
-
-## API Endpoints
-
-*API endpoints will be documented here as they are developed.*
-
 ## Configuration
 
-Environment variables:
+Create a `.env` file in `backend/`:
+
+```env
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/smartgrader
+REDIS_ENDPOINT=redis://localhost:6379
+JWT_SECRET_KEY=your-secret-key
+```
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Server port | `8000` |
-| `DEBUG` | Enable debug mode | `false` |
-| `REDIS_ENDPOINT` | Redis connection URL for sandbox job queue | — |
 | `DATABASE_URL` | PostgreSQL async connection URL | — |
+| `REDIS_ENDPOINT` | Redis connection URL for sandbox job queue | — |
+| `JWT_SECRET_KEY` | Secret key for signing JWT tokens | — |
+
+## API
+
+See [api/README.md](api/README.md) for full endpoint documentation.
+
+The API is organized into four routers:
+
+| Prefix | Description |
+|--------|-------------|
+| `/users` | Registration, login, profile management |
+| `/assignments` | Assignment and testcase CRUD (instructors) |
+| `/submissions` | Submission lifecycle (students and instructors) |
+| `/grading` | Compile results, transcriptions, AI feedback, grades |
 
 ## Database
 
-Async PostgreSQL database using SQLAlchemy 2.0 ORM with Alembic migrations.
+Async PostgreSQL using SQLAlchemy 2.0 ORM with Alembic migrations.
 
 ### Models
 
@@ -123,7 +122,7 @@ See [db/README.md](db/README.md) for full details.
 
 ## Sandbox Worker
 
-The sandbox worker is an async service that processes Java compilation and execution jobs from a Redis queue. It runs Docker containers in isolated environments with memory limits, network isolation, and PID limits.
+Async service that compiles and executes Java submissions in isolated Docker containers, consuming jobs from a Redis queue.
 
 ### Running the Worker
 
@@ -135,14 +134,27 @@ The worker supports graceful shutdown via Ctrl+C (SIGINT).
 
 ### Docker Images
 
-Docker images (`compiler-image` and `executer-image`) are built automatically when the worker starts.
-
-To build them manually from the project root:
+Built automatically on worker startup. To build manually from the project root:
 
 ```bash
-# Compiler image
 docker build -f backend/sandbox/Dockerfile.compiler -t compiler-image backend/sandbox/
-
-# Executer image
 docker build -f backend/sandbox/Dockerfile.executer -t executer-image backend/sandbox/
+```
+
+See [sandbox/README.md](sandbox/README.md) for full details.
+
+## Development
+
+### Adding Dependencies
+
+Edit `pyproject.toml`, then reinstall:
+
+```bash
+pip install -e .
+```
+
+### Running Tests
+
+```bash
+pytest
 ```
