@@ -1,37 +1,9 @@
-from sqlalchemy import delete, select, update
+from datetime import datetime
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import AIFeedback, CompileResult, Grade, Testcase, Transcription
-
-
-async def create_testcase(
-    session: AsyncSession, assignment_id: int, input_data: str, expected_output: str
-) -> Testcase:
-    testcase = Testcase(
-        assignment_id=assignment_id,
-        input=input_data,
-        expected_output=expected_output,
-    )
-    session.add(testcase)
-    await session.commit()
-    await session.refresh(testcase)
-    return testcase
-
-
-async def get_testcases_by_assignment_id(
-    session: AsyncSession, assignment_id: int
-) -> list[Testcase]:
-
-    result = await session.execute(
-        select(Testcase).where(Testcase.assignment_id == assignment_id)
-    )
-    return result.scalars().all()
-
-
-async def delete_testcase(session: AsyncSession, testcase_id: int) -> None:
-
-    await session.execute(delete(Testcase).where(Testcase.id == testcase_id))
-    await session.commit()
+from ..models import AIFeedback, CompileResult, Grade, Transcription
 
 
 async def create_compile_result(
@@ -66,11 +38,11 @@ async def get_compile_result_by_submission_id(
 
 
 async def create_transcription(
-    session: AsyncSession, submission_id: int, transcription: str | None
+    session: AsyncSession, submission_id: int, transcribed_text: str | None
 ) -> Transcription:
     transcription = Transcription(
         submission_id=submission_id,
-        transcription=transcription,
+        transcribed_text=transcribed_text,
     )
     session.add(transcription)
     await session.commit()
@@ -124,6 +96,7 @@ async def create_grade(
         submission_id=submission_id,
         instructor_id=instructor_id,
         final_grade=final_grade,
+        published_at=datetime.now if final_grade is not None else None,
     )
     session.add(grade)
     await session.commit()
