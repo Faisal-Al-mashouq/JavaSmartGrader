@@ -50,8 +50,5 @@ select = [
 target-version = ["py312"]
 line-length = 120
 
-[dependency-groups]
-dev = [
-    "black>=26.1.0",
-    "ruff>=0.15.1",
-]
+
+
