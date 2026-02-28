@@ -20,8 +20,6 @@ npm install
 
 Runs the app in development mode at [http://localhost:3000](http://localhost:3000).
 
-The page will reload when you make changes.
-
 ### `npm test`
 
 Launches the test runner in interactive watch mode.
@@ -38,75 +36,46 @@ Ejects from Create React App (one-way operation).
 
 ```
 frontend/
-├── public/              # Static assets
+├── public/                   # Static assets
 ├── src/
-│   ├── App.js           # Main application component
-│   ├── App.css          # Application styles
-│   ├── index.js         # Entry point
-│   └── index.css        # Global styles
-├── package.json         # Dependencies and scripts
-└── README.md            # This file
+│   ├── components/
+│   │   ├── Navbar.jsx        # Top navigation bar
+│   │   └── ProtectedRoute.jsx# Auth-gated route wrapper
+│   ├── context/
+│   │   └── AuthContext.jsx   # Authentication context/provider
+│   ├── layout/
+│   │   ├── DashboardLayout.jsx
+│   │   ├── InstructorLayout.jsx
+│   │   └── MainLayout.jsx
+│   ├── pages/
+│   │   ├── Home.jsx
+│   │   ├── Login.jsx
+│   │   ├── Dashboard.jsx
+│   │   └── dashboard/
+│   │       ├── instructor/
+│   │       │   ├── InstructorHome.jsx
+│   │       │   ├── InstructorGrading.jsx
+│   │       │   └── InstructorSubmissions.jsx
+│   │       └── student/
+│   │           ├── StudentHome.jsx
+│   │           ├── StudentUpload.jsx
+│   │           └── StudentSubmissions.jsx
+│   ├── services/
+│   │   └── api.js            # API client for backend communication
+│   ├── App.js                # Main application component and routing
+│   └── index.js              # Entry point
+├── tailwind.config.js        # Tailwind CSS configuration
+├── package.json              # Dependencies and scripts
+└── README.md                 # This file
 ```
 
 ## Tech Stack
 
 - React 19
+- React Router v7
+- Tailwind CSS
 - Create React App
-- Testing Library
 
-## Development
+## Connecting to Backend
 
-### Adding Components
-
-Create new components in the `src/` directory:
-
-```jsx
-// src/components/GradeDisplay.js
-function GradeDisplay({ score, maxScore }) {
-  return (
-    <div className="grade-display">
-      <span>{score}</span> / <span>{maxScore}</span>
-    </div>
-  );
-}
-
-export default GradeDisplay;
-```
-
-### Connecting to Backend
-
-The backend API runs on port 8000. Configure a proxy in `package.json`:
-
-```json
-{
-  "proxy": "http://localhost:8000"
-}
-```
-
-Then make API calls:
-
-```jsx
-fetch('/api/submissions')
-  .then(res => res.json())
-  .then(data => console.log(data));
-```
-
-## Testing
-
-Run tests with:
-
-```bash
-npm test
-```
-
-Write tests using Testing Library:
-
-```jsx
-import { render, screen } from '@testing-library/react';
-import App from './App';
-
-test('renders app', () => {
-  render(<App />);
-  expect(screen.getByText(/learn react/i)).toBeInTheDocument();
-});
-```
+The backend API runs on port 8000. API calls are made via `src/services/api.js`.
