@@ -41,7 +41,7 @@ async def register_user(
 
 @router.post("/login")
 async def login_user():
-    form_data: OAuth2PasswordRequestForm = (Depends(),)
+    form_data: OAuth2PasswordRequestForm = Depends()
     session = Depends(get_db)
 
     user = await get_user_by_username(session, form_data.username)
@@ -64,7 +64,7 @@ async def update_email(
     new_email: str,
 ):
     session = Depends(get_db)
-    current_user = (Depends(get_current_user),)
+    current_user = Depends(get_current_user)
 
     result = await update_user_email(
         session=session, username=current_user.username, new_email=new_email

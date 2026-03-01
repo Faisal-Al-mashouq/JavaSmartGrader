@@ -42,8 +42,8 @@ async def submit_answer(
 
 @router.get("/me", response_model=list[SubmissionBase])
 async def get_student_submissions():
-    session = (Depends(get_db),)
-    current_user = (Depends(get_current_user),)
+    session = Depends(get_db)
+    current_user = Depends(get_current_user)
 
     return await get_submissions_by_student_id(session, current_user.id)
 
@@ -52,8 +52,8 @@ async def get_student_submissions():
 async def get_submission(
     submission_id: int,
 ):
-    session = (Depends(get_db),)
-    current_user = (Depends(get_current_user),)
+    session = Depends(get_db)
+    current_user = Depends(get_current_user)
 
     submission = await get_submission_by_id(session, submission_id)
     if not submission:
@@ -96,10 +96,10 @@ async def remove_submission(
     session = Depends(get_db)
     current_user = Depends(require_role(UserRole.student))
 
-    submisson = await get_submission_by_id(session, submission_id)
-    if not submisson:
+    submission = await get_submission_by_id(session, submission_id)
+    if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
-    elif submisson.student_id != current_user.id:
+    elif submission.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
     success = await delete_submission(session, submission_id)
     if not success:
