@@ -13,8 +13,8 @@ Quick start::
     print(result.corrected_code)
 """
 
-from ocr_corrector.pipeline import OCRCorrectionPipeline
 from ocr_corrector.models import CorrectionResult, OCRLine, OCRWord
+from ocr_corrector.pipeline import OCRCorrectionPipeline
 
 __all__ = [
     "OCRCorrectionPipeline",

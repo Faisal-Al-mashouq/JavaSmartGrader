@@ -26,13 +26,13 @@ Run the worker (from CLI or supervisor)::
 from __future__ import annotations
 
 import json
-import uuid
 import logging
 import time
+import uuid
 
 import redis
 
-from ocr_corrector.config import REDIS_URL, REDIS_QUEUE_NAME, REDIS_RESULT_TTL
+from ocr_corrector.config import REDIS_QUEUE_NAME, REDIS_RESULT_TTL, REDIS_URL
 from ocr_corrector.pipeline import OCRCorrectionPipeline
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ def _get_redis() -> redis.Redis:
 
 
 # ── Enqueue ──────────────────────────────────────────────────────
+
 
 def enqueue_job(image_path: str, model: str | None = None) -> str:
     """
@@ -63,11 +64,13 @@ def enqueue_job(image_path: str, model: str | None = None) -> str:
     r = _get_redis()
     job_id = uuid.uuid4().hex[:12]
 
-    payload = json.dumps({
-        "job_id": job_id,
-        "image_path": image_path,
-        "model": model,
-    })
+    payload = json.dumps(
+        {
+            "job_id": job_id,
+            "image_path": image_path,
+            "model": model,
+        }
+    )
 
     r.set(f"ocr:status:{job_id}", "pending", ex=REDIS_RESULT_TTL)
     r.lpush(REDIS_QUEUE_NAME, payload)
@@ -77,6 +80,7 @@ def enqueue_job(image_path: str, model: str | None = None) -> str:
 
 
 # ── Query ────────────────────────────────────────────────────────
+
 
 def get_job_status(job_id: str) -> str | None:
     """Return the current status of a job, or None if not found."""
@@ -90,6 +94,7 @@ def get_job_result(job_id: str) -> dict | None:
 
 
 # ── Worker ───────────────────────────────────────────────────────
+
 
 def process_one(r: redis.Redis, pipeline: OCRCorrectionPipeline) -> bool:
     """

@@ -11,11 +11,11 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from azure.ai.formrecognizer import AnalysisFeature, DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.formrecognizer import DocumentAnalysisClient, AnalysisFeature
 
 from ocr_corrector.config import AZURE_ENDPOINT, AZURE_KEY
-from ocr_corrector.models import OCRWord, OCRLine
+from ocr_corrector.models import OCRLine, OCRWord
 
 logger = logging.getLogger(__name__)
 

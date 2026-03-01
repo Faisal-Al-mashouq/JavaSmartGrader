@@ -6,8 +6,9 @@ them as module-level constants. Call ``validate()`` at startup
 to fail fast on missing credentials.
 """
 
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,7 +47,7 @@ def validate() -> None:
     }
     missing = [name for name, value in required.items() if not value]
     if missing:
-        raise EnvironmentError(
+        raise OSError(
             f"Missing required environment variables: {', '.join(missing)}. "
             f"Copy .env.template → .env and fill in your keys."
         )

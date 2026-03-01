@@ -37,11 +37,14 @@ def main() -> None:
 
     if args.worker:
         from ocr_corrector.tasks import run_worker
+
         run_worker()
         return
 
     if not args.image:
-        parser.error("Provide an image path, or use --worker to start the queue worker.")
+        parser.error(
+            "Provide an image path, or use --worker to start the queue worker."
+        )
 
     from ocr_corrector.pipeline import OCRCorrectionPipeline
 
