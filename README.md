@@ -6,7 +6,9 @@ An automated grading system for Java programming assignments, featuring a Python
 
 ```
 JavaSmartGrader/
-├── backend/          # Python API server
+├── backend/          # Python backend
+│   ├── api/          # FastAPI REST API (auth, routes)
+│   ├── db/           # SQLAlchemy ORM models, CRUD, and Alembic migrations
 │   └── sandbox/      # Async sandbox worker (Docker-based Java compile & execute)
 ├── frontend/         # React web application
 ├── dataset/          # Training and test datasets
@@ -29,7 +31,7 @@ JavaSmartGrader/
 ```bash
 cd backend
 pip install -e .
-python main.py
+uvicorn main:app --reload
 ```
 
 ### Frontend Setup

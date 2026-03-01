@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Assignment
+from ..models import Assignment, Testcase
 
 
 async def create_assignment(
@@ -63,3 +63,33 @@ async def delete_assignment(session: AsyncSession, assignment_id: int) -> bool:
     )
     await session.commit()
     return result.rowcount > 0
+
+
+async def create_testcase(
+    session: AsyncSession, assignment_id: int, input_data: str, expected_output: str
+) -> Testcase:
+    testcase = Testcase(
+        assignment_id=assignment_id,
+        input=input_data,
+        expected_output=expected_output,
+    )
+    session.add(testcase)
+    await session.commit()
+    await session.refresh(testcase)
+    return testcase
+
+
+async def get_testcases_by_assignment_id(
+    session: AsyncSession, assignment_id: int
+) -> list[Testcase]:
+
+    result = await session.execute(
+        select(Testcase).where(Testcase.assignment_id == assignment_id)
+    )
+    return result.scalars().all()
+
+
+async def delete_testcase(session: AsyncSession, testcase_id: int) -> None:
+
+    await session.execute(delete(Testcase).where(Testcase.id == testcase_id))
+    await session.commit()
