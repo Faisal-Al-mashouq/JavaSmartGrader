@@ -1,0 +1,8 @@
+# Core pipeline
+azure-ai-formrecognizer>=3.3.0
+azure-core>=1.30.0
+google-genai>=1.0.0
+python-dotenv>=1.0.0
+
+# Redis job queue (optional — only needed for worker mode)
+redis>=5.0.0
