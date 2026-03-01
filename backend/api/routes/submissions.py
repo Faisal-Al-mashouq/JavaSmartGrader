@@ -1,6 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
-
 from db.crud.submissions import (
     create_submission,
     delete_submission,
@@ -10,7 +7,10 @@ from db.crud.submissions import (
     update_submission_state,
 )
 from db.models import SubmissionState, UserRole
+from fastapi import APIRouter, Depends, HTTPException
 from schemas import SubmissionBase
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
@@ -22,10 +22,9 @@ router = APIRouter()
 async def submit_answer(
     assignment_id: int,
     image_url: str | None = None,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.student)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.student))
-
     try:
         submission = await create_submission(
             session=session,
@@ -41,20 +40,19 @@ async def submit_answer(
 
 
 @router.get("/me", response_model=list[SubmissionBase])
-async def get_student_submissions():
-    session = Depends(get_db)
-    current_user = Depends(get_current_user)
-
+async def get_student_submissions(
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     return await get_submissions_by_student_id(session, current_user.id)
 
 
 @router.get("/{submission_id}", response_model=SubmissionBase)
 async def get_submission(
     submission_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    session = Depends(get_db)
-    current_user = Depends(get_current_user)
-
     submission = await get_submission_by_id(session, submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
@@ -70,9 +68,9 @@ async def get_submission(
 @router.get("/assignment/{assignment_id}", response_model=list[SubmissionBase])
 async def get_assignment_submissions(
     assignment_id: int,
+    session: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    Depends(require_role(UserRole.instructor))
     return await get_submissions_by_assignment_id(session, assignment_id)
 
 
@@ -80,9 +78,9 @@ async def get_assignment_submissions(
 async def change_submission_state(
     submission_id: int,
     new_state: SubmissionState,
+    session: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    Depends(require_role(UserRole.instructor))
     submission = await update_submission_state(session, submission_id, new_state)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
@@ -92,10 +90,9 @@ async def change_submission_state(
 @router.delete("/{submission_id}")
 async def remove_submission(
     submission_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.student)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.student))
-
     submission = await get_submission_by_id(session, submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")

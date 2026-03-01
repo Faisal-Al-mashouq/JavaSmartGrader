@@ -1,8 +1,5 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
-
 from db.crud.assignments import (
     create_assignment,
     create_testcase,
@@ -14,7 +11,10 @@ from db.crud.assignments import (
     update_assignment,
 )
 from db.models import UserRole
+from fastapi import APIRouter, Depends, HTTPException
 from schemas import AssignmentBase, TestcaseBase
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
@@ -28,9 +28,9 @@ async def create_new_assignment(
     question: str,
     description: str | None = None,
     due_date: datetime | None = None,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
     try:
         assignment = await create_assignment(
             session=session,
@@ -48,20 +48,19 @@ async def create_new_assignment(
 
 
 @router.get("/instructors", response_model=list[AssignmentBase])
-async def get_instructor_assignments():
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
+async def get_instructor_assignments(
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
     return await get_assignments_by_instructor_id(session, current_user.id)
 
 
 @router.get("/{assignment_id}", response_model=AssignmentBase)
 async def get_assignment(
     assignment_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    session = Depends(get_db)
-    current_user = Depends(get_current_user)
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -80,10 +79,9 @@ async def update_assignment_details(
     question: str | None = None,
     description: str | None = None,
     due_date: datetime | None = None,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -111,10 +109,9 @@ async def update_assignment_details(
 @router.delete("/{assignment_id}")
 async def remove_assignment(
     assignment_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -129,10 +126,9 @@ async def add_testcase(
     assignment_id: int,
     input_data: str,
     expected_output: str,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -148,10 +144,9 @@ async def add_testcase(
 @router.get("/{assignment_id}/testcases", response_model=list[TestcaseBase])
 async def get_testcases(
     assignment_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -164,10 +159,9 @@ async def get_testcases(
 async def remove_testcase(
     assignment_id: int,
     input_data: str,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
 ):
-    session = Depends(get_db)
-    current_user = Depends(require_role(UserRole.instructor))
-
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")

@@ -1,0 +1,17 @@
+target-version = "py312"
+line-length = 88
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[lint.per-file-ignores]
+"backend/api/routes/*.py" = ["B008"]  # Allow Depends() in function signatures (FastAPI pattern)
+"backend/api/auth.py" = ["B008"]
