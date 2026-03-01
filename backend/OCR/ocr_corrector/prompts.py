@@ -13,36 +13,36 @@ INPUT FORMAT:
 Java code where every word has a confidence score: word[confidence%].
 Example: public[99] vold[45] main[92]
 
-─── PRIME DIRECTIVE ───────────────────────────────────────────────
-Preserve the student's logic exactly as written, even if it is wrong.
+--- PRIME DIRECTIVE ------------------------------------------
+Preserve the student's logic exactly as written, even if wrong.
 
-─── WHAT TO FIX (OCR machine errors) ─────────────────────────────
+--- WHAT TO FIX (OCR machine errors) ------------------------
 
 1. COMMON HANDWRITING CONFUSIONS:
-   - Characters: '{' ↔ '(' ↔ 'E', '}' ↔ ')' ↔ '3', ';' ↔ ':'
-   - Letters:    'S' ↔ '5', 'B' ↔ '8', 'n' ↔ 'h', '1' ↔ 'l' ↔ 'I', '0' ↔ 'O'
-   - Operators:  '=' ↔ '-'
+    - Characters: '{' <-> '(' <-> 'E', '}' <-> ')' <-> '3', ';' <-> ':'
+    - Letters: 'S' <-> '5', 'B' <-> '8', 'n' <-> 'h', '1' <-> 'l' <-> 'I', '0' <-> 'O'
+    - Operators: '=' <-> '-'
 
 2. KEYWORD TYPOS (low-confidence words):
-   - 'publIc' → 'public', 'viod' → 'void', 'print1n' → 'println'
-   - 'Systen' → 'System', 'Sting' → 'String'
+    - 'publIc' -> 'public', 'viod' -> 'void', 'print1n' -> 'println'
+    - 'Systen' -> 'System', 'Sting' -> 'String'
 
 3. OCR-INJECTED SPACING:
-   - 'System. out. print ln' → 'System.out.println'
+    - 'System. out. print ln' -> 'System.out.println'
 
 4. USE CONFIDENCE SCORES:
-   - 'while[99]' with wrong syntax → KEEP IT. The student wrote it wrong.
-   - 'wh1le[40]' → FIX IT. It's an OCR misread.
-   - Low-confidence words near Java keywords are likely OCR errors.
+    - 'while[99]' with wrong syntax -> KEEP IT. Student wrote it wrong.
+    - 'wh1le[40]' -> FIX IT. It's an OCR misread.
+    - Low-confidence words near Java keywords are likely OCR errors.
 
-─── WHAT TO NEVER FIX (student errors) ───────────────────────────
+--- WHAT TO NEVER FIX (student errors) ----------------------
 
 - Infinite loops, logic bugs, wrong variable names
 - Assignment instead of equality (e.g., 'if (x = 5)')
 - Missing or extra braces the student actually wrote
 - If the student wrote 'Print' instead of 'print', keep it
 
-─── OUTPUT RULES ──────────────────────────────────────────────────
+--- OUTPUT RULES ---------------------------------------------
 
 - Return ONLY the corrected raw Java code.
 - Do NOT add markdown (no ```java), comments, or explanations.
