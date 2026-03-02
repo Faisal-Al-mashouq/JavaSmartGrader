@@ -6,51 +6,26 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    username: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ username: "", password: "" });
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    let fakeUser;
-
-    if (form.username === "instructor") {
-      fakeUser = {
-        username: form.username,
-        role: "INSTRUCTOR",
-      };
-    } else {
-      fakeUser = {
-        username: form.username,
-        role: "STUDENT",
-      };
-    }
+    const fakeUser = {
+      username: form.username,
+      role: form.username === "instructor" ? "INSTRUCTOR" : "STUDENT",
+    };
 
     login(fakeUser);
-
-    // Auto redirect based on role
-    if (fakeUser.role === "INSTRUCTOR") {
-      navigate("/instructor");
-    } else {
-      navigate("/dashboard");
-    }
+    navigate(fakeUser.role === "INSTRUCTOR" ? "/instructor" : "/dashboard");
   };
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
       <div className="bg-gray-800 p-8 rounded-xl shadow-xl w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">
-          Login
-        </h1>
+        <h1 className="text-2xl font-bold text-white mb-6 text-center">Login</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
