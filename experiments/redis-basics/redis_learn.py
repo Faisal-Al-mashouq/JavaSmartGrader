@@ -1,5 +1,6 @@
-import redis.asyncio as redis
 import uuid
+
+import redis.asyncio as redis
 
 
 class RedisSandbox:

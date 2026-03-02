@@ -34,21 +34,29 @@ backend/
 │   ├── auth.py          # JWT creation, token verification, role enforcement
 │   ├── dependencies.py  # Shared FastAPI dependencies (DB session)
 │   └── routes/
-│       ├── users.py         # /users — register, login, profile
-│       ├── assignments.py   # /assignments — CRUD + testcase management
-│       ├── submissions.py   # /submissions — student submission lifecycle
-│       └── grading.py       # /grading — compile results, AI feedback, grades
+│       ├── users.py             # /users — register, login, profile
+│       ├── courses.py           # /courses — course CRUD, student enrollment
+│       ├── assignments.py       # /assignments — assignment CRUD
+│       ├── questions.py         # /assignments/{id}/questions — question & testcase CRUD
+│       ├── submissions.py       # /submissions — student submission lifecycle
+│       ├── grading.py           # /grading — compile results, AI feedback, grades
+│       ├── confidence_flags.py  # /confidence-flags — OCR confidence flag management
+│       └── generate_report.py   # /reports — assignment report generation
 ├── db/
 │   ├── models/
 │   │   ├── base.py          # Declarative base
 │   │   ├── main_db.py       # ORM models (User, Assignment, Submission, etc.)
 │   │   └── __init__.py      # Re-exports models
 │   ├── crud/
-│   │   ├── users.py         # User CRUD
-│   │   ├── assignments.py   # Assignment CRUD
-│   │   ├── submissions.py   # Submission CRUD
-│   │   ├── grading.py       # Testcase, CompileResult, Transcription, AIFeedback, Grade CRUD
-│   │   └── __init__.py      # Re-exports all CRUD functions
+│   │   ├── users.py             # User CRUD
+│   │   ├── courses.py           # Course CRUD, enrollment
+│   │   ├── assignments.py       # Assignment CRUD
+│   │   ├── questions.py         # Question & Testcase CRUD
+│   │   ├── submissions.py       # Submission CRUD
+│   │   ├── grading.py           # CompileResult, Transcription, AIFeedback, Grade CRUD
+│   │   ├── confidence_flags.py  # ConfidenceFlag CRUD
+│   │   ├── generate_report.py   # GenerateReport CRUD
+│   │   └── __init__.py          # Re-exports all CRUD functions
 │   ├── alembic/             # Migration versions
 │   ├── alembic.ini          # Alembic configuration
 │   └── session.py           # Async engine and session factory
@@ -84,14 +92,18 @@ JWT_SECRET_KEY=your-secret-key
 
 See [api/README.md](api/README.md) for full endpoint documentation.
 
-The API is organized into four routers:
+The API is organized into eight routers:
 
 | Prefix | Description |
 |--------|-------------|
 | `/users` | Registration, login, profile management |
-| `/assignments` | Assignment and testcase CRUD (instructors) |
+| `/courses` | Course CRUD, student enrollment/unenrollment |
+| `/assignments` | Assignment CRUD (instructors) |
+| `/assignments/{id}/questions` | Question and testcase CRUD (instructors) |
 | `/submissions` | Submission lifecycle (students and instructors) |
 | `/grading` | Compile results, transcriptions, AI feedback, grades |
+| `/confidence-flags` | OCR confidence flag management |
+| `/reports` | Assignment report generation and management |
 
 ## Database
 
@@ -100,13 +112,17 @@ Async PostgreSQL using SQLAlchemy 2.0 ORM with Alembic migrations.
 ### Models
 
 - **User** - Students and instructors (role-based)
-- **Assignment** - Questions, test cases, due dates, rubrics
-- **Submission** - Student work linked to assignments (state: submitted/processing/graded/failed)
-- **Testcase** - Input/output pairs per assignment
+- **Course** - Courses with instructor ownership and student enrollment (many-to-many)
+- **Assignment** - Assignments linked to courses with due dates and rubrics
+- **Question** - Questions within assignments (composite PK: id + assignment_id)
+- **Testcase** - Input/output pairs per question
+- **Submission** - Student work linked to questions (state: submitted/processing/graded/failed)
 - **CompileResult** - Compilation and runtime results per submission
 - **Transcription** - OCR/transcription output per submission
+- **ConfidenceFlag** - OCR confidence scores and suggestions per transcription
 - **AIFeedback** - AI-suggested grade and feedback per submission
 - **Grade** - Final instructor grade per submission
+- **GenerateReport** - Generated reports per assignment
 
 ### Migrations
 

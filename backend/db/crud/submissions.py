@@ -6,11 +6,13 @@ from ..models import Submission, SubmissionState
 
 async def create_submission(
     session: AsyncSession,
+    question_id: int,
     assignment_id: int,
     student_id: int,
     image_url: str | None = None,
 ) -> Submission:
     submission = Submission(
+        question_id=question_id,
         assignment_id=assignment_id,
         student_id=student_id,
         image_url=image_url,

@@ -17,7 +17,7 @@ class CompileResultBase(BaseModel):
     compiled_ok: bool
     compile_errors: str | None
     runtime_errors: str | None
-    runtime_output: str | None
+    runtime_outputs: str | None
 
     model_config = {"from_attributes": True}
 
@@ -26,7 +26,8 @@ class AIFeedbackBase(BaseModel):
     id: int
     submission_id: int
     suggested_grade: float | None
-    feedback_text: str | None
+    instructor_guidance: str | None
+    student_feedback: str | None
 
     model_config = {"from_attributes": True}
 

@@ -1,4 +1,5 @@
-from datetime import datetime
+import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,14 +13,15 @@ async def create_compile_result(
     compiled_ok: bool,
     compile_errors: str | None,
     runtime_errors: str | None,
-    runtime_output: str | None,
+    runtime_outputs: str | None,
 ) -> CompileResult:
     compile_result = CompileResult(
+        id=uuid.uuid4(),
         submission_id=submission_id,
         compiled_ok=compiled_ok,
         compile_errors=compile_errors,
         runtime_errors=runtime_errors,
-        runtime_output=runtime_output,
+        runtime_outputs=runtime_outputs,
     )
     session.add(compile_result)
     await session.commit()
@@ -63,12 +65,15 @@ async def create_ai_feedback(
     session: AsyncSession,
     submission_id: int,
     suggested_grade: float | None,
-    feedback_text: str | None,
+    instructor_guidance: str | None,
+    student_feedback: str | None,
 ) -> AIFeedback:
     ai_feedback = AIFeedback(
+        id=uuid.uuid4(),
         submission_id=submission_id,
         suggested_grade=suggested_grade,
-        feedback_text=feedback_text,
+        instructor_guidance=instructor_guidance,
+        student_feedback=student_feedback,
     )
     session.add(ai_feedback)
     await session.commit()
@@ -96,7 +101,7 @@ async def create_grade(
         submission_id=submission_id,
         instructor_id=instructor_id,
         final_grade=final_grade,
-        published_at=datetime.now if final_grade is not None else None,
+        published_at=datetime.now(UTC) if final_grade is not None else None,
     )
     session.add(grade)
     await session.commit()
@@ -120,7 +125,7 @@ async def update_grade(
     await session.execute(
         update(Grade)
         .where(Grade.submission_id == submission_id)
-        .values(final_grade=new_final_grade)
+        .values(final_grade=new_final_grade, published_at=datetime.now(UTC))
     )
     await session.commit()
     return await get_grade_by_submission_id(session, submission_id)

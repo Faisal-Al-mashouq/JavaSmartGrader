@@ -1,6 +1,6 @@
 # API Layer
 
-FastAPI REST API for JavaSmartGrader. Handles authentication, assignment management, submission lifecycle, and grading.
+FastAPI REST API for JavaSmartGrader. Handles authentication, course management, assignment and question lifecycle, submission handling, grading, and reporting.
 
 ## Module Structure
 
@@ -9,9 +9,13 @@ FastAPI REST API for JavaSmartGrader. Handles authentication, assignment managem
 | `auth.py` | JWT token creation, verification, and role-based access control |
 | `dependencies.py` | Shared `get_db` dependency (async SQLAlchemy session) |
 | `routes/users.py` | User registration, login, and profile endpoints |
-| `routes/assignments.py` | Assignment and testcase CRUD |
+| `routes/courses.py` | Course CRUD and student enrollment |
+| `routes/assignments.py` | Assignment CRUD |
+| `routes/questions.py` | Question and testcase CRUD (nested under assignments) |
 | `routes/submissions.py` | Submission creation and retrieval |
 | `routes/grading.py` | Compile results, transcriptions, AI feedback, and grade management |
+| `routes/confidence_flags.py` | OCR confidence flag management |
+| `routes/generate_report.py` | Assignment report generation |
 
 ## Authentication
 
@@ -25,7 +29,7 @@ Tokens expire after **30 minutes**.
 
 Role-based access:
 - **student** — submit work, view own submissions and grades
-- **instructor** — manage assignments, view all submissions, assign grades
+- **instructor** — manage courses, assignments, questions, testcases, enrollment, view all submissions, assign grades
 
 ---
 
@@ -62,24 +66,68 @@ Returns: `{ "access_token": "...", "token_type": "bearer" }`
 
 ---
 
+### Courses — `/courses`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/courses/` | Instructor | Create a new course |
+| `GET` | `/courses/me` | Instructor | List own courses |
+| `GET` | `/courses/{id}` | Any | Get course by ID |
+| `PUT` | `/courses/{id}` | Instructor | Update course fields |
+| `DELETE` | `/courses/{id}` | Instructor | Delete course |
+| `POST` | `/courses/{id}/enroll/{student_id}` | Instructor | Enroll a student (must have student role) |
+| `DELETE` | `/courses/{id}/enroll/{student_id}` | Instructor | Unenroll a student |
+
+#### `POST /courses/`
+
+Query params: `name`, `description` (optional)
+
+Returns: `CourseBase` — `{ id, name, description, instructor_id }`
+
+---
+
 ### Assignments — `/assignments`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/assignments/` | Instructor | Create a new assignment |
-| `GET` | `/assignments/instructors` | Instructor | List own assignments |
+| `GET` | `/assignments/course/{course_id}` | Any | List assignments for a course |
 | `GET` | `/assignments/{id}` | Any | Get assignment by ID |
 | `PUT` | `/assignments/{id}` | Instructor | Update assignment fields |
 | `DELETE` | `/assignments/{id}` | Instructor | Delete assignment |
-| `POST` | `/assignments/{id}/testcases` | Instructor | Add a testcase |
-| `GET` | `/assignments/{id}/testcases` | Instructor | List testcases |
-| `DELETE` | `/assignments/{id}/testcases` | Instructor | Remove a testcase by input |
 
 #### `POST /assignments/`
 
-Query params: `title`, `question`, `description` (optional), `due_date` (optional, ISO 8601)
+Query params: `course_id`, `title`, `description` (optional), `due_date` (optional, ISO 8601)
 
-Returns: `AssignmentBase`
+Returns: `AssignmentBase` — `{ id, course_id, title, description, due_date, rubric_json }`
+
+---
+
+### Questions — `/assignments/{assignment_id}/questions`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `.../questions/` | Instructor | Create a question for the assignment |
+| `GET` | `.../questions/` | Any | List all questions for the assignment |
+| `GET` | `.../questions/{question_id}` | Any | Get a specific question |
+| `PUT` | `.../questions/{question_id}` | Instructor | Update question text |
+| `DELETE` | `.../questions/{question_id}` | Instructor | Delete a question |
+| `POST` | `.../questions/{question_id}/testcases` | Instructor | Add a testcase to a question |
+| `GET` | `.../questions/{question_id}/testcases` | Any | List testcases for a question |
+| `DELETE` | `.../questions/{question_id}/testcases/{testcase_id}` | Instructor | Delete a testcase |
+
+#### `POST .../questions/`
+
+Query params: `question_text`
+
+Returns: `QuestionBase` — `{ id, assignment_id, question_text }`
+
+#### `POST .../questions/{question_id}/testcases`
+
+Query params: `input_data`, `expected_output`
+
+Returns: `{ "message": "Testcase added successfully" }`
 
 ---
 
@@ -87,7 +135,7 @@ Returns: `AssignmentBase`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/submissions/` | Student | Submit an answer for an assignment |
+| `POST` | `/submissions/` | Student | Submit an answer for a question |
 | `GET` | `/submissions/me` | Any | List current user's submissions |
 | `GET` | `/submissions/{id}` | Any | Get submission by ID |
 | `GET` | `/submissions/assignment/{id}` | Instructor | List all submissions for an assignment |
@@ -96,7 +144,7 @@ Returns: `AssignmentBase`
 
 #### `POST /submissions/`
 
-Query params: `assignment_id`, `image_url` (optional)
+Query params: `question_id`, `assignment_id`, `image_url` (optional)
 
 Submission states: `submitted` → `processing` → `graded` / `failed`
 
@@ -113,3 +161,37 @@ Submission states: `submitted` → `processing` → `graded` / `failed`
 | `PUT` | `/grading/{id}/grade` | Instructor | Update an existing grade |
 
 Students can only access grading data for their own submissions. Instructors can access all.
+
+---
+
+### Confidence Flags — `/confidence-flags`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/confidence-flags/` | Instructor | Create a confidence flag |
+| `GET` | `/confidence-flags/transcription/{transcription_id}` | Any | List flags for a transcription |
+| `DELETE` | `/confidence-flags/{flag_id}` | Instructor | Delete a confidence flag |
+
+#### `POST /confidence-flags/`
+
+Query params: `transcription_id`, `text_segment`, `confidence_score`, `coordinates` (optional), `suggestions` (optional)
+
+Returns: `ConfidenceFlagBase` — `{ id, transcription_id, text_segment, confidence_score, coordinates, suggestions }`
+
+---
+
+### Reports — `/reports`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/reports/assignment/{assignment_id}` | Instructor | Create a report for an assignment |
+| `GET` | `/reports/assignment/{assignment_id}` | Any | List reports for an assignment |
+| `GET` | `/reports/{report_id}` | Any | Get a specific report |
+| `PUT` | `/reports/{report_id}` | Instructor | Update report text |
+| `DELETE` | `/reports/{report_id}` | Instructor | Delete a report |
+
+#### `POST /reports/assignment/{assignment_id}`
+
+Query params: `report_text` (optional)
+
+Returns: `GenerateReportBase` — `{ id, assignment_id, report_text }`
