@@ -17,12 +17,7 @@ app = FastAPI()
 setup_logging("DEBUG")
 logger = logging.getLogger(__name__)
 
-logger.info("Info")
-logger.warning("Warning")
-logger.error("Error")
-logger.critical("Critical")
-logger.debug("Debug")
-logger.info("Finished Test")
+logger.info("Starting JavaSmartGrader API server")
 
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(courses.router, prefix="/courses", tags=["courses"])
@@ -40,3 +35,5 @@ app.include_router(
     tags=["confidence-flags"],
 )
 app.include_router(generate_report.router, prefix="/reports", tags=["reports"])
+
+logger.info("All routers registered successfully")

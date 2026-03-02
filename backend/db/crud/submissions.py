@@ -1,7 +1,11 @@
+import logging
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Submission, SubmissionState
+
+logger = logging.getLogger(__name__)
 
 
 async def create_submission(
@@ -11,6 +15,9 @@ async def create_submission(
     student_id: int,
     image_url: str | None = None,
 ) -> Submission:
+    logger.info(
+        "Creating submission for student %d, assignment %d", student_id, assignment_id
+    )
     submission = Submission(
         question_id=question_id,
         assignment_id=assignment_id,
@@ -20,13 +27,14 @@ async def create_submission(
     session.add(submission)
     await session.commit()
     await session.refresh(submission)
+    logger.info("Submission created (id=%d) for student %d", submission.id, student_id)
     return submission
 
 
 async def get_submission_by_id(
     session: AsyncSession, submission_id: int
 ) -> Submission | None:
-
+    logger.debug("Looking up submission by id: %d", submission_id)
     result = await session.execute(
         select(Submission).where(Submission.id == submission_id)
     )
@@ -36,7 +44,7 @@ async def get_submission_by_id(
 async def get_submissions_by_student_id(
     session: AsyncSession, student_id: int
 ) -> list[Submission]:
-
+    logger.debug("Fetching submissions for student %d", student_id)
     result = await session.execute(
         select(Submission).where(Submission.student_id == student_id)
     )
@@ -46,7 +54,7 @@ async def get_submissions_by_student_id(
 async def get_submissions_by_assignment_id(
     session: AsyncSession, assignment_id: int
 ) -> list[Submission]:
-
+    logger.debug("Fetching submissions for assignment %d", assignment_id)
     result = await session.execute(
         select(Submission).where(Submission.assignment_id == assignment_id)
     )
@@ -56,6 +64,7 @@ async def get_submissions_by_assignment_id(
 async def update_submission_state(
     session: AsyncSession, submission_id: int, new_state: SubmissionState
 ) -> Submission | None:
+    logger.info("Updating submission %d state to %s", submission_id, new_state.value)
     await session.execute(
         update(Submission).where(Submission.id == submission_id).values(state=new_state)
     )
@@ -66,6 +75,9 @@ async def update_submission_state(
 async def update_submission(
     session: AsyncSession, submission_id: int, **fields
 ) -> Submission | None:
+    logger.info(
+        "Updating submission %d with fields: %s", submission_id, list(fields.keys())
+    )
     await session.execute(
         update(Submission).where(Submission.id == submission_id).values(**fields)
     )
@@ -74,8 +86,14 @@ async def update_submission(
 
 
 async def delete_submission(session: AsyncSession, submission_id: int) -> bool:
+    logger.info("Deleting submission %d", submission_id)
     result = await session.execute(
         delete(Submission).where(Submission.id == submission_id)
     )
     await session.commit()
-    return result.rowcount > 0
+    deleted = result.rowcount > 0
+    if deleted:
+        logger.info("Submission %d deleted", submission_id)
+    else:
+        logger.warning("Submission %d not found for deletion", submission_id)
+    return deleted

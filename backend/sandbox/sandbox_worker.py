@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import logging
 import os
-import sys
 
 import redis.asyncio as redis
 from dotenv import load_dotenv
@@ -22,11 +21,6 @@ from .schemas import (
 )
 
 load_dotenv()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
 logger = logging.getLogger(__name__)
 
 

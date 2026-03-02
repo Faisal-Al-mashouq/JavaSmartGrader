@@ -14,13 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Logging ──────────────────────────────────────────────────────
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s │ %(name)-18s │ %(levelname)-7s │ %(message)s",
-    datefmt="%H:%M:%S",
-)
+LOG_LEVEL = logging.getLogger(__name__)
 
 # ── Azure Document Intelligence ──────────────────────────────────
 AZURE_ENDPOINT = os.getenv(

@@ -1,3 +1,5 @@
+import logging
+
 import bcrypt
 from db.crud.users import (
     create_user,
@@ -14,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import create_access_token, get_current_user
 from ..dependencies import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -22,6 +26,7 @@ async def register_user(
     body: RegisterRequest,
     session: AsyncSession = Depends(get_db),
 ):
+    logger.info("Registering new user: %s (role=%s)", body.username, body.role)
     try:
         password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
         new_user = await create_user(
@@ -31,8 +36,14 @@ async def register_user(
             email=body.email,
             role=body.role,
         )
+        logger.info(
+            "User registered successfully: %s (id=%d)", new_user.username, new_user.id
+        )
         return new_user
     except IntegrityError:
+        logger.warning(
+            "Registration failed - duplicate username or email: %s", body.username
+        )
         raise HTTPException(
             status_code=409, detail="Username or email already exists"
         ) from None
@@ -43,12 +54,15 @@ async def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_db),
 ):
+    logger.info("Login attempt for user: %s", form_data.username)
     user = await get_user_by_username(session, form_data.username)
     if not user or not bcrypt.checkpw(
         form_data.password.encode(), user.password_hash.encode()
     ):
+        logger.warning("Failed login attempt for user: %s", form_data.username)
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = create_access_token({"sub": str(user.id), "role": user.role.value})
+    logger.info("User logged in successfully: %s (id=%d)", user.username, user.id)
     return {"access_token": token, "token_type": "bearer"}
 
 
@@ -56,6 +70,7 @@ async def login_user(
 async def get_user(
     current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching current user profile: %s", current_user.username)
     return current_user
 
 
@@ -65,12 +80,17 @@ async def update_email(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.info("User %s updating email to %s", current_user.username, new_email)
     result = await update_user_email(
         session=session, username=current_user.username, new_email=new_email
     )
     if result:
+        logger.info("Email updated successfully for user: %s", current_user.username)
         return {"message": "Email updated successfully"}
     else:
+        logger.error(
+            "Failed to update email - user not found: %s", current_user.username
+        )
         raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -79,8 +99,13 @@ async def delete_account(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.info("User %s requesting account deletion", current_user.username)
     result = await delete_user(session=session, username=current_user.username)
     if result:
+        logger.info("Account deleted successfully: %s", current_user.username)
         return {"message": "User deleted successfully"}
     else:
+        logger.error(
+            "Failed to delete account - user not found: %s", current_user.username
+        )
         raise HTTPException(status_code=404, detail="User not found")
