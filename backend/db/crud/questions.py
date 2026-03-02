@@ -1,7 +1,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Question
+from ..models import Question, Testcase
 
 
 async def create_question(
@@ -61,3 +61,39 @@ async def delete_question(
     )
     await session.commit()
     return result.rowcount > 0
+
+
+async def create_testcase(
+    session: AsyncSession,
+    question_id: int,
+    assignment_id: int,
+    input_data: str,
+    expected_output: str,
+) -> Testcase:
+    testcase = Testcase(
+        question_id=question_id,
+        assignment_id=assignment_id,
+        input=input_data,
+        expected_output=expected_output,
+    )
+    session.add(testcase)
+    await session.commit()
+    await session.refresh(testcase)
+    return testcase
+
+
+async def get_testcases_by_question_id(
+    session: AsyncSession, question_id: int, assignment_id: int
+) -> list[Testcase]:
+    result = await session.execute(
+        select(Testcase).where(
+            Testcase.question_id == question_id,
+            Testcase.assignment_id == assignment_id,
+        )
+    )
+    return result.scalars().all()
+
+
+async def delete_testcase(session: AsyncSession, testcase_id: int) -> None:
+    await session.execute(delete(Testcase).where(Testcase.id == testcase_id))
+    await session.commit()

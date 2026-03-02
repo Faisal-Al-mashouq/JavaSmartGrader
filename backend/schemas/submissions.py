@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class SubmissionBase(BaseModel):
     id: int
+    question_id: int
     assignment_id: int
     student_id: int
     image_url: str | None

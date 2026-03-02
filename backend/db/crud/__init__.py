@@ -1,11 +1,8 @@
 from .assignments import (
     create_assignment,
-    create_testcase,
     delete_assignment,
-    delete_testcase,
     get_assignment_by_id,
     get_assignments_by_course_id,
-    get_testcases_by_assignment_id,
     update_assignment,
 )
 from .confidence_flags import (
@@ -42,9 +39,12 @@ from .grading import (
 )
 from .questions import (
     create_question,
+    create_testcase,
     delete_question,
+    delete_testcase,
     get_question_by_id,
     get_questions_by_assignment_id,
+    get_testcases_by_question_id,
     update_question,
 )
 from .submissions import (
@@ -73,13 +73,10 @@ __all__ = [
     "create_ai_feedback",
     "create_compile_result",
     "create_grade",
-    "create_testcase",
     "create_transcription",
-    "delete_testcase",
     "get_ai_feedback_by_submission_id",
     "get_compile_result_by_submission_id",
     "get_grade_by_submission_id",
-    "get_testcases_by_assignment_id",
     "get_transcription_by_submission_id",
     "update_grade",
     "create_submission",
@@ -102,10 +99,13 @@ __all__ = [
     "enroll_student",
     "unenroll_student",
     "create_question",
+    "create_testcase",
     "get_question_by_id",
     "get_questions_by_assignment_id",
+    "get_testcases_by_question_id",
     "update_question",
     "delete_question",
+    "delete_testcase",
     "create_confidence_flag",
     "get_confidence_flags_by_transcription_id",
     "delete_confidence_flag",
