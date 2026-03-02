@@ -7,6 +7,7 @@ from db.crud.courses import (
     unenroll_student,
     update_course,
 )
+from db.crud.users import get_user_by_id
 from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
 from schemas import CourseBase
@@ -118,10 +119,20 @@ async def enroll_student_in_course(
         raise HTTPException(status_code=404, detail="Course not found")
     if course.instructor_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    result = await enroll_student(session, course_id, student_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Student not found")
-    return {"message": "Student enrolled successfully"}
+    user = await get_user_by_id(session, student_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role != UserRole.student:
+        raise HTTPException(status_code=400, detail="User is not a student")
+    try:
+        result = await enroll_student(session, course_id, student_id)
+        if not result:
+            raise HTTPException(status_code=400, detail="Failed to enroll student")
+        return {"message": "Student enrolled successfully"}
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409, detail="Student is already enrolled in this course"
+        ) from None
 
 
 @router.delete("/{course_id}/enroll/{student_id}")
@@ -136,7 +147,14 @@ async def unenroll_student_from_course(
         raise HTTPException(status_code=404, detail="Course not found")
     if course.instructor_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
+    user = await get_user_by_id(session, student_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role != UserRole.student:
+        raise HTTPException(status_code=400, detail="User is not a student")
     result = await unenroll_student(session, course_id, student_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Student not found or not enrolled")
+        raise HTTPException(
+            status_code=404, detail="Student is not enrolled in this course"
+        )
     return {"message": "Student unenrolled successfully"}

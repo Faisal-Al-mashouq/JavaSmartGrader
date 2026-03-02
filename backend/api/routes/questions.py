@@ -37,7 +37,7 @@ async def _verify_instructor_owns_assignment(
 # --- Question CRUD ---
 
 
-@router.post("/assignment/{assignment_id}", response_model=QuestionBase)
+@router.post("/", response_model=QuestionBase)
 async def create_new_question(
     assignment_id: int,
     question_text: str,
@@ -58,7 +58,7 @@ async def create_new_question(
         ) from None
 
 
-@router.get("/assignment/{assignment_id}", response_model=list[QuestionBase])
+@router.get("/", response_model=list[QuestionBase])
 async def get_assignment_questions(
     assignment_id: int,
     session: AsyncSession = Depends(get_db),
@@ -70,10 +70,10 @@ async def get_assignment_questions(
     return await get_questions_by_assignment_id(session, assignment_id)
 
 
-@router.get("/{question_id}/assignment/{assignment_id}", response_model=QuestionBase)
+@router.get("/{question_id}", response_model=QuestionBase)
 async def get_question(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
@@ -83,10 +83,10 @@ async def get_question(
     return question
 
 
-@router.put("/{question_id}/assignment/{assignment_id}", response_model=QuestionBase)
+@router.put("/{question_id}", response_model=QuestionBase)
 async def update_question_details(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     question_text: str,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
@@ -101,10 +101,10 @@ async def update_question_details(
     return updated
 
 
-@router.delete("/{question_id}/assignment/{assignment_id}")
+@router.delete("/{question_id}")
 async def remove_question(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
@@ -115,13 +115,13 @@ async def remove_question(
     return {"message": "Question deleted successfully"}
 
 
-# --- Testcase CRUD (under questions) ---
+# --- Testcase CRUD ---
 
 
-@router.post("/{question_id}/assignment/{assignment_id}/testcases")
+@router.post("/{question_id}/testcases")
 async def add_testcase(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     input_data: str,
     expected_output: str,
     session: AsyncSession = Depends(get_db),
@@ -140,13 +140,10 @@ async def add_testcase(
         raise HTTPException(status_code=400, detail="Failed to add testcase") from None
 
 
-@router.get(
-    "/{question_id}/assignment/{assignment_id}/testcases",
-    response_model=list[TestcaseBase],
-)
+@router.get("/{question_id}/testcases", response_model=list[TestcaseBase])
 async def get_testcases(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
@@ -156,10 +153,10 @@ async def get_testcases(
     return await get_testcases_by_question_id(session, question_id, assignment_id)
 
 
-@router.delete("/{question_id}/assignment/{assignment_id}/testcases/{testcase_id}")
+@router.delete("/{question_id}/testcases/{testcase_id}")
 async def remove_testcase(
-    question_id: int,
     assignment_id: int,
+    question_id: int,
     testcase_id: int,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
