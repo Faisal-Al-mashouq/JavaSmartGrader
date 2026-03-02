@@ -30,8 +30,22 @@ JavaSmartGrader/
 
 ```bash
 cd backend
-pip install -e .
-uvicorn main:app --reload
+uv sync
+```
+
+To run in development environment:
+```bash
+uv run task dev
+```
+
+To run in local environment:
+```bash
+uv run task local
+```
+
+To run in production environment:
+```bash
+uv run task prod
 ```
 
 ### Frontend Setup
