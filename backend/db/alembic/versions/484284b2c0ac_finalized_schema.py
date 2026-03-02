@@ -1,8 +1,8 @@
-"""initial db
+"""finalized schema
 
-Revision ID: 2bf3f38b207f
+Revision ID: 484284b2c0ac
 Revises:
-Create Date: 2026-02-27 02:03:40.532921
+Create Date: 2026-03-02 05:23:43.297936
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "2bf3f38b207f"
+revision: str = "484284b2c0ac"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -25,6 +25,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("username", sa.String(length=255), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column(
             "user_role",
             sa.Enum("student", "instructor", name="userrole"),
@@ -32,24 +33,76 @@ def upgrade() -> None:
         ),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email"),
         sa.UniqueConstraint("username"),
     )
     op.create_table(
-        "assignments",
+        "courses",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
         sa.Column("instructor_id", sa.Integer(), nullable=False),
-        sa.Column("suggested_grade", sa.Numeric(precision=10, scale=2), nullable=True),
-        sa.Column("feedback_text", sa.Text(), nullable=True),
-        sa.Column("rubric_json", sa.JSON(), nullable=True),
         sa.ForeignKeyConstraint(
             ["instructor_id"],
             ["users.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+    )
+    op.create_table(
+        "assignments",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("course_id", sa.Integer(), nullable=False),
+        sa.Column("title", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rubric_json", sa.JSON(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["course_id"],
+            ["courses.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "course_students",
+        sa.Column("course_id", sa.Integer(), nullable=False),
+        sa.Column("student_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["course_id"],
+            ["courses.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["student_id"],
+            ["users.id"],
+        ),
+        sa.PrimaryKeyConstraint("course_id", "student_id"),
+    )
+    op.create_table(
+        "generate_reports",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("assignment_id", sa.Integer(), nullable=False),
+        sa.Column("report_text", sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["assignment_id"],
+            ["assignments.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "questions",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("assignment_id", sa.Integer(), nullable=False),
+        sa.Column("question_text", sa.Text(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["assignment_id"],
+            ["assignments.id"],
+        ),
+        sa.PrimaryKeyConstraint("id", "assignment_id"),
     )
     op.create_table(
         "submissions",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("question_id", sa.Integer(), nullable=False),
         sa.Column("assignment_id", sa.Integer(), nullable=False),
         sa.Column("student_id", sa.Integer(), nullable=False),
         sa.Column("image_url", sa.String(length=2048), nullable=True),
@@ -62,8 +115,9 @@ def upgrade() -> None:
         ),
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["assignment_id"],
-            ["assignments.id"],
+            ["question_id", "assignment_id"],
+            ["questions.id", "questions.assignment_id"],
+            name="fk_submissions_question_id_assignment_id",
         ),
         sa.ForeignKeyConstraint(
             ["student_id"],
@@ -72,11 +126,26 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
+        "testcases",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("question_id", sa.Integer(), nullable=False),
+        sa.Column("assignment_id", sa.Integer(), nullable=False),
+        sa.Column("input", sa.Text(), nullable=False),
+        sa.Column("expected_output", sa.Text(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["question_id", "assignment_id"],
+            ["questions.id", "questions.assignment_id"],
+            name="fk_testcases_question_id_assignment_id",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "ai_feedback",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("submission_id", sa.Integer(), nullable=False),
         sa.Column("suggested_grade", sa.Numeric(precision=10, scale=2), nullable=True),
-        sa.Column("feedback_text", sa.Text(), nullable=True),
+        sa.Column("instructor_guidance", sa.Text(), nullable=True),
+        sa.Column("student_feedback", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(
             ["submission_id"],
             ["submissions.id"],
@@ -90,7 +159,8 @@ def upgrade() -> None:
         sa.Column("submission_id", sa.Integer(), nullable=False),
         sa.Column("compiled_ok", sa.Boolean(), nullable=False),
         sa.Column("compile_errors", sa.Text(), nullable=True),
-        sa.Column("runtime_output", sa.Text(), nullable=True),
+        sa.Column("runtime_errors", sa.Text(), nullable=True),
+        sa.Column("runtime_outputs", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(
             ["submission_id"],
             ["submissions.id"],
@@ -117,22 +187,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("submission_id", name="grades_submission_id"),
     )
     op.create_table(
-        "testcases",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("submission_id", sa.Integer(), nullable=False),
-        sa.Column("input", sa.Text(), nullable=False),
-        sa.Column("suggested_output", sa.Text(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["submission_id"],
-            ["submissions.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
         "transcriptions",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("submission_id", sa.Integer(), nullable=False),
-        sa.Column("feedback_text", sa.Text(), nullable=True),
+        sa.Column("transcribed_text", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(
             ["submission_id"],
             ["submissions.id"],
@@ -140,18 +198,37 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("submission_id", name="transcriptions_submission_id"),
     )
+    op.create_table(
+        "confidence_flags",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("transcription_id", sa.Integer(), nullable=False),
+        sa.Column("text_segment", sa.Text(), nullable=False),
+        sa.Column("confidence_score", sa.Numeric(precision=5, scale=4), nullable=False),
+        sa.Column("coordinates", sa.Text(), nullable=True),
+        sa.Column("suggestions", sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["transcription_id"],
+            ["transcriptions.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("confidence_flags")
     op.drop_table("transcriptions")
-    op.drop_table("testcases")
     op.drop_table("grades")
     op.drop_table("compile_results")
     op.drop_table("ai_feedback")
+    op.drop_table("testcases")
     op.drop_table("submissions")
+    op.drop_table("questions")
+    op.drop_table("generate_reports")
+    op.drop_table("course_students")
     op.drop_table("assignments")
+    op.drop_table("courses")
     op.drop_table("users")
     # ### end Alembic commands ###

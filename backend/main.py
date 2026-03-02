@@ -1,6 +1,5 @@
-from fastapi import FastAPI
-
 from api.routes import assignments, grading, submissions, users
+from fastapi import FastAPI
 
 app = FastAPI()
 

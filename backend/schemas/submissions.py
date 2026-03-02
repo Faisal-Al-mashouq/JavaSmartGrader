@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-
 from db.models import SubmissionState
+from pydantic import BaseModel
 
 
 class SubmissionBase(BaseModel):
