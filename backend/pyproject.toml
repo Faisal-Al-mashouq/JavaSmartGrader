@@ -20,6 +20,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
     "redis>=7.1.1",
+    "rich>=14.3.3",
     "sqlalchemy>=2.0.0",
     "uvicorn>=0.41.0",
 ]
