@@ -4,9 +4,30 @@ from .assignments import (
     delete_assignment,
     delete_testcase,
     get_assignment_by_id,
-    get_assignments_by_instructor_id,
+    get_assignments_by_course_id,
     get_testcases_by_assignment_id,
     update_assignment,
+)
+from .confidence_flags import (
+    create_confidence_flag,
+    delete_confidence_flag,
+    get_confidence_flags_by_transcription_id,
+)
+from .courses import (
+    create_course,
+    delete_course,
+    enroll_student,
+    get_course_by_id,
+    get_courses_by_instructor_id,
+    unenroll_student,
+    update_course,
+)
+from .generate_report import (
+    create_generate_report,
+    delete_generate_report,
+    get_generate_report_by_id,
+    get_generate_reports_by_assignment_id,
+    update_generate_report,
 )
 from .grading import (
     create_ai_feedback,
@@ -18,6 +39,13 @@ from .grading import (
     get_grade_by_submission_id,
     get_transcription_by_submission_id,
     update_grade,
+)
+from .questions import (
+    create_question,
+    delete_question,
+    get_question_by_id,
+    get_questions_by_assignment_id,
+    update_question,
 )
 from .submissions import (
     create_submission,
@@ -40,7 +68,7 @@ __all__ = [
     "create_assignment",
     "delete_assignment",
     "get_assignment_by_id",
-    "get_assignments_by_instructor_id",
+    "get_assignments_by_course_id",
     "update_assignment",
     "create_ai_feedback",
     "create_compile_result",
@@ -66,4 +94,24 @@ __all__ = [
     "get_user_by_id",
     "get_user_by_username",
     "update_user_email",
+    "create_course",
+    "get_course_by_id",
+    "get_courses_by_instructor_id",
+    "update_course",
+    "delete_course",
+    "enroll_student",
+    "unenroll_student",
+    "create_question",
+    "get_question_by_id",
+    "get_questions_by_assignment_id",
+    "update_question",
+    "delete_question",
+    "create_confidence_flag",
+    "get_confidence_flags_by_transcription_id",
+    "delete_confidence_flag",
+    "create_generate_report",
+    "get_generate_report_by_id",
+    "get_generate_reports_by_assignment_id",
+    "update_generate_report",
+    "delete_generate_report",
 ]

@@ -65,12 +65,12 @@ class User(Base):
     )
     grades_given: Mapped[list["Grade"]] = relationship(
         back_populates="instructor",
-        foreign_keys="Grade.instructor_id",
+        foreign_keys="[Grade.instructor_id]",
         cascade="all, delete-orphan",
     )
     submissions: Mapped[list["Submission"]] = relationship(
         back_populates="student",
-        foreign_keys="Submission.student_id",
+        foreign_keys="[Submission.student_id]",
         cascade="all, delete-orphan",
     )
 
@@ -102,7 +102,7 @@ class Course(Base):
     def __repr__(self):
         return (
             f"Course(id={self.id}, name='{self.name}',"
-            " instructor_id={self.instructor_id})"
+            f" instructor_id={self.instructor_id})"
         )
 
 
@@ -134,7 +134,7 @@ class Assignment(Base):
     def __repr__(self):
         return (
             f"Assignment(id={self.id}, course_id={self.course_id},"
-            " title='{self.title}')"
+            f" title='{self.title}')"
         )
 
 
@@ -332,7 +332,7 @@ class Grade(Base):
     def __repr__(self):
         return (
             f"Grade(id={self.id}, submission_id={self.submission_id},"
-            " final_grade={self.final_grade})"
+            f" final_grade={self.final_grade})"
         )
 
     submission: Mapped["Submission"] = relationship(back_populates="grade")
