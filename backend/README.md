@@ -18,8 +18,19 @@ pip install -e .
 
 ## Running the Server
 
+To run in development environment:
 ```bash
-uvicorn main:app --reload
+uv run task dev
+```
+
+To run in local environment:
+```bash
+uv run task local
+```
+
+To run in production environment:
+```bash
+uv run task prod
 ```
 
 The API runs at http://localhost:8000. Interactive docs are available at http://localhost:8000/docs.

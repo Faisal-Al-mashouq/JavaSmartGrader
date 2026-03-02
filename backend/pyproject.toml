@@ -22,6 +22,7 @@ dependencies = [
     "redis>=7.1.1",
     "rich>=14.3.3",
     "sqlalchemy>=2.0.0",
+    "taskipy>=1.14.1",
     "uvicorn>=0.41.0",
 ]
 
@@ -31,6 +32,12 @@ dev = [
     "psycopg2-binary>=2.9.11",
     "ruff>=0.15.1",
 ]
+
+[tool.taskipy.tasks]
+local = "APP_ENV=local LOG_LEVEL=INFO uvicorn main:app --reload --log-level error"
+prod = "APP_ENV=prod LOG_LEVEL=INFO uvicorn main:app --reload --log-level error"
+dev = "APP_ENV=dev LOG_LEVEL=DEBUG uvicorn main:app --reload --log-level error"
+init-env = "cp -n .env.example .env"
 
 [tool.black]
 target-version = ["py312"]

@@ -14,10 +14,11 @@ from fastapi import FastAPI
 from logs import setup_logging
 
 app = FastAPI()
-setup_logging("DEBUG")
+setup_logging()
 logger = logging.getLogger(__name__)
 
 logger.info("Starting JavaSmartGrader API server")
+logger.debug("Debug Mode: On")
 
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(courses.router, prefix="/courses", tags=["courses"])
