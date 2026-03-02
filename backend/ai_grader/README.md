@@ -27,7 +27,7 @@ If output JSON is invalid:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `MODEL` | No | `ft:gpt-4.1-mini` | Fine-tuned (or regular) model id used by LLM API |
+| `MODEL` | No | `ft:gpt-4.1-` | Fine-tuned (or regular) model id used by LLM API |
 | `API_KEY` | Yes | `""` | LLM API key |
 | `BASE_URL` | No | `https://api.openai.com/v1` | LLM base URL (OpenAI-compatible chat completions endpoint) |
 | `TIMEOUT_S` | No | `30` | HTTP timeout in seconds |
