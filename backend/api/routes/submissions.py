@@ -33,6 +33,7 @@ async def submit_answer(
         "Student %d submitting answer for assignment %d", current_user.id, assignment_id
     )
     try:
+        # Start job process immediately after creating it.
         submission = await create_submission(
             session=session,
             assignment_id=assignment_id,

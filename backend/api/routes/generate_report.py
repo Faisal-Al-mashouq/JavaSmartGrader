@@ -44,7 +44,6 @@ async def _verify_instructor_owns_assignment(
 @router.post("/assignment/{assignment_id}", response_model=GenerateReportBase)
 async def create_new_report(
     assignment_id: int,
-    report_text: str | None = None,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
@@ -55,10 +54,10 @@ async def create_new_report(
     )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     try:
+        # Call to function that generates the report returns report_text: str
         report = await create_generate_report(
             session=session,
             assignment_id=assignment_id,
-            report_text=report_text,
         )
         logger.info(
             "Report created (id=%d) for assignment %d", report.id, assignment_id

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _docker_build_image(tag: str, dockerfile_path: Path) -> None:
-    logger.info("Building Docker image '%s' from %s", tag, dockerfile_path.name)
+    logger.debug("Building Docker image '%s' from %s", tag, dockerfile_path.name)
     proc = await asyncio.create_subprocess_exec(
         "docker",
         "build",
@@ -28,7 +28,7 @@ async def _docker_build_image(tag: str, dockerfile_path: Path) -> None:
     if proc.returncode != 0:
         logger.error("Failed to build Docker image '%s': %s", tag, stderr.decode())
         raise RuntimeError(f"Failed to build {tag}: {stderr.decode()}")
-    logger.info("Docker image '%s' built successfully", tag)
+    logger.debug("Docker image '%s' built successfully", tag)
 
 
 async def docker_build_images():

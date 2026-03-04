@@ -3,8 +3,8 @@ import datetime
 import logging
 import os
 
-import redis.asyncio as redis
 from dotenv import load_dotenv
+from redis.asyncio import Redis
 
 from .helpers import SANDBOX_TMP_DIR, _cleanup_workspace, docker_build_images
 from .jobs import (
@@ -13,6 +13,7 @@ from .jobs import (
     run_test_cases,
     set_result,
 )
+from .logs import setup_logging
 from .schemas import (
     JobStatus,
     SandboxJob,
@@ -20,6 +21,7 @@ from .schemas import (
     SandboxJobResult,
 )
 
+setup_logging()
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 class Sandbox:
     def __init__(self, redis_url: str, max_concurrency: int = 4):
         self.max_concurrency = max_concurrency
-        self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis_client = Redis.from_url(url=redis_url, decode_responses=True)
 
 
 async def start():
@@ -48,14 +50,15 @@ async def main_loop(client: Sandbox, process_id: int = 0):
     while True:
         try:
             logger.info(f"Process #{process_id}: Waiting for job in SandboxJobQueue...")
-            result = await client.redis_client.blpop("SandboxJobQueue", timeout=0)
+            result = await client.redis_client.brpoplpush(
+                src="SandboxJobQueue", dst="SandboxJobQueue:processing", timeout=0
+            )
         except asyncio.CancelledError:
             return
-        logger.info(f"SandboxJob received: {result}")
+        logger.info("Sandbox Job Received.")
         if result:
-            _, job_request = result
-
-            initialized_job = await initialize_job(job_request)
+            logger.debug(f"Details: {result}")
+            initialized_job = await initialize_job(result)
             if not initialized_job:
                 logger.error("Failed to initialize job, skipping")
                 continue
@@ -69,10 +72,11 @@ async def main_loop(client: Sandbox, process_id: int = 0):
                 continue
 
             await save_result(processed_job)
+            await client.redis_client.lpush("SandboxJobQueue:processing", result)
 
 
 async def initialize_job(job_request: str) -> SandboxJob | None:
-    logger.info(f"Initializing Job request: {job_request}")
+    logger.debug(f"Initializing SandboxJob Request: {job_request}")
     try:
         sandbox_job_request = SandboxJobRequest.model_validate_json(job_request)
         job = SandboxJob(
@@ -82,7 +86,7 @@ async def initialize_job(job_request: str) -> SandboxJob | None:
             request=sandbox_job_request,
             result=None,
         )
-        logger.info(f"Job initialized successfully: {job.job_id}")
+        logger.debug(f"SandboxJob initialized successfully: {job.job_id}")
         return job
     except Exception as e:
         logger.error(f"Failed to initialize job: {e}")
@@ -94,19 +98,19 @@ async def process_job(job: SandboxJob) -> SandboxJobResult:
         logger.info(f"Processing Job: {job.job_id}")
         job.status = JobStatus.RUNNING
 
-        logger.info(f"Job {job.job_id} compilation started")
+        logger.debug(f"Job {job.job_id} compilation started")
         compiled_job = await compile_job(job)
         if not compiled_job:
             logger.error(f"Compilation failed for Job: {job.job_id}")
             return await set_result(job, JobStatus.FAILED)
 
-        logger.info(f"Job {job.job_id} execution started")
+        logger.debug(f"Job {job.job_id} execution started")
         executed_job = await execute_job(compiled_job)
         if not executed_job:
             logger.error(f"Execution failed for Job: {job.job_id}")
             return await set_result(compiled_job, JobStatus.FAILED)
 
-        logger.info(f"Job {job.job_id} evaluating test cases")
+        logger.debug(f"Job {job.job_id} evaluating test cases")
         tested_job = run_test_cases(executed_job)
 
         logger.info(f"Job {job.job_id} completed successfully")

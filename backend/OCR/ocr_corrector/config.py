@@ -10,8 +10,10 @@ import logging
 import os
 
 from dotenv import load_dotenv
+from logs import setup_logging
 
 load_dotenv()
+setup_logging()
 
 # ── Logging ──────────────────────────────────────────────────────
 LOG_LEVEL = logging.getLogger(__name__)

@@ -37,7 +37,7 @@ dev = [
 local = "APP_ENV=local LOG_LEVEL=INFO uvicorn main:app --reload --log-level error"
 prod = "APP_ENV=prod LOG_LEVEL=INFO uvicorn main:app --reload --log-level error"
 dev = "APP_ENV=dev LOG_LEVEL=DEBUG uvicorn main:app --reload --log-level error"
-init-env = "cp -n .env.example .env"
+lint = "black . && ruff check --fix ."
 
 [tool.black]
 target-version = ["py312"]
