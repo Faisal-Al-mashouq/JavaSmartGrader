@@ -1,10 +1,9 @@
 import asyncio
 import datetime
 import logging
-import os
 
-from dotenv import load_dotenv
 from redis.asyncio import Redis
+from settings import settings
 
 from .helpers import SANDBOX_TMP_DIR, _cleanup_workspace, docker_build_images
 from .jobs import (
@@ -22,12 +21,15 @@ from .schemas import (
 )
 
 setup_logging()
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
 class Sandbox:
-    def __init__(self, redis_url: str, max_concurrency: int = 4):
+    def __init__(
+        self,
+        redis_url: str = settings.redis_endpoint,
+        max_concurrency: int = settings.max_concurrency,
+    ):
         self.max_concurrency = max_concurrency
         self.redis_client = Redis.from_url(url=redis_url, decode_responses=True)
 
@@ -36,7 +38,7 @@ async def start():
     try:
         logger.info("Starting Sandbox Worker...")
         await docker_build_images()
-        client = Sandbox(os.getenv("REDIS_ENDPOINT"), max_concurrency=4)
+        client = Sandbox()
     except Exception as e:
         logger.error(f"Sandbox Worker Initialization error: {e}")
         raise
@@ -54,6 +56,7 @@ async def main_loop(client: Sandbox, process_id: int = 0):
                 src="SandboxJobQueue", dst="SandboxJobQueue:processing", timeout=0
             )
         except asyncio.CancelledError:
+            logger.debug(f"Process #{process_id} cancelled. Shutting down...")
             return
         logger.info("Sandbox Job Received.")
         if result:

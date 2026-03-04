@@ -1,22 +1,22 @@
 import asyncio
 import logging
-import os
 from datetime import UTC, datetime, timedelta
 
-from dotenv import load_dotenv
 from redis.asyncio import Redis
 from schemas import Job, JobRequest, JobResult, JobStatus
+from settings import settings
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
 class JobQueue:
-    def __init__(self, max_concurrency: int = 10):
-        self.redis_url = os.getenv(
-            "REDIS_ENDPOINT", "redis://username:password@localhost:6379"
-        )
-        self.max_concurrency = max_concurrency
+    def __init__(
+        self,
+        redis_url: str = settings.redis_endpoint,
+        max_concurrency: int = settings.max_concurrency,
+    ):
+        self.redis_url: str = redis_url
+        self.max_concurrency: int = max_concurrency
         self.redis_client = Redis.from_url(self.redis_url, decode_responses=True)
 
 
@@ -37,9 +37,11 @@ async def main_loop(client: JobQueue, process_id: int = 0):
     while True:
         try:
             logger.info(f"Process #{process_id}: Waiting for Job in MainJobQueue...")
-            result = await client.redis_client.brpoplpush("MainJobQueue", timeout=0)
+            result = await client.redis_client.brpoplpush(
+                src="MainJobQueue", dst="MainJobQueue:processing", timeout=0
+            )
         except asyncio.CancelledError:
-            logger.info("Process cancelled. Shutting down...")
+            logger.debug(f"Process #{process_id} cancelled. Shutting down...")
             return
         logger.info("Job Received from MainJobQueue.")
         if result:

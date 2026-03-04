@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from api.routes import (
     assignments,
@@ -10,15 +12,68 @@ from api.routes import (
     submissions,
     users,
 )
+from core.job_queue import start as start_job_queue
+from db.session import engine
 from fastapi import FastAPI
 from logs import setup_logging
+from settings import settings
 
-app = FastAPI()
 setup_logging()
 logger = logging.getLogger(__name__)
 
-logger.info("Starting JavaSmartGrader API server")
-logger.debug("Debug Mode: On")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting JavaSmartGrader API server")
+    logger.debug("Debug Mode: On")
+
+    app.state.db = await engine.connect()
+    logger.info("Database connected successfully")
+
+    app.state.job_queue = asyncio.create_task(start_job_queue())
+    logger.info("Job queue started successfully")
+    if settings.app_env == "all":
+        from ocr.ocr_corrector.tasks import run_worker as start_ocr_worker
+        from sandbox.sandbox_worker import start as start_sandbox_worker
+
+        app.state.sandbox_worker = asyncio.create_task(start_sandbox_worker())
+        app.state.ocr_worker = asyncio.create_task(asyncio.to_thread(start_ocr_worker))
+        logger.debug("Sandbox and OCR workers started successfully")
+
+    try:
+        yield
+    except Exception:
+        logger.error("Error in lifespan")
+        raise
+    finally:
+        logger.info("Shutting down JavaSmartGrader API server")
+
+        app.state.job_queue.cancel()
+        try:
+            await app.state.job_queue
+        except asyncio.CancelledError:
+            pass
+        logger.debug("Job queue shut down successfully")
+
+        if settings.app_env == "all":
+            app.state.sandbox_worker.cancel()
+            try:
+                await app.state.sandbox_worker
+            except asyncio.CancelledError:
+                pass
+            app.state.ocr_worker.cancel()
+            try:
+                await app.state.ocr_worker
+            except asyncio.CancelledError:
+                pass
+            logger.debug("Sandbox and OCR workers shut down successfully")
+
+        await engine.dispose()
+        logger.info("Shutdown complete")
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(courses.router, prefix="/courses", tags=["courses"])

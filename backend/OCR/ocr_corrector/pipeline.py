@@ -11,10 +11,10 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from ocr_corrector.config import GEMINI_MODEL
-from ocr_corrector.llm_corrector import correct_ocr
-from ocr_corrector.models import CorrectionResult
-from ocr_corrector.ocr_engine import extract_words
+from .config import GEMINI_MODEL
+from .llm_corrector import correct_ocr
+from .models import CorrectionResult
+from .ocr_engine import extract_words
 
 logger = logging.getLogger(__name__)
 

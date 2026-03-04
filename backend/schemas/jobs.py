@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from ocr.ocr_corrector.models import CorrectionResult
@@ -30,7 +30,9 @@ class TestCase(BaseModel):
 
 
 class SubmissionPayload(BaseModel):
-    type: JobType = Field(default=JobType.SUBMISSION, description="discriminator")
+    type: Literal[JobType.SUBMISSION] = Field(
+        default=JobType.SUBMISSION, description="discriminator"
+    )
     submission_id: int
     question_id: int
     assignment_id: int
@@ -42,7 +44,7 @@ class SubmissionPayload(BaseModel):
 
 
 class OCRPayload(BaseModel):
-    type: JobType = Field(default=JobType.OCR, description="discriminator")
+    type: Literal[JobType.OCR] = Field(default=JobType.OCR, description="discriminator")
     transcription_id: int
     submission_id: int
     image_url: str
@@ -50,7 +52,7 @@ class OCRPayload(BaseModel):
 
 
 class OCRResult(BaseModel):
-    type: JobType = Field(default=JobType.OCR, description="discriminator")
+    type: Literal[JobType.OCR] = Field(default=JobType.OCR, description="discriminator")
     transcription_id: int
     submission_id: int
     result: CorrectionResult
@@ -59,7 +61,9 @@ class OCRResult(BaseModel):
 
 
 class SandboxPayload(BaseModel):
-    type: JobType = Field(default=JobType.SANDBOX, description="discriminator")
+    type: Literal[JobType.SANDBOX] = Field(
+        default=JobType.SANDBOX, description="discriminator"
+    )
     compilation_id: int
     submission_id: int
     java_code: str
@@ -68,7 +72,9 @@ class SandboxPayload(BaseModel):
 
 
 class SandboxResult(BaseModel):
-    type: JobType = Field(default=JobType.SANDBOX, description="discriminator")
+    type: Literal[JobType.SANDBOX] = Field(
+        default=JobType.SANDBOX, description="discriminator"
+    )
     compilation_id: int
     submission_id: int
     result: SandboxJobResult
@@ -76,7 +82,9 @@ class SandboxResult(BaseModel):
 
 
 class GraderPayload(BaseModel):
-    type: JobType = Field(default=JobType.GRADER, description="discriminator")
+    type: Literal[JobType.GRADER] = Field(
+        default=JobType.GRADER, description="discriminator"
+    )
     feedback_id: int
     submission_id: int
     transcribed_text: str
@@ -86,7 +94,9 @@ class GraderPayload(BaseModel):
 
 
 class GraderResult(BaseModel):
-    type: JobType = Field(default=JobType.GRADER, description="discriminator")
+    type: Literal[JobType.GRADER] = Field(
+        default=JobType.GRADER, description="discriminator"
+    )
     feedback_id: int
     submission_id: int
     rubric_json: dict
@@ -97,7 +107,9 @@ class GraderResult(BaseModel):
 
 
 class FinalResult(BaseModel):
-    type: JobType = Field(default=JobType.FINAL_RESULT, description="discriminator")
+    type: Literal[JobType.FINAL_RESULT] = Field(
+        default=JobType.FINAL_RESULT, description="discriminator"
+    )
     submission_id: int
     result: GraderResult
     finished_at: datetime | None = None

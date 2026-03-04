@@ -1,22 +1,20 @@
 import logging
-import os
 from datetime import datetime, timedelta
 
 from db.crud.users import get_user_by_id
 from db.models import UserRole
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from schemas import UserBase
+from settings import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .dependencies import get_db
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

@@ -1,17 +1,15 @@
 import logging
-import os
 
-from dotenv import load_dotenv
+from settings import settings
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-DATABASE_URL = os.getenv("ASYNC_DATABASE_URL")
+ASYNC_DATABASE_URL = settings.async_database_url
 
 logger.info("Initializing database engine")
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
 async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 

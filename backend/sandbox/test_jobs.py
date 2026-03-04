@@ -1,18 +1,16 @@
 import json
 import logging
-import os
 import uuid
 
 import redis
-from dotenv import load_dotenv
+from settings import settings
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger.info("Starting Test Sandbox Worker...")
     r = redis.Redis.from_url(
-        os.getenv("REDIS_ENDPOINT"),
+        settings.redis_endpoint,
         decode_responses=True,
     )
     payload = json.dumps(
