@@ -1,187 +1,91 @@
 # JavaSmartGrader Backend
 
-Python backend service for the JavaSmartGrader application.
+Python 3.12 FastAPI backend for JavaSmartGrader, including:
+
+- REST API routes and authentication
+- async SQLAlchemy/PostgreSQL data layer
+- Redis-backed job orchestration (`core/job_queue.py`)
+- Docker-isolated Java sandbox execution
+- OCR correction worker integration
 
 ## Requirements
 
 - Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
 - PostgreSQL
 - Redis
-- Docker (for sandbox worker)
+- Docker
 
-## Installation
+## Install
 
 ```bash
 cd backend
-pip install -e .
+uv sync
 ```
 
-## Running the Server
+## Run Modes
 
-To run in development environment:
+From `backend/`:
+
 ```bash
+# FastAPI with APP_ENV=dev
 uv run task dev
-```
 
-To run in local environment:
-```bash
+# FastAPI with APP_ENV=local
 uv run task local
+
+# FastAPI with APP_ENV=all (starts API + job queue + sandbox + OCR workers)
+uv run task all
 ```
 
-To run in production environment:
-```bash
-uv run task prod
-```
+API base URL: [http://localhost:8000](http://localhost:8000)  
+Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-The API runs at http://localhost:8000. Interactive docs are available at http://localhost:8000/docs.
+## Settings
 
-## Project Structure
-
-```
-backend/
-├── main.py              # FastAPI application entry point and router registration
-├── pyproject.toml       # Project configuration and dependencies
-├── api/
-│   ├── auth.py          # JWT creation, token verification, role enforcement
-│   ├── dependencies.py  # Shared FastAPI dependencies (DB session)
-│   └── routes/
-│       ├── users.py             # /users — register, login, profile
-│       ├── courses.py           # /courses — course CRUD, student enrollment
-│       ├── assignments.py       # /assignments — assignment CRUD
-│       ├── questions.py         # /assignments/{id}/questions — question & testcase CRUD
-│       ├── submissions.py       # /submissions — student submission lifecycle
-│       ├── grading.py           # /grading — compile results, AI feedback, grades
-│       ├── confidence_flags.py  # /confidence-flags — OCR confidence flag management
-│       └── generate_report.py   # /reports — assignment report generation
-├── db/
-│   ├── models/
-│   │   ├── base.py          # Declarative base
-│   │   ├── main_db.py       # ORM models (User, Assignment, Submission, etc.)
-│   │   └── __init__.py      # Re-exports models
-│   ├── crud/
-│   │   ├── users.py             # User CRUD
-│   │   ├── courses.py           # Course CRUD, enrollment
-│   │   ├── assignments.py       # Assignment CRUD
-│   │   ├── questions.py         # Question & Testcase CRUD
-│   │   ├── submissions.py       # Submission CRUD
-│   │   ├── grading.py           # CompileResult, Transcription, AIFeedback, Grade CRUD
-│   │   ├── confidence_flags.py  # ConfidenceFlag CRUD
-│   │   ├── generate_report.py   # GenerateReport CRUD
-│   │   └── __init__.py          # Re-exports all CRUD functions
-│   ├── alembic/             # Migration versions
-│   ├── alembic.ini          # Alembic configuration
-│   └── session.py           # Async engine and session factory
-├── sandbox/
-│   ├── sandbox_worker.py  # Async worker orchestrator (main loop, job lifecycle)
-│   ├── jobs.py            # Job processing (compile, execute, test case evaluation)
-│   ├── helpers.py         # Workspace management, Docker container commands
-│   ├── schemas.py         # Pydantic models for jobs, results, and test cases
-│   ├── test_jobs.py       # Script to push test payloads to Redis queue
-│   ├── Dockerfile.compiler
-│   ├── Dockerfile.executer
-│   └── tmp/               # Temporary workspaces and test results (created at runtime)
-└── README.md            # This file
-```
-
-## Configuration
-
-Create a `.env` file in `backend/`:
+Create `backend/.env` (loaded by `pydantic-settings`):
 
 ```env
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/smartgrader
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
 REDIS_ENDPOINT=redis://localhost:6379
-JWT_SECRET_KEY=your-secret-key
+QUEUE_NAMESPACE=jsg.v1
+JWT_SECRET_KEY=change-me
+MAX_CONCURRENCY=10
 ```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL async connection URL | — |
-| `REDIS_ENDPOINT` | Redis connection URL for sandbox job queue | — |
-| `JWT_SECRET_KEY` | Secret key for signing JWT tokens | — |
+See `settings.py` for the full list of configurable values.
 
-## API
+## Project Layout
 
-See [api/README.md](api/README.md) for full endpoint documentation.
+```text
+backend/
+├── main.py            # FastAPI app + lifespan startup/shutdown orchestration
+├── api/               # Auth, dependencies, and route handlers
+├── core/              # Job queue orchestrator and processing pipeline
+├── db/                # SQLAlchemy models, CRUD, session, Alembic migrations
+├── sandbox/           # Docker sandbox worker (compile/execute Java submissions)
+├── ocr/               # OCR correction pipeline and worker
+├── schemas/           # Shared Pydantic schemas
+└── pyproject.toml     # Dependencies and task commands
+```
 
-The API is organized into eight routers:
-
-| Prefix | Description |
-|--------|-------------|
-| `/users` | Registration, login, profile management |
-| `/courses` | Course CRUD, student enrollment/unenrollment |
-| `/assignments` | Assignment CRUD (instructors) |
-| `/assignments/{id}/questions` | Question and testcase CRUD (instructors) |
-| `/submissions` | Submission lifecycle (students and instructors) |
-| `/grading` | Compile results, transcriptions, AI feedback, grades |
-| `/confidence-flags` | OCR confidence flag management |
-| `/reports` | Assignment report generation and management |
-
-## Database
-
-Async PostgreSQL using SQLAlchemy 2.0 ORM with Alembic migrations.
-
-### Models
-
-- **User** - Students and instructors (role-based)
-- **Course** - Courses with instructor ownership and student enrollment (many-to-many)
-- **Assignment** - Assignments linked to courses with due dates and rubrics
-- **Question** - Questions within assignments (composite PK: id + assignment_id)
-- **Testcase** - Input/output pairs per question
-- **Submission** - Student work linked to questions (state: submitted/processing/graded/failed)
-- **CompileResult** - Compilation and runtime results per submission
-- **Transcription** - OCR/transcription output per submission
-- **ConfidenceFlag** - OCR confidence scores and suggestions per transcription
-- **AIFeedback** - AI-suggested grade and feedback per submission
-- **Grade** - Final instructor grade per submission
-- **GenerateReport** - Generated reports per assignment
-
-### Migrations
+## Helpful Commands
 
 ```bash
-# Generate migration after model changes
-alembic revision --autogenerate -m "description"
+# Lint + format
+uv run task lint
 
-# Apply migrations
-alembic upgrade head
+# Run sandbox worker only
+uv run task sandbox
+
+# Run OCR worker only
+uv run task ocr
 ```
 
-See [db/README.md](db/README.md) for full details.
+## Component Docs
 
-## Sandbox Worker
-
-Async service that compiles and executes Java submissions in isolated Docker containers, consuming jobs from a Redis queue.
-
-### Running the Worker
-
-```bash
-python -m backend.sandbox.sandbox_worker
-```
-
-The worker supports graceful shutdown via Ctrl+C (SIGINT).
-
-### Docker Images
-
-Built automatically on worker startup. To build manually from the project root:
-
-```bash
-docker build -f backend/sandbox/Dockerfile.compiler -t compiler-image backend/sandbox/
-docker build -f backend/sandbox/Dockerfile.executer -t executer-image backend/sandbox/
-```
-
-See [sandbox/README.md](sandbox/README.md) for full details.
-
-## Development
-
-### Adding Dependencies
-
-Edit `pyproject.toml`, then reinstall:
-
-```bash
-pip install -e .
-```
-
-### Running Tests
-
-```bash
-pytest
-```
+- API: `api/README.md`
+- Database: `db/README.md`
+- Sandbox worker: `sandbox/README.md`
+- OCR pipeline: `ocr/README.md`

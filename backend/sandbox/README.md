@@ -5,7 +5,7 @@ Async service that compiles and executes Java code submissions in isolated Docke
 ## Architecture
 
 ```
-Redis Queue (SandboxJobQueue)
+Redis Queue (`jsg.v1:SandboxJobQueue`)
         │
         ▼
   Sandbox Worker (async, N concurrent coroutines)
@@ -15,7 +15,7 @@ Redis Queue (SandboxJobQueue)
         └── 3. Evaluate  →  Compare actual vs expected output
         │
         ▼
-  Result saved to tmp/test_results/{job_id}.txt
+  Result pushed to `jsg.v1:SandboxJobQueue:completed:{job_id}`
 ```
 
 Each Docker container runs with:
@@ -36,6 +36,8 @@ Each Docker container runs with:
 
 ```
 REDIS_ENDPOINT="redis://<user>:<password>@localhost:6379"
+QUEUE_NAMESPACE="jsg.v1"
+MAX_CONCURRENCY=10
 ```
 
 2. Docker images are built automatically on worker startup. To build manually:
@@ -48,16 +50,22 @@ docker build -f backend/sandbox/Dockerfile.executer -t executer-image backend/sa
 
 ## Running
 
-Start the worker (from project root):
+Start the worker (recommended, from `backend/`):
 
 ```bash
-python -m backend.sandbox.sandbox_worker
+uv run task sandbox
 ```
 
-Push test jobs to the queue:
+Or directly:
 
 ```bash
-python -m backend.sandbox.test_jobs
+python -m sandbox.sandbox_worker
+```
+
+Push test jobs to the queue (from `backend/`):
+
+```bash
+python -m sandbox.test_jobs
 ```
 Run docker containers via commands per {CLASS_NAME} (for testing):
 
@@ -82,7 +90,7 @@ The worker supports graceful shutdown via `Ctrl+C`.
 
 ## Job Payload Format
 
-Push a JSON string to the `SandboxJobQueue` Redis list:
+Push a JSON string to the `jsg.v1:SandboxJobQueue` Redis list:
 
 ```json
 {
