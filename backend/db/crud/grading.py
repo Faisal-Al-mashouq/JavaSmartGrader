@@ -1,5 +1,4 @@
 import logging
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
@@ -24,7 +23,6 @@ async def create_compile_result(
         compiled_ok,
     )
     compile_result = CompileResult(
-        id=uuid.uuid4(),
         submission_id=submission_id,
         compiled_ok=compiled_ok,
         compile_errors=compile_errors,
@@ -86,7 +84,6 @@ async def create_ai_feedback(
         suggested_grade,
     )
     ai_feedback = AIFeedback(
-        id=uuid.uuid4(),
         submission_id=submission_id,
         suggested_grade=suggested_grade,
         instructor_guidance=instructor_guidance,

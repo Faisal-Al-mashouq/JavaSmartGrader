@@ -21,9 +21,8 @@ from .jobs import (
     GraderPayload,
     GraderResult,
     Job,
-    JobPayload,
     JobRequest,
-    JobResult,
+    JobRequestPayload,
     JobResultPayload,
     JobStatus,
     JobType,
@@ -31,7 +30,6 @@ from .jobs import (
     OCRResult,
     SandboxPayload,
     SandboxResult,
-    SubmissionPayload,
     TestCase,
 )
 from .questions import (
@@ -64,12 +62,8 @@ __all__ = [
     "GradeBase",
     "Job",
     "JobRequest",
-    "JobResult",
     "JobStatus",
     "JobType",
-    "JobPayload",
-    "JobResultPayload",
-    "SubmissionPayload",
     "OCRPayload",
     "OCRResult",
     "SandboxPayload",
@@ -78,4 +72,6 @@ __all__ = [
     "GraderResult",
     "FinalResult",
     "TestCase",
+    "JobRequestPayload",
+    "JobResultPayload",
 ]

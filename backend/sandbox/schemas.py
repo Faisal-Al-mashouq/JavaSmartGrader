@@ -64,7 +64,7 @@ class ExecutionJobResult(BaseModel):
 class SandboxJobRequest(BaseModel):
     job_id: uuid.UUID
     java_code: str
-    test_cases: TestCasesRequest | None
+    test_cases: list[TestCaseRequest] | None
 
 
 class SandboxResult(BaseModel):

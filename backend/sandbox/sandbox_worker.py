@@ -5,7 +5,7 @@ import logging
 from redis.asyncio import Redis
 from settings import settings
 
-from .helpers import SANDBOX_TMP_DIR, _cleanup_workspace, docker_build_images
+from .helpers import _cleanup_workspace, docker_build_images
 from .jobs import (
     compile_job,
     execute_job,
@@ -22,6 +22,7 @@ from .schemas import (
 
 setup_logging()
 logger = logging.getLogger(__name__)
+SANDBOX_QUEUE = f"{settings.queue_namespace}:SandboxJobQueue"
 
 
 class Sandbox:
@@ -51,9 +52,9 @@ async def start():
 async def main_loop(client: Sandbox, process_id: int = 0):
     while True:
         try:
-            logger.info(f"Process #{process_id}: Waiting for job in SandboxJobQueue...")
+            logger.info(f"Process #{process_id}: Waiting for job in {SANDBOX_QUEUE}...")
             result = await client.redis_client.brpoplpush(
-                src="SandboxJobQueue", dst="SandboxJobQueue:processing", timeout=0
+                src=SANDBOX_QUEUE, dst=f"{SANDBOX_QUEUE}:processing", timeout=0
             )
         except asyncio.CancelledError:
             logger.debug(f"Process #{process_id} cancelled. Shutting down...")
@@ -74,8 +75,12 @@ async def main_loop(client: Sandbox, process_id: int = 0):
                 logger.error("Failed to process job, skipping")
                 continue
 
-            await save_result(processed_job)
-            await client.redis_client.lpush("SandboxJobQueue:processing", result)
+            await return_result(client, processed_job)
+            await client.redis_client.lrem(f"{SANDBOX_QUEUE}:processing", 1, result)
+        else:
+            logger.error(f"No job found in {SANDBOX_QUEUE}")
+            await client.redis_client.lrem(f"{SANDBOX_QUEUE}:processing", 1, result)
+            continue
 
 
 async def initialize_job(job_request: str) -> SandboxJob | None:
@@ -125,22 +130,16 @@ async def process_job(job: SandboxJob) -> SandboxJobResult:
         _cleanup_workspace(job.job_id)
 
 
-async def save_result(job: SandboxJobResult):
-    """
-    In production, this would save to a database or object storage.
-    For testing, we save to a local file.
-    """
-    results_dir = SANDBOX_TMP_DIR / "test_results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    result_file = results_dir / f"{job.job_id}.txt"
-    result_file.write_text(job.model_dump_json(indent=2))
-    logger.info(f"Job result saved to {result_file}")
+async def return_result(client: Sandbox, job: SandboxJobResult):
+    await client.redis_client.lpush(
+        f"{SANDBOX_QUEUE}:completed:{job.job_id}", job.model_dump_json()
+    )
+    logger.debug(f"Sandbox Job: {job.job_id} result returned successfully")
+    return True
 
 
 if __name__ == "__main__":
     try:
-        # This should be used only for testing the worker locally
-        # In production we will push jobs to the queue from the API server
         asyncio.run(start())
     except KeyboardInterrupt:
         logger.info("Sandbox Worker shut down gracefully")

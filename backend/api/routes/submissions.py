@@ -10,12 +10,15 @@ from db.crud.submissions import (
 )
 from db.models import SubmissionState, UserRole
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import SubmissionBase
+from schemas import SubmissionBase, TestCase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
+from .assignments import get_assignment_by_id
+from .helpers import start_job_process
+from .questions import get_testcases_by_question_id
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,7 @@ router = APIRouter()
 
 @router.post("/", response_model=SubmissionBase)
 async def submit_answer(
+    question_id: int,
     assignment_id: int,
     image_url: str | None = None,
     session: AsyncSession = Depends(get_db),
@@ -36,9 +40,36 @@ async def submit_answer(
         # Start job process immediately after creating it.
         submission = await create_submission(
             session=session,
+            question_id=question_id,
             assignment_id=assignment_id,
             student_id=current_user.id,
             image_url=image_url,
+        )
+        test_cases = await get_testcases_by_question_id(
+            session, question_id, assignment_id
+        )
+        if not test_cases:
+            test_cases = [TestCase(input="", expected_output="")]
+        assignment = await get_assignment_by_id(session, assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        rubric_json = assignment.rubric_json
+        if not rubric_json:
+            raise HTTPException(status_code=404, detail="Rubric not found")
+
+        java_code = ""  # TODO: Implement Editable Java Code Editor
+        await start_job_process(
+            submission_id=submission.id,
+            question_id=question_id,
+            assignment_id=assignment_id,
+            student_id=current_user.id,
+            image_url=image_url,
+            java_code=java_code,
+            test_cases=[
+                TestCase(input=tc.input, expected_output=tc.expected_output)
+                for tc in test_cases
+            ],
+            rubric_json=rubric_json,
         )
         logger.info(
             "Submission created (id=%d) by student %d for assignment %d",

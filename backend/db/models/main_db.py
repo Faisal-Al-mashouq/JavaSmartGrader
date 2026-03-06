@@ -116,7 +116,7 @@ class Assignment(Base):
     due_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    rubric_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    rubric_json: Mapped[dict] = mapped_column(JSON, nullable=False)
 
     course: Mapped["Course"] = relationship(
         back_populates="assignments",
@@ -141,7 +141,7 @@ class Assignment(Base):
 class Question(Base):
     __tablename__ = "questions"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     assignment_id: Mapped[int] = mapped_column(
         ForeignKey("assignments.id"), nullable=False, primary_key=True
     )
@@ -246,7 +246,7 @@ class AIFeedback(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(
-        ForeignKey("submissions.id"), nullable=False
+        ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
     )
 
     suggested_grade: Mapped[Decimal | None] = mapped_column(
@@ -266,7 +266,7 @@ class CompileResult(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(
-        ForeignKey("submissions.id"), nullable=False
+        ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
     )
 
     compiled_ok: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -285,7 +285,7 @@ class Transcription(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(
-        ForeignKey("submissions.id"), nullable=False
+        ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
     )
 
     transcribed_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -302,7 +302,7 @@ class ConfidenceFlag(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     transcription_id: Mapped[int] = mapped_column(
-        ForeignKey("transcriptions.id"), nullable=False
+        ForeignKey("transcriptions.id", ondelete="CASCADE"), nullable=False
     )
     text_segment: Mapped[str] = mapped_column(Text, nullable=False)
     confidence_score: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
@@ -320,7 +320,7 @@ class Grade(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     submission_id: Mapped[int] = mapped_column(
-        ForeignKey("submissions.id"), nullable=False
+        ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
     )
     instructor_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 

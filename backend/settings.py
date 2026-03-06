@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+ENV_FILE = Path(__file__).resolve().parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -6,6 +10,7 @@ class Settings(BaseSettings):
     app_env: str = "local"
 
     redis_endpoint: str = "redis://redis:6379"
+    queue_namespace: str = "jsg.v1"
     redis_port: int = 6379
     max_concurrency: int = 10
 
@@ -18,11 +23,6 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "your-super-secret-jwt-key"
 
     fastapi_port: int = 8000
-
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-    }
 
     api_gemini: str = "API_GEMINI"
     api_azure: str = "API_AZURE"
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.1-flash-preview"
 
     model_config = {
-        "env_file": ".env",
+        "env_file": ENV_FILE,
         "env_file_encoding": "utf-8",
     }
 

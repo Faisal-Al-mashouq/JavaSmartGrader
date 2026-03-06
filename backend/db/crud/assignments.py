@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 async def create_assignment(
     session: AsyncSession,
     course_id: int,
+    rubric_json: dict,
     title: str,
     description: str | None,
     due_date: datetime | None,
@@ -19,6 +20,7 @@ async def create_assignment(
     logger.info("Creating assignment '%s' for course %d", title, course_id)
     assignment = Assignment(
         course_id=course_id,
+        rubric_json=rubric_json,
         title=title,
         description=description,
         due_date=due_date,

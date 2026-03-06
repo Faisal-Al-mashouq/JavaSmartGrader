@@ -6,6 +6,7 @@ import redis
 from settings import settings
 
 logger = logging.getLogger(__name__)
+SANDBOX_QUEUE = f"{settings.queue_namespace}:SandboxJobQueue"
 
 if __name__ == "__main__":
     logger.info("Starting Test Sandbox Worker...")
@@ -25,8 +26,8 @@ if __name__ == "__main__":
             },
         }
     )
-    r.lpush("SandboxJobQueue", payload)
-    logger.info("Test job 1 pushed to SandboxJobQueue")
+    r.lpush(SANDBOX_QUEUE, payload)
+    logger.info(f"Test job 1 pushed to {SANDBOX_QUEUE}")
     payload2 = json.dumps(
         {
             "job_id": str(uuid.uuid4()),
@@ -39,8 +40,8 @@ if __name__ == "__main__":
             },
         }
     )
-    r.lpush("SandboxJobQueue", payload2)
-    logger.info("Test job 2 pushed to SandboxJobQueue")
+    r.lpush(SANDBOX_QUEUE, payload2)
+    logger.info(f"Test job 2 pushed to {SANDBOX_QUEUE}")
     payload3 = json.dumps(
         {
             "job_id": str(uuid.uuid4()),
@@ -56,8 +57,8 @@ if __name__ == "__main__":
             "test_cases": {"test_cases": [{"input": "1 2", "expected_output": "3"}]},
         }
     )
-    r.lpush("SandboxJobQueue", payload3)
-    logger.info("Test job 3 pushed to SandboxJobQueue")
+    r.lpush(SANDBOX_QUEUE, payload3)
+    logger.info(f"Test job 3 pushed to {SANDBOX_QUEUE}")
     payload4 = json.dumps(
         {
             "job_id": str(uuid.uuid4()),
@@ -82,5 +83,5 @@ if __name__ == "__main__":
             },
         }
     )
-    r.lpush("SandboxJobQueue", payload4)
-    logger.info("Test job 4 pushed to SandboxJobQueue")
+    r.lpush(SANDBOX_QUEUE, payload4)
+    logger.info(f"Test job 4 pushed to {SANDBOX_QUEUE}")

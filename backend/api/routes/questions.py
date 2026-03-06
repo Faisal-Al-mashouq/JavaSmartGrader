@@ -70,8 +70,13 @@ async def create_new_question(
             "Question created (id=%d) for assignment %d", question.id, assignment_id
         )
         return question
-    except IntegrityError:
-        logger.error("Failed to create question for assignment %d", assignment_id)
+    except IntegrityError as exc:
+        await session.rollback()
+        logger.exception(
+            "Failed to create question for assignment %d: %s",
+            assignment_id,
+            exc,
+        )
         raise HTTPException(
             status_code=400, detail="Failed to create question"
         ) from None

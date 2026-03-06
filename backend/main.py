@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
 
     app.state.job_queue = asyncio.create_task(start_job_queue())
     logger.info("Job queue started successfully")
+
     if settings.app_env == "all":
         from ocr.ocr_corrector.tasks import run_worker as start_ocr_worker
         from sandbox.sandbox_worker import start as start_sandbox_worker

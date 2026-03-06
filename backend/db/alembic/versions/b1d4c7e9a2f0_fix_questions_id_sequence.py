@@ -1,8 +1,8 @@
-"""fixing foreign keys
+"""fix questions id sequence
 
-Revision ID: 05bb301a1930
-Revises: 484284b2c0ac
-Create Date: 2026-03-02 06:27:51.434798
+Revision ID: b1d4c7e9a2f0
+Revises: 328eb2ce63c1
+Create Date: 2026-03-06 14:05:00.000000
 
 """
 
@@ -11,8 +11,8 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "05bb301a1930"
-down_revision: str | Sequence[str] | None = "484284b2c0ac"
+revision: str = "b1d4c7e9a2f0"
+down_revision: str | Sequence[str] | None = "328eb2ce63c1"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -44,6 +44,7 @@ async def _verify_instructor_owns_assignment(
 @router.post("/", response_model=AssignmentBase)
 async def create_new_assignment(
     course_id: int,
+    rubric_json: dict,
     title: str,
     description: str | None = None,
     due_date: datetime | None = None,
@@ -71,6 +72,7 @@ async def create_new_assignment(
         assignment = await create_assignment(
             session=session,
             course_id=course_id,
+            rubric_json=rubric_json,
             title=title,
             description=description,
             due_date=due_date,

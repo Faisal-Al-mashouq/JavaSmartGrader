@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Submission, SubmissionState
@@ -87,13 +87,12 @@ async def update_submission(
 
 async def delete_submission(session: AsyncSession, submission_id: int) -> bool:
     logger.info("Deleting submission %d", submission_id)
-    result = await session.execute(
-        delete(Submission).where(Submission.id == submission_id)
-    )
-    await session.commit()
-    deleted = result.rowcount > 0
-    if deleted:
-        logger.info("Submission %d deleted", submission_id)
-    else:
+    submission = await get_submission_by_id(session, submission_id)
+    if not submission:
         logger.warning("Submission %d not found for deletion", submission_id)
-    return deleted
+        return False
+
+    await session.delete(submission)
+    await session.commit()
+    logger.info("Submission %d deleted", submission_id)
+    return True
