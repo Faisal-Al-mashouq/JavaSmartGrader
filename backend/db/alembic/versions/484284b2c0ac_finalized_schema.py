@@ -90,7 +90,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "questions",
-        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("assignment_id", sa.Integer(), nullable=False),
         sa.Column("question_text", sa.Text(), nullable=False),
         sa.ForeignKeyConstraint(

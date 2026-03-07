@@ -68,11 +68,7 @@ async def execute_job(job: SandboxJob) -> SandboxJob | None:
     class_name = _extract_class_name(job.request.java_code)
     workspace = SANDBOX_TMP_DIR / str(job.job_id)
     input_file = workspace / "input" / "input.txt"
-    test_cases = (
-        job.request.test_cases.test_cases
-        if job.request.test_cases and job.request.test_cases.test_cases
-        else None
-    )
+    test_cases = job.request.test_cases if job.request.test_cases else None
     errors = []
     outputs = []
 

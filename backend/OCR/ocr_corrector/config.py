@@ -7,36 +7,27 @@ to fail fast on missing credentials.
 """
 
 import logging
-import os
 
-from dotenv import load_dotenv
+from logs import setup_logging
+from settings import settings
 
-load_dotenv()
+setup_logging()
 
 # ── Logging ──────────────────────────────────────────────────────
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s │ %(name)-18s │ %(levelname)-7s │ %(message)s",
-    datefmt="%H:%M:%S",
-)
+LOG_LEVEL = logging.getLogger(__name__)
 
 # ── Azure Document Intelligence ──────────────────────────────────
-AZURE_ENDPOINT = os.getenv(
-    "AZURE_ENDPOINT",
-    "https://gpfirsttrydoc.cognitiveservices.azure.com/",
-)
-AZURE_KEY = os.getenv("API_AZURE")
+AZURE_ENDPOINT = settings.azure_ocr_endpoint
+AZURE_KEY = settings.api_azure
 
 # ── Gemini (Google GenAI) ────────────────────────────────────────
-GEMINI_KEY = os.getenv("API_GEMINI")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-preview")
+GEMINI_KEY = settings.api_gemini
+GEMINI_MODEL = settings.gemini_model
 
 # ── Redis (for job queue integration) ────────────────────────────
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-REDIS_QUEUE_NAME = os.getenv("REDIS_QUEUE_NAME", "ocr:jobs")
-REDIS_RESULT_TTL = int(os.getenv("REDIS_RESULT_TTL", "3600"))  # seconds
+REDIS_URL = settings.redis_endpoint
+REDIS_QUEUE_NAME = "ocr:jobs"
+REDIS_RESULT_TTL = 3600  # seconds
 
 
 def validate() -> None:
