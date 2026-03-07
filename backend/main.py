@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from api.routes import (
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
 
         await engine.dispose()
         logger.info("Shutdown complete")
+        os._exit(0)
 
 
 app = FastAPI(lifespan=lifespan)

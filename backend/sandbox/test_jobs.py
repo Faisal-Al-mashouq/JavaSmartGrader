@@ -21,9 +21,7 @@ if __name__ == "__main__":
             public class Main { public static void main(String[] args) {
             System.out.println(\"Hello, World!\"); } }
             """,
-            "test_cases": {
-                "test_cases": [{"input": "", "expected_output": "Hello, World!"}]
-            },
+            "test_cases": [{"input": "", "expected_output": "Hello, World!"}],
         }
     )
     r.lpush(SANDBOX_QUEUE, payload)
@@ -35,9 +33,7 @@ if __name__ == "__main__":
             public static void main(String[] args) {
             System.out.println(\"Hello All World!\"); } }
             """,
-            "test_cases": {
-                "test_cases": [{"input": "", "expected_output": "Hello, World!"}]
-            },
+            "test_cases": [{"input": "", "expected_output": "Hello, World!"}],
         }
     )
     r.lpush(SANDBOX_QUEUE, payload2)
@@ -54,7 +50,7 @@ if __name__ == "__main__":
             int b = scanner.nextInt();
             System.out.println(a + b);} }
             """,
-            "test_cases": {"test_cases": [{"input": "1 2", "expected_output": "3"}]},
+            "test_cases": [{"input": "1 2", "expected_output": "3"}],
         }
     )
     r.lpush(SANDBOX_QUEUE, payload3)
@@ -74,13 +70,11 @@ if __name__ == "__main__":
             System.out.println("No input provided");
             } } }
             """,
-            "test_cases": {
-                "test_cases": [
-                    {"input": "5", "expected_output": "25"},
-                    {"input": "", "expected_output": "No input provided"},
-                    {"input": "3", "expected_output": "9"},
-                ]
-            },
+            "test_cases": [
+                {"input": "5", "expected_output": "25"},
+                {"input": "", "expected_output": "No input provided"},
+                {"input": "3", "expected_output": "9"},
+            ],
         }
     )
     r.lpush(SANDBOX_QUEUE, payload4)

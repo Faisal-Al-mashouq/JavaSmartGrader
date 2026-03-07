@@ -41,7 +41,7 @@ async def start():
         await docker_build_images()
         client = Sandbox()
     except Exception as e:
-        logger.error(f"Sandbox Worker Initialization error: {e}")
+        logger.exception("Sandbox Worker Initialization error: %s", e)
         raise
     logger.info("Sandbox Worker started")
     await asyncio.gather(
@@ -124,7 +124,7 @@ async def process_job(job: SandboxJob) -> SandboxJobResult:
         logger.info(f"Job {job.job_id} completed successfully")
         return await set_result(tested_job, JobStatus.COMPLETED)
     except Exception as e:
-        logger.error(f"SandboxJob error: {e}")
+        logger.exception("SandboxJob error: %s", e)
         return await set_result(job, JobStatus.ERROR)
     finally:
         _cleanup_workspace(job.job_id)

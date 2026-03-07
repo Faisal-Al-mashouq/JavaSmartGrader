@@ -18,7 +18,7 @@ from ..auth import get_current_user, require_role
 from ..dependencies import get_db
 from .assignments import get_assignment_by_id
 from .helpers import start_job_process
-from .questions import get_testcases_by_question_id
+from .questions import get_question_by_id, get_testcases_by_question_id
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,22 @@ async def submit_answer(
         "Student %d submitting answer for assignment %d", current_user.id, assignment_id
     )
     try:
-        # Start job process immediately after creating it.
+        assignment = await get_assignment_by_id(session, assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        rubric_json = assignment.rubric_json
+        if not rubric_json:
+            raise HTTPException(status_code=404, detail="Rubric not found")
+        test_cases = await get_testcases_by_question_id(
+            session, question_id, assignment_id
+        )
+        if not test_cases:
+            test_cases = [TestCase(input="", expected_output="")]
+        question = await get_question_by_id(session, question_id, assignment_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        logger.debug("Creating submission for question %d", question_id)
         submission = await create_submission(
             session=session,
             question_id=question_id,
@@ -45,18 +60,6 @@ async def submit_answer(
             student_id=current_user.id,
             image_url=image_url,
         )
-        test_cases = await get_testcases_by_question_id(
-            session, question_id, assignment_id
-        )
-        if not test_cases:
-            test_cases = [TestCase(input="", expected_output="")]
-        assignment = await get_assignment_by_id(session, assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        rubric_json = assignment.rubric_json
-        if not rubric_json:
-            raise HTTPException(status_code=404, detail="Rubric not found")
-
         java_code = ""  # TODO: Implement Editable Java Code Editor
         await start_job_process(
             submission_id=submission.id,

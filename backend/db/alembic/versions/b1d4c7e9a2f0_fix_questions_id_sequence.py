@@ -25,10 +25,8 @@ def upgrade() -> None:
         "ALTER TABLE questions ALTER COLUMN id SET DEFAULT nextval('questions_id_seq')"
     )
     op.execute(
-        "SELECT setval('questions_id_seq', "
-        "COALESCE((SELECT MAX(id) FROM questions), 1), "
-        "(SELECT COUNT(*) FROM questions) > 0)"
-        ")"
+        "SELECT setval('questions_id_seq',"
+        " COALESCE((SELECT MAX(id) FROM questions), 1))"
     )
 
 

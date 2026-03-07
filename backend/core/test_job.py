@@ -6,6 +6,7 @@ from settings import settings
 
 MAIN_QUEUE = f"{settings.queue_namespace}:MainJobQueue"
 
+# Requires submission_id to exist in DB. Create via POST /submissions/ first.
 job = JobRequest(
     submission_id=1,
     question_id=1,

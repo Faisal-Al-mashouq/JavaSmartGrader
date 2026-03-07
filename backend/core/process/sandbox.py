@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 from db.crud.grading import create_compile_result
+from db.crud.submissions import get_submission_by_id
 from db.session import async_session
 from schemas import (
     Job,
@@ -35,10 +36,10 @@ async def process_sandbox_job(client: JobQueue, job: Job) -> Job | None:
                 created_at=datetime.now(),
             )
         )
+        logger.debug(f"Sandbox Job: {job.job_id} pushed to {SANDBOX_QUEUE}")
         await client.redis_client.lpush(
             SANDBOX_QUEUE, sandbox_payload.model_dump_json()
         )
-        logger.debug(f"Sandbox Job: {job.job_id} pushed to {SANDBOX_QUEUE}")
         _, result = await client.redis_client.brpop(
             f"{SANDBOX_QUEUE}:completed:{job.job_id}", timeout=0
         )
@@ -89,6 +90,16 @@ async def save_to_db(job: Job) -> bool:
                 logger.error(
                     f"Sandbox Result or Compilation Result not found"
                     f" for Sandbox Job: {job.job_id}"
+                )
+                return False
+
+            submission = await get_submission_by_id(
+                session, job.initial_request.submission_id
+            )
+            if not submission:
+                logger.error(
+                    f"Submission {job.initial_request.submission_id} not found - "
+                    "cannot save compile result. Ensure the submission exists "
                 )
                 return False
 

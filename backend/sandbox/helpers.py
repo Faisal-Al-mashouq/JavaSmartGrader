@@ -2,6 +2,8 @@ import asyncio
 import logging
 import re
 import shutil
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 
@@ -13,30 +15,55 @@ logger = logging.getLogger(__name__)
 
 async def _docker_build_image(tag: str, dockerfile_path: Path) -> None:
     logger.debug("Building Docker image '%s' from %s", tag, dockerfile_path.name)
-    proc = await asyncio.create_subprocess_exec(
-        "docker",
-        "build",
-        "-t",
-        tag,
-        "-f",
-        str(dockerfile_path),
-        str(SANDBOX_DIR),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate()
-    if proc.returncode != 0:
-        logger.error("Failed to build Docker image '%s': %s", tag, stderr.decode())
-        raise RuntimeError(f"Failed to build {tag}: {stderr.decode()}")
+    if sys.platform == "win32":
+        result = subprocess.run(
+            [
+                "docker",
+                "build",
+                "-t",
+                tag,
+                "-f",
+                str(dockerfile_path),
+                str(SANDBOX_DIR),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            err = result.stderr or result.stdout or "(no output)"
+            logger.error("Failed to build Docker image '%s': %s", tag, err)
+            raise RuntimeError(f"Failed to build {tag}: {err}")
+    else:
+        proc = await asyncio.create_subprocess_exec(
+            "docker",
+            "build",
+            "-t",
+            tag,
+            "-f",
+            str(dockerfile_path),
+            str(SANDBOX_DIR),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            err = stderr.decode() or stdout.decode() or "(no output)"
+            logger.error("Failed to build Docker image '%s': %s", tag, err)
+            raise RuntimeError(f"Failed to build {tag}: {err}")
     logger.debug("Docker image '%s' built successfully", tag)
 
 
 async def docker_build_images():
     logger.info("Building sandbox Docker images...")
-    await asyncio.gather(
-        _docker_build_image("compiler-image", SANDBOX_DIR / "Dockerfile.compiler"),
-        _docker_build_image("executer-image", SANDBOX_DIR / "Dockerfile.executer"),
-    )
+    if sys.platform == "win32":
+        # Sequential builds to avoid Windows Docker contention
+        await _docker_build_image("compiler-image", SANDBOX_DIR / "Dockerfile.compiler")
+        await _docker_build_image("executer-image", SANDBOX_DIR / "Dockerfile.executer")
+    else:
+        await asyncio.gather(
+            _docker_build_image("compiler-image", SANDBOX_DIR / "Dockerfile.compiler"),
+            _docker_build_image("executer-image", SANDBOX_DIR / "Dockerfile.executer"),
+        )
     logger.info("All sandbox Docker images built successfully")
 
 
@@ -70,8 +97,16 @@ def _cleanup_workspace(job_id: uuid.UUID):
         logger.debug("No workspace to clean up for job %s", job_id)
 
 
+def _run_container_sync(cmd: list[str]) -> tuple[int, str, str]:
+    """Sync container run for Windows (avoids asyncio subprocess issues)."""
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.returncode, result.stdout, result.stderr
+
+
 async def run_container(cmd: list[str]) -> tuple[int, str, str]:
     logger.debug("Running container: %s", " ".join(cmd[:6]))
+    if sys.platform == "win32":
+        return await asyncio.to_thread(_run_container_sync, cmd)
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
