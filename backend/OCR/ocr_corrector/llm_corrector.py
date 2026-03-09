@@ -12,8 +12,8 @@ import logging
 
 from google import genai
 
-from ocr_corrector.config import GEMINI_KEY, GEMINI_MODEL
-from ocr_corrector.prompts import build_correction_prompt
+from .config import GEMINI_KEY, GEMINI_MODEL
+from .prompts import build_correction_prompt
 
 logger = logging.getLogger(__name__)
 

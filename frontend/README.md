@@ -1,81 +1,51 @@
 # JavaSmartGrader Frontend
 
-React web application for the JavaSmartGrader system.
+React frontend for instructors and students to manage courses, assignments, submissions, and grading workflows.
 
 ## Requirements
 
 - Node.js 18+
-- npm or yarn
+- npm
 
-## Installation
+## Install and Run
 
 ```bash
 cd frontend
 npm install
+npm start
 ```
 
-## Available Scripts
+Development server: [http://localhost:3000](http://localhost:3000)
 
-### `npm start`
+## Scripts
 
-Runs the app in development mode at [http://localhost:3000](http://localhost:3000).
+- `npm start` - Run development server
+- `npm test` - Run tests in watch mode
+- `npm run build` - Build production bundle
+- `npm run eject` - Eject Create React App config (irreversible)
 
-### `npm test`
+## Backend Connection
 
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.
-
-### `npm run eject`
-
-Ejects from Create React App (one-way operation).
-
-## Project Structure
-
-```
-frontend/
-├── public/                   # Static assets
-├── src/
-│   ├── components/
-│   │   ├── Navbar.jsx        # Top navigation bar
-│   │   └── ProtectedRoute.jsx# Auth-gated route wrapper
-│   ├── context/
-│   │   └── AuthContext.jsx   # Authentication context/provider
-│   ├── layout/
-│   │   ├── DashboardLayout.jsx
-│   │   ├── InstructorLayout.jsx
-│   │   └── MainLayout.jsx
-│   ├── pages/
-│   │   ├── Home.jsx
-│   │   ├── Login.jsx
-│   │   ├── Dashboard.jsx
-│   │   └── dashboard/
-│   │       ├── instructor/
-│   │       │   ├── InstructorHome.jsx
-│   │       │   ├── InstructorGrading.jsx
-│   │       │   └── InstructorSubmissions.jsx
-│   │       └── student/
-│   │           ├── StudentHome.jsx
-│   │           ├── StudentUpload.jsx
-│   │           └── StudentSubmissions.jsx
-│   ├── services/
-│   │   └── api.js            # API client for backend communication
-│   ├── App.js                # Main application component and routing
-│   └── index.js              # Entry point
-├── tailwind.config.js        # Tailwind CSS configuration
-├── package.json              # Dependencies and scripts
-└── README.md                 # This file
-```
+- API client is configured in `src/services/api.js`
+- Default backend base URL: `http://localhost:8000`
+- Make sure backend is running (`cd backend && uv run task local`)
 
 ## Tech Stack
 
 - React 19
-- React Router v7
+- React Router 7
 - Tailwind CSS
+- Axios
 - Create React App
 
-## Connecting to Backend
+## Structure (High Level)
 
-The backend API runs on port 8000. API calls are made via `src/services/api.js`.
+```text
+frontend/
+├── public/          # Static assets
+├── src/components/  # Reusable UI pieces
+├── src/context/     # Global auth/app context
+├── src/layout/      # Shared page layouts
+├── src/pages/       # Route-level pages
+└── src/services/    # API client and service helpers
+```

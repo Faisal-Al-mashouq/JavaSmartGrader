@@ -3,10 +3,10 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
+from settings import settings
 from sqlalchemy import engine_from_config, pool
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from dotenv import load_dotenv
 from models import Base
 
 # this is the Alembic Config object, which provides
@@ -14,9 +14,7 @@ from models import Base
 config = context.config
 
 
-load_dotenv()
-
-config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
+config.set_main_option("sqlalchemy.url", settings.database_url)
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:

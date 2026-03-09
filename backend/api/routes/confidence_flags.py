@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from db.crud.confidence_flags import (
@@ -14,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -27,6 +30,11 @@ async def create_new_confidence_flag(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Creating confidence flag for transcription %d (score=%s)",
+        transcription_id,
+        confidence_score,
+    )
     try:
         flag = await create_confidence_flag(
             session=session,
@@ -36,8 +44,16 @@ async def create_new_confidence_flag(
             coordinates=coordinates,
             suggestions=suggestions,
         )
+        logger.info(
+            "Confidence flag created (id=%d) for transcription %d",
+            flag.id,
+            transcription_id,
+        )
         return flag
     except IntegrityError:
+        logger.error(
+            "Failed to create confidence flag for transcription %d", transcription_id
+        )
         raise HTTPException(
             status_code=400, detail="Failed to create confidence flag"
         ) from None
@@ -52,6 +68,7 @@ async def get_flags_for_transcription(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching confidence flags for transcription %d", transcription_id)
     return await get_confidence_flags_by_transcription_id(session, transcription_id)
 
 
@@ -61,7 +78,10 @@ async def remove_confidence_flag(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info("Deleting confidence flag %d", flag_id)
     deleted = await delete_confidence_flag(session, flag_id)
     if not deleted:
+        logger.warning("Confidence flag not found: %d", flag_id)
         raise HTTPException(status_code=404, detail="Confidence flag not found")
+    logger.info("Confidence flag %d deleted successfully", flag_id)
     return {"message": "Confidence flag deleted successfully"}

@@ -32,8 +32,8 @@ import uuid
 
 import redis
 
-from ocr_corrector.config import REDIS_QUEUE_NAME, REDIS_RESULT_TTL, REDIS_URL
-from ocr_corrector.pipeline import OCRCorrectionPipeline
+from .config import REDIS_QUEUE_NAME, REDIS_RESULT_TTL, REDIS_URL
+from .pipeline import OCRCorrectionPipeline
 
 logger = logging.getLogger(__name__)
 

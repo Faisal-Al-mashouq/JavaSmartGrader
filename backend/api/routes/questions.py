@@ -1,3 +1,5 @@
+import logging
+
 from db.crud.assignments import get_assignment_by_id
 from db.crud.courses import get_course_by_id
 from db.crud.questions import (
@@ -19,6 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -27,9 +31,15 @@ async def _verify_instructor_owns_assignment(
 ):
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
+        logger.warning("Assignment not found: %d", assignment_id)
         raise HTTPException(status_code=404, detail="Assignment not found")
     course = await get_course_by_id(session, assignment.course_id)
     if not course or course.instructor_id != instructor_id:
+        logger.warning(
+            "Instructor %d forbidden from accessing assignment %d",
+            instructor_id,
+            assignment_id,
+        )
         raise HTTPException(status_code=403, detail="Forbidden")
     return assignment
 
@@ -44,6 +54,11 @@ async def create_new_question(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Instructor %d creating question for assignment %d",
+        current_user.id,
+        assignment_id,
+    )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     try:
         question = await create_question(
@@ -51,8 +66,17 @@ async def create_new_question(
             assignment_id=assignment_id,
             question_text=question_text,
         )
+        logger.info(
+            "Question created (id=%d) for assignment %d", question.id, assignment_id
+        )
         return question
-    except IntegrityError:
+    except IntegrityError as exc:
+        await session.rollback()
+        logger.exception(
+            "Failed to create question for assignment %d: %s",
+            assignment_id,
+            exc,
+        )
         raise HTTPException(
             status_code=400, detail="Failed to create question"
         ) from None
@@ -64,8 +88,10 @@ async def get_assignment_questions(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching questions for assignment %d", assignment_id)
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
+        logger.warning("Assignment not found: %d", assignment_id)
         raise HTTPException(status_code=404, detail="Assignment not found")
     return await get_questions_by_assignment_id(session, assignment_id)
 
@@ -77,8 +103,12 @@ async def get_question(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching question %d for assignment %d", question_id, assignment_id)
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
+        logger.warning(
+            "Question %d not found in assignment %d", question_id, assignment_id
+        )
         raise HTTPException(status_code=404, detail="Question not found")
     return question
 
@@ -91,13 +121,23 @@ async def update_question_details(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Instructor %d updating question %d in assignment %d",
+        current_user.id,
+        question_id,
+        assignment_id,
+    )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
+        logger.warning(
+            "Question %d not found in assignment %d", question_id, assignment_id
+        )
         raise HTTPException(status_code=404, detail="Question not found")
     updated = await update_question(
         session, question_id, assignment_id, question_text=question_text
     )
+    logger.info("Question %d updated successfully", question_id)
     return updated
 
 
@@ -108,10 +148,22 @@ async def remove_question(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Instructor %d deleting question %d from assignment %d",
+        current_user.id,
+        question_id,
+        assignment_id,
+    )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     deleted = await delete_question(session, question_id, assignment_id)
     if not deleted:
+        logger.warning(
+            "Question %d not found in assignment %d for deletion",
+            question_id,
+            assignment_id,
+        )
         raise HTTPException(status_code=404, detail="Question not found")
+    logger.info("Question %d deleted successfully", question_id)
     return {"message": "Question deleted successfully"}
 
 
@@ -127,16 +179,24 @@ async def add_testcase(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Adding testcase for question %d in assignment %d", question_id, assignment_id
+    )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
+        logger.warning(
+            "Question %d not found in assignment %d", question_id, assignment_id
+        )
         raise HTTPException(status_code=404, detail="Question not found")
     try:
         await create_testcase(
             session, question_id, assignment_id, input_data, expected_output
         )
+        logger.info("Testcase added for question %d", question_id)
         return {"message": "Testcase added successfully"}
     except IntegrityError:
+        logger.error("Failed to add testcase for question %d", question_id)
         raise HTTPException(status_code=400, detail="Failed to add testcase") from None
 
 
@@ -147,6 +207,11 @@ async def get_testcases(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(get_current_user),
 ):
+    logger.debug(
+        "Fetching testcases for question %d in assignment %d",
+        question_id,
+        assignment_id,
+    )
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -161,6 +226,13 @@ async def remove_testcase(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Deleting testcase %d for question %d in assignment %d",
+        testcase_id,
+        question_id,
+        assignment_id,
+    )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
     await delete_testcase(session, testcase_id)
+    logger.info("Testcase %d deleted successfully", testcase_id)
     return {"message": "Testcase deleted successfully"}
