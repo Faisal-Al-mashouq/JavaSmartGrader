@@ -1,3 +1,5 @@
+import logging
+
 from db.crud.grading import (
     create_grade,
     get_ai_feedback_by_submission_id,
@@ -22,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -30,11 +34,17 @@ async def _verify_submission_access(
 ):
     submission = await get_submission_by_id(session, submission_id)
     if not submission:
+        logger.warning("Submission not found: %d", submission_id)
         raise HTTPException(status_code=404, detail="Submission not found")
     if (
         current_user.role != UserRole.instructor
         and submission.student_id != current_user.id
     ):
+        logger.warning(
+            "User %d forbidden from accessing submission %d grading",
+            current_user.id,
+            submission_id,
+        )
         raise HTTPException(status_code=403, detail="Forbidden")
     return submission
 
@@ -45,9 +55,11 @@ async def get_compile_result(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching compile result for submission %d", submission_id)
     await _verify_submission_access(session, submission_id, current_user)
     compile_result = await get_compile_result_by_submission_id(session, submission_id)
     if not compile_result:
+        logger.warning("Compile result not found for submission %d", submission_id)
         raise HTTPException(status_code=404, detail="Compile result not found")
     return compile_result
 
@@ -58,9 +70,11 @@ async def get_transcription(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching transcription for submission %d", submission_id)
     await _verify_submission_access(session, submission_id, current_user)
     transcription = await get_transcription_by_submission_id(session, submission_id)
     if not transcription:
+        logger.warning("Transcription not found for submission %d", submission_id)
         raise HTTPException(status_code=404, detail="Transcription not found")
     return transcription
 
@@ -71,9 +85,11 @@ async def get_ai_feedback(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.debug("Fetching AI feedback for submission %d", submission_id)
     await _verify_submission_access(session, submission_id, current_user)
     ai_feedback = await get_ai_feedback_by_submission_id(session, submission_id)
     if not ai_feedback:
+        logger.warning("AI feedback not found for submission %d", submission_id)
         raise HTTPException(status_code=404, detail="AI feedback not found")
     return ai_feedback
 
@@ -85,6 +101,9 @@ async def add_grade(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Instructor %d adding grade for submission %d", current_user.id, submission_id
+    )
     await _verify_submission_access(session, submission_id, current_user)
     try:
         grade = await create_grade(
@@ -93,10 +112,13 @@ async def add_grade(
             instructor_id=current_user.id,
             final_grade=final_grade,
         )
+        logger.info("Grade added for submission %d: %s", submission_id, final_grade)
         return grade
     except IntegrityError:
+        logger.error("Failed to add grade for submission %d", submission_id)
         raise HTTPException(status_code=400, detail="Failed to add grade") from None
     except Exception:
+        logger.error("Duplicate grade entry for submission %d", submission_id)
         raise HTTPException(status_code=409, detail="Duplicate grade entry") from None
 
 
@@ -107,10 +129,22 @@ async def reassign_grade(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
+    logger.info(
+        "Instructor %d reassigning grade for submission %d to %s",
+        current_user.id,
+        submission_id,
+        grade,
+    )
     existing_grade = await get_grade_by_submission_id(session, submission_id)
     if not existing_grade:
+        logger.warning("Grade not found for submission %d", submission_id)
         raise HTTPException(status_code=404, detail="Grade not found")
     if existing_grade.instructor_id != current_user.id:
+        logger.warning(
+            "Instructor %d forbidden from updating grade for submission %d",
+            current_user.id,
+            submission_id,
+        )
         raise HTTPException(status_code=403, detail="Forbidden")
     try:
         updated_grade = await update_grade(
@@ -118,6 +152,8 @@ async def reassign_grade(
             submission_id=submission_id,
             new_final_grade=grade,
         )
+        logger.info("Grade updated for submission %d to %s", submission_id, grade)
         return updated_grade
     except IntegrityError:
+        logger.error("Failed to update grade for submission %d", submission_id)
         raise HTTPException(status_code=400, detail="Failed to update grade") from None

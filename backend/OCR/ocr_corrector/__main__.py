@@ -8,7 +8,7 @@ Allow running the package directly::
 import argparse
 import sys
 
-from ocr_corrector.config import validate
+from .config import validate
 
 
 def main() -> None:
@@ -36,7 +36,7 @@ def main() -> None:
     validate()
 
     if args.worker:
-        from ocr_corrector.tasks import run_worker
+        from .tasks import run_worker
 
         run_worker()
         return
@@ -46,7 +46,7 @@ def main() -> None:
             "Provide an image path, or use --worker to start the queue worker."
         )
 
-    from ocr_corrector.pipeline import OCRCorrectionPipeline
+    from .pipeline import OCRCorrectionPipeline
 
     pipeline = OCRCorrectionPipeline(model=args.model)
     result = pipeline.run(args.image)

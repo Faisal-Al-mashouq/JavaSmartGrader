@@ -1,12 +1,40 @@
 from .assignments import (
     AssignmentBase,
-    TestcaseBase,
+)
+from .confidence_flags import (
+    ConfidenceFlagBase,
+)
+from .courses import (
+    CourseBase,
+)
+from .generate_reports import (
+    GenerateReportBase,
 )
 from .grading import (
     AIFeedbackBase,
     CompileResultBase,
     GradeBase,
     TranscriptionBase,
+)
+from .jobs import (
+    FinalResult,
+    GraderPayload,
+    GraderResult,
+    Job,
+    JobRequest,
+    JobRequestPayload,
+    JobResultPayload,
+    JobStatus,
+    JobType,
+    OCRPayload,
+    OCRResult,
+    SandboxPayload,
+    SandboxResult,
+    TestCase,
+)
+from .questions import (
+    QuestionBase,
+    TestcaseBase,
 )
 from .submissions import (
     SubmissionBase,
@@ -19,6 +47,10 @@ from .users import (
 
 __all__ = [
     "AssignmentBase",
+    "ConfidenceFlagBase",
+    "CourseBase",
+    "GenerateReportBase",
+    "QuestionBase",
     "TestcaseBase",
     "LoginRequest",
     "RegisterRequest",
@@ -28,4 +60,18 @@ __all__ = [
     "CompileResultBase",
     "AIFeedbackBase",
     "GradeBase",
+    "Job",
+    "JobRequest",
+    "JobStatus",
+    "JobType",
+    "OCRPayload",
+    "OCRResult",
+    "SandboxPayload",
+    "SandboxResult",
+    "GraderPayload",
+    "GraderResult",
+    "FinalResult",
+    "TestCase",
+    "JobRequestPayload",
+    "JobResultPayload",
 ]

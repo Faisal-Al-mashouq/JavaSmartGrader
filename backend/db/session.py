@@ -1,13 +1,15 @@
-import os
+import logging
 
-from dotenv import load_dotenv
+from settings import settings
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-load_dotenv()
-DATABASE_URL = os.getenv("ASYNC_DATABASE_URL")
+logger = logging.getLogger(__name__)
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+ASYNC_DATABASE_URL = settings.async_database_url
+
+logger.info("Initializing database engine")
+engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
 async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
@@ -15,7 +17,7 @@ async def main():
     async with async_session() as session:
         result = await session.execute(text("SELECT version();"))
         version = result.fetchone()[0]
-        print(f"Database version: {version}")
+        logger.info("Database version: %s", version)
 
 
 if __name__ == "__main__":

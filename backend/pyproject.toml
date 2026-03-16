@@ -16,11 +16,14 @@ dependencies = [
     "httpx>=0.28.1",
     "opencv-python>=4.13.0.92",
     "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
     "redis>=7.1.1",
+    "rich>=14.3.3",
     "sqlalchemy>=2.0.0",
+    "taskipy>=1.14.1",
     "uvicorn>=0.41.0",
 ]
 
@@ -30,6 +33,18 @@ dev = [
     "psycopg2-binary>=2.9.11",
     "ruff>=0.15.1",
 ]
+
+[tool.taskipy.tasks]
+lint = "black . && ruff check --fix ."
+base = "uvicorn main:app --reload --log-level error"
+dev = "APP_ENV=dev LOG_LEVEL=DEBUG uv run task base"
+local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
+all_debug = "clear && APP_ENV=all LOG_LEVEL=DEBUG uv run task base"
+all = "APP_ENV=all LOG_LEVEL=INFO uv run task base"
+sandbox = "uv run -m sandbox.sandbox_worker"
+ocr = "uv run -m ocr.main --worker"
+win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
+win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
 
 [tool.black]
 target-version = ["py312"]

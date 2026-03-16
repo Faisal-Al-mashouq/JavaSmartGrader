@@ -1,58 +1,47 @@
 # Database Layer
 
-Async PostgreSQL database layer using SQLAlchemy 2.0 ORM and Alembic for migrations.
+Async PostgreSQL data layer built with SQLAlchemy 2.x and Alembic.
 
-## Structure
+## Layout
 
-```
+```text
 db/
-├── models/
-│   ├── base.py          # Declarative base
-│   ├── main_db.py       # All ORM models
-│   └── __init__.py      # Re-exports models
-├── crud/
-│   ├── users.py         # User CRUD operations
-│   ├── assignments.py   # Assignment CRUD operations
-│   ├── submissions.py   # Submission CRUD operations
-│   ├── grading.py       # Testcase, CompileResult, Transcription, AIFeedback, Grade CRUD
-│   └── __init__.py      # Re-exports all CRUD functions
-├── alembic/             # Migration versions
-├── alembic.ini          # Alembic configuration
-├── session.py           # Async engine and session factory
-└── README.md            # This file
+├── models/       # ORM models
+├── crud/         # DB operation helpers used by routes/services
+├── alembic/      # Migration versions
+├── alembic.ini   # Alembic config
+├── session.py    # Async engine/session factory
+└── settings.py   # DB settings loader
 ```
 
-## Models
+## Core Entities
 
-| Model | Table | Description |
-|-------|-------|-------------|
-| `User` | `users` | Students and instructors (role-based) |
-| `Assignment` | `assignments` | Instructor-created assignments with questions and test cases |
-| `Submission` | `submissions` | Student submissions linked to assignments |
-| `Testcase` | `testcases` | Input/output test cases per assignment |
-| `CompileResult` | `compile_results` | Compilation and runtime results per submission |
-| `Transcription` | `transcriptions` | OCR/transcription output per submission |
-| `AIFeedback` | `ai_feedback` | AI-suggested grade and feedback per submission |
-| `Grade` | `grades` | Final instructor grade per submission |
+- `User` (student/instructor roles)
+- `Course` + `course_students` (enrollment)
+- `Assignment`
+- `Question` (composite key with assignment scope)
+- `Testcase`
+- `Submission`
+- `CompileResult`
+- `Transcription`
+- `ConfidenceFlag`
+- `AIFeedback`
+- `Grade`
+- `GenerateReport`
 
-## Relationships
+## Migration Commands
 
-- `User` 1:N `Assignment` (instructor creates assignments)
-- `User` 1:N `Submission` (student submits work)
-- `Assignment` 1:N `Testcase` (assignment has test cases)
-- `Assignment` 1:N `Submission` (assignment receives submissions)
-- `Submission` 1:1 `CompileResult`, `Transcription`, `AIFeedback`, `Grade`
-- `User` 1:N `Grade` (instructor gives grades)
-
-## Migrations
+Run from `backend/`:
 
 ```bash
-# Generate a new migration after model changes
-alembic revision --autogenerate -m "description"
+# Create migration from model changes
+uv run alembic revision --autogenerate -m "description"
 
-# Apply migrations
-alembic upgrade head
+# Upgrade to latest
+uv run alembic upgrade head
 
-# Rollback one migration
-alembic downgrade -1
+# Downgrade one revision
+uv run alembic downgrade -1
 ```
+
+More Alembic details: `db/alembic/README.md`.

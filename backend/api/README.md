@@ -1,115 +1,56 @@
 # API Layer
 
-FastAPI REST API for JavaSmartGrader. Handles authentication, assignment management, submission lifecycle, and grading.
+FastAPI route layer for JavaSmartGrader.
 
-## Module Structure
+## Run
 
-| File | Purpose |
-|------|---------|
-| `auth.py` | JWT token creation, verification, and role-based access control |
-| `dependencies.py` | Shared `get_db` dependency (async SQLAlchemy session) |
-| `routes/users.py` | User registration, login, and profile endpoints |
-| `routes/assignments.py` | Assignment and testcase CRUD |
+From `backend/`:
+
+```bash
+uv run task local
+```
+
+Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+## Core Modules
+
+| File | Responsibility |
+|------|----------------|
+| `auth.py` | JWT creation/verification and role guards |
+| `dependencies.py` | Shared dependencies (DB session, auth helpers) |
+| `routes/users.py` | Registration, login, user profile endpoints |
+| `routes/courses.py` | Course CRUD and enrollment flows |
+| `routes/assignments.py` | Assignment CRUD |
+| `routes/questions.py` | Question + testcase endpoints under assignments |
 | `routes/submissions.py` | Submission creation and retrieval |
-| `routes/grading.py` | Compile results, transcriptions, AI feedback, and grade management |
+| `routes/grading.py` | Compile/OCR/AI feedback + final grade endpoints |
+| `routes/confidence_flags.py` | OCR confidence flag endpoints |
+| `routes/generate_report.py` | Assignment report endpoints |
+
+## Router Prefixes
+
+- `/users`
+- `/courses`
+- `/assignments`
+- `/assignments/{assignment_id}/questions`
+- `/submissions`
+- `/grading`
+- `/confidence-flags`
+- `/reports`
 
 ## Authentication
 
-JWT bearer tokens. Obtain a token via `POST /users/login`, then pass it as:
+- Auth uses Bearer JWTs (`HS256`) from `POST /users/login`.
+- Default token expiry: **30 minutes**.
+- Role gates are enforced in route dependencies (`student` vs `instructor`).
 
-```
+Header format:
+
+```text
 Authorization: Bearer <token>
 ```
 
-Tokens expire after **30 minutes**.
+## Notes
 
-Role-based access:
-- **student** — submit work, view own submissions and grades
-- **instructor** — manage assignments, view all submissions, assign grades
-
----
-
-## Endpoints
-
-### Users — `/users`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/users/register` | None | Register a new user |
-| `POST` | `/users/login` | None | Login and receive a JWT token |
-| `GET` | `/users/me` | Any | Get current user profile |
-| `PATCH` | `/users/me/email` | Any | Update current user's email |
-| `DELETE` | `/users/me` | Any | Delete current user's account |
-
-#### `POST /users/register`
-
-```json
-{
-  "username": "jdoe",
-  "password": "secret",
-  "email": "jdoe@example.com",
-  "role": "student"
-}
-```
-
-Returns: `UserBase` — `{ id, username, email, role }`
-
-#### `POST /users/login`
-
-Form data (`application/x-www-form-urlencoded`): `username`, `password`
-
-Returns: `{ "access_token": "...", "token_type": "bearer" }`
-
----
-
-### Assignments — `/assignments`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/assignments/` | Instructor | Create a new assignment |
-| `GET` | `/assignments/instructors` | Instructor | List own assignments |
-| `GET` | `/assignments/{id}` | Any | Get assignment by ID |
-| `PUT` | `/assignments/{id}` | Instructor | Update assignment fields |
-| `DELETE` | `/assignments/{id}` | Instructor | Delete assignment |
-| `POST` | `/assignments/{id}/testcases` | Instructor | Add a testcase |
-| `GET` | `/assignments/{id}/testcases` | Instructor | List testcases |
-| `DELETE` | `/assignments/{id}/testcases` | Instructor | Remove a testcase by input |
-
-#### `POST /assignments/`
-
-Query params: `title`, `question`, `description` (optional), `due_date` (optional, ISO 8601)
-
-Returns: `AssignmentBase`
-
----
-
-### Submissions — `/submissions`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/submissions/` | Student | Submit an answer for an assignment |
-| `GET` | `/submissions/me` | Any | List current user's submissions |
-| `GET` | `/submissions/{id}` | Any | Get submission by ID |
-| `GET` | `/submissions/assignment/{id}` | Instructor | List all submissions for an assignment |
-| `PUT` | `/submissions/{id}/state` | Instructor | Update submission state |
-| `DELETE` | `/submissions/{id}` | Student | Delete own submission |
-
-#### `POST /submissions/`
-
-Query params: `assignment_id`, `image_url` (optional)
-
-Submission states: `submitted` → `processing` → `graded` / `failed`
-
----
-
-### Grading — `/grading`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/grading/{id}/compile_result` | Any | Get compile/run result for submission |
-| `GET` | `/grading/{id}/transcription` | Any | Get OCR transcription for submission |
-| `GET` | `/grading/{id}/ai_feedback` | Any | Get AI-suggested feedback and grade |
-| `POST` | `/grading/{id}/grade` | Instructor | Assign a final grade |
-| `PUT` | `/grading/{id}/grade` | Instructor | Update an existing grade |
-
-Students can only access grading data for their own submissions. Instructors can access all.
+- The OpenAPI spec in `/docs` is the source of truth for request/response schemas.
+- Lifespan startup in `backend/main.py` also starts the queue orchestrator (`core/job_queue.py`), so submission flows can trigger downstream workers.

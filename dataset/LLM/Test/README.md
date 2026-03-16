@@ -58,9 +58,6 @@ An additional `valid_json_output` metric verifies that every response is valid J
 
 ```bash
 npm install
-```
-
-```bash
 npm install -g promptfoo
 ```
 
@@ -78,21 +75,21 @@ XAI_API_KEY=...
 DEEPSEEK_API_KEY=...
 ALIBABA_API_KEY=...
 ```
-Set it in .env in ./dataset/LLM/Test
+Save them in `./dataset/LLM/Test/.env`.
 
 ### 3. Run the evaluation
 
-If in directory ./dataset/LLM/Test :
+If you are in `./dataset/LLM/Test`:
 ```bash
 promptfoo eval
 ```
-or if in Root directory :
+Or from repository root:
 
 ```bash
 promptfoo eval -c dataset/LLM/Test/promptfooconfig.yaml --env-file dataset/LLM/Test/.env
 ```
 
-Results are saved to `./results/grader_evaluation_final.json`.
+Results are written under `./results/` (inside `dataset/LLM/Test`).
 
 ### 4. View results
 

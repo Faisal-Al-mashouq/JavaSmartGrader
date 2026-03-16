@@ -27,12 +27,17 @@ requirements.txt       # Python dependencies
 ## Setup
 
 ```bash
-# 1. Install dependencies
+# From backend/ocr
 pip install -r requirements.txt
 
-# 2. Configure API keys
+# Configure API keys
 cp .env.template .env
-# Edit .env with your Azure and Gemini keys
+```
+
+You can also run OCR through the backend `uv` environment from `backend/`:
+
+```bash
+uv run task ocr
 ```
 
 ## Usage
@@ -40,6 +45,7 @@ cp .env.template .env
 ### Direct (single image)
 
 ```bash
+# From backend/ocr
 python main.py path/to/exam_image.jpg
 
 # Or as a module
@@ -68,6 +74,7 @@ print(result.to_dict())       # Serializable dict for APIs
 For processing multiple images asynchronously (e.g., from a web server):
 
 ```bash
+# From backend/ocr
 # Start the worker (blocks, processing jobs from Redis)
 python -m ocr_corrector --worker
 ```
