@@ -116,12 +116,23 @@ Example failure:
 | `MAX_RETRIES` | No | `3` | Retry count for retryable failures |
 | `BACKOFF_BASE_S` | No | `1.0` | Exponential backoff base |
 | `BACKOFF_MAX_S` | No | `30.0` | Exponential backoff cap |
-| `REDIS_ENDPOINT` | No | uses `REDIS_URL` or `redis://localhost:6379` | Redis URL |
+| `LLM_TEMPERATURE` | No | `0.0` | LLM sampling temperature |
+| `REDIS_ENDPOINT` | No | uses `REDIS_URL` or `redis://redis:6379` | Preferred Redis URL |
+| `REDIS_URL` | No | `redis://redis:6379` | Fallback Redis URL when `REDIS_ENDPOINT` is unset |
+| `QUEUE_NAMESPACE` | No | `jsg.v1` | Prefix used for queue names (e.g. `jsg.v1:Ready_Grading`) |
 | `READY_GRADING_QUEUE` | No | `Ready_Grading` | Base queue name |
 | `QUEUE_POLL_TIMEOUT_S` | No | `5` | BRPOP timeout |
 | `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Status applied on success |
 | `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Ordered failure statuses to attempt |
-| `BACKEND_PATH` | No | `<repo>/backend` | Added to `sys.path` for DB imports |
+| `BACKEND_PATH` | No | computed from runtime path | Path added to `sys.path` for DB imports (`db.*`) |
+
+Notes:
+
+- Redis URL resolution priority is `REDIS_ENDPOINT` -> `REDIS_URL` -> default.
+- If your submission enum values are `submitted/processing/graded/failed`, set:
+  - `PENDING_REVIEW_STATUS=graded`
+  - `FAILURE_STATUS_CANDIDATES=failed`
+- In this repo layout, set `BACKEND_PATH` explicitly to your backend module root (usually `.../JavaSmartGrader/backend`) if dynamic DB imports fail.
 
 ## How to Run Locally
 

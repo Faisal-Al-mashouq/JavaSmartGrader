@@ -6,6 +6,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Load .env once so local development values are available before reading
+# os.getenv(...) in load_settings().
 load_dotenv()
 
 # Centralises all runtime configuration
@@ -101,8 +103,12 @@ def load_settings() -> Settings:
     Returns: Settings (frozen dataclass)
     """
     repo_root = Path(__file__).resolve().parents[1]
+    # BACKEND_PATH is where `db.*` modules live (for dynamic adapter imports).
+    # Override this in .env when running outside the expected project layout.
     backend_path = Path(os.getenv("BACKEND_PATH", str(repo_root / "backend")))
 
+    # Queue names are namespace-aware so multiple environments can share one
+    # Redis instance safely.
     queue_namespace = os.getenv("QUEUE_NAMESPACE", "jsg.v1")
     ready_queue_base = os.getenv("READY_GRADING_QUEUE", "Ready_Grading")
     if queue_namespace:
@@ -116,6 +122,7 @@ def load_settings() -> Settings:
         ready_queue_name = ready_queue_base
 
     return Settings(
+        # LLM endpoint configuration.
         model=os.getenv("MODEL", "ft:gpt-4.1-nano-"),
         api_key=os.getenv("API_KEY", ""),
         base_url=os.getenv("BASE_URL", "https://api.openai.com/v1"),
@@ -123,12 +130,14 @@ def load_settings() -> Settings:
         max_retries=_read_int("MAX_RETRIES", 3, minimum=0),
         backoff_base_s=_read_float("BACKOFF_BASE_S", 1.0, minimum=0.0),
         backoff_max_s=_read_float("BACKOFF_MAX_S", 30.0, minimum=0.1),
+        # Redis URL priority: REDIS_ENDPOINT > REDIS_URL > hardcoded default.
         redis_url=os.getenv(
             "REDIS_ENDPOINT",
             os.getenv("REDIS_URL", "redis://redis:6379"),
         ),
         ready_queue_name=ready_queue_name,
         queue_poll_timeout_s=_read_int("QUEUE_POLL_TIMEOUT_S", 5, minimum=0),
+        # Submission state transitions after success/failure.
         pending_review_status=os.getenv("PENDING_REVIEW_STATUS", "Pending_Review"),
         failure_status_candidates=_read_csv(
             "FAILURE_STATUS_CANDIDATES",

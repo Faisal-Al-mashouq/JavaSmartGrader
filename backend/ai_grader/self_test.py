@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import Awaitable
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,7 +14,7 @@ import pytest
 from ai_grader import main as grader_main
 from ai_grader.adapters import database_adapter as db_module
 from ai_grader.adapters import queue_adapter as queue_module
-from ai_grader.config import Settings
+from ai_grader.config import Settings, load_settings
 from ai_grader.llm_client import LLMAPIError, LLMClient
 from ai_grader.parser_validator import (
     JSONValidationError,
@@ -24,8 +25,14 @@ from ai_grader.parser_validator import (
 from ai_grader.prompt_builder import construct_prompt
 
 
-def _run(coro):
+def _run(coro: Awaitable[object]) -> object:
     return asyncio.run(coro)
+
+
+async def _async_noop() -> None:
+    fut = asyncio.get_running_loop().create_future()
+    fut.set_result(None)
+    await fut
 
 
 def _build_valid_payload(
@@ -121,7 +128,7 @@ def test_parser_accepts_valid_json() -> None:
         _valid_json(submission_id=101, total_score=8.5, max_score=10)
     )
     validate_submission_id(parsed, 101)
-    assert float(parsed["total_score"]) == 8.5
+    assert float(parsed["total_score"]) == pytest.approx(8.5)
 
 
 def test_parser_rejects_incomplete_json() -> None:
@@ -185,7 +192,7 @@ def test_llm_client_retries_on_retryable(monkeypatch: pytest.MonkeyPatch) -> Non
     _patch_async_client(monkeypatch, transport)
 
     async def _no_sleep(_: float) -> None:
-        return None
+        await _async_noop()
 
     monkeypatch.setattr(asyncio, "sleep", _no_sleep)
 
@@ -261,7 +268,7 @@ def test_llm_client_sends_expected_payload(
     payload = captured["payload"]
     assert headers["authorization"] == "Bearer test-key"
     assert payload["model"] == "m1"
-    assert payload["temperature"] == 0.4
+    assert payload["temperature"] == pytest.approx(0.4)
     assert payload["messages"][0]["role"] == "system"
     assert payload["messages"][1]["content"] == "PROMPT"
 
@@ -436,7 +443,7 @@ def test_build_completion_payload_completed() -> None:
     }
     payload = grader_main._build_completion_payload(job=job, outcome=outcome)
     assert payload["status"] == "COMPLETED"
-    assert payload["final_grade"] == 9.0
+    assert payload["final_grade"] == pytest.approx(9.0)
     assert payload["student_feedback"] == "Nice job."
 
 
@@ -621,8 +628,15 @@ class _FakeAIFeedback:
 
 def _make_fake_adapter(session: _FakeSession) -> db_module.SQLAlchemyDatabaseAdapter:
     adapter = object.__new__(db_module.SQLAlchemyDatabaseAdapter)
-    adapter._async_session_factory = lambda: _SessionContext(session)
-    adapter._select = lambda model: _FakeSelect(model)
+
+    def _session_factory() -> _SessionContext:
+        return _SessionContext(session)
+
+    def _select(model: object) -> _FakeSelect:
+        return _FakeSelect(model)
+
+    adapter._async_session_factory = _session_factory
+    adapter._select = _select
     adapter._AIFeedback = _FakeAIFeedback
     return adapter
 
@@ -636,7 +650,7 @@ def test_sqlalchemy_adapter_save_feedback_inserts() -> None:
 
     assert session.added
     saved = session.added[0]
-    assert saved.suggested_grade == float(payload["total_score"])
+    assert saved.suggested_grade == pytest.approx(float(payload["total_score"]))
     assert saved.student_feedback == payload["feedback"]["summary"]
     assert isinstance(saved.instructor_guidance, str)
 
@@ -655,7 +669,7 @@ def test_sqlalchemy_adapter_save_feedback_updates() -> None:
     _run(adapter.save_feedback(2, payload))
 
     assert not session.added
-    assert existing.suggested_grade == 5.0
+    assert existing.suggested_grade == pytest.approx(5.0)
     assert existing.student_feedback == payload["feedback"]["summary"]
     assert isinstance(existing.instructor_guidance, str)
 
@@ -686,6 +700,7 @@ def test_sqlalchemy_adapter_get_sandbox_results_runtime_outputs() -> None:
         compile_results = _Compile()
 
     async def _get_submission(_: int):
+        await _async_noop()
         return _Submission()
 
     adapter._get_submission = _get_submission
@@ -707,6 +722,7 @@ def test_sqlalchemy_adapter_get_sandbox_results_runtime_output_fallback() -> Non
         compile_results = _Compile()
 
     async def _get_submission(_: int):
+        await _async_noop()
         return _Submission()
 
     adapter._get_submission = _get_submission
@@ -1176,9 +1192,6 @@ def test_live_llm_call() -> None:
     if not api_key or not model:
         pytest.skip("Skipping live LLM test: API_KEY or MODEL not set.")
 
-    from ai_grader.config import load_settings
-    from ai_grader.llm_client import LLMClient
-
     settings = load_settings()
     client = LLMClient(settings)
 
@@ -1230,6 +1243,7 @@ def test_run_worker_once_processes_job(
             self.closed = True
 
     async def _fake_process_submission(**kwargs: object) -> dict:
+        await _async_noop()
         return {
             "status": "COMPLETED",
             "parsed_feedback": {
