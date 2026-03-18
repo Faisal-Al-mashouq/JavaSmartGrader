@@ -268,13 +268,7 @@ def test_llm_client_sends_expected_payload(
 
 def test_extract_text_handles_list_content() -> None:
     response_json = {
-        "choices": [
-            {
-                "message": {
-                    "content": [{"text": "Hello, "}, {"text": "world!"}]
-                }
-            }
-        ]
+        "choices": [{"message": {"content": [{"text": "Hello, "}, {"text": "world!"}]}}]
     }
     assert LLMClient._extract_text(response_json) == "Hello, world!"
 
@@ -543,10 +537,7 @@ def test_extract_submission_id_variants() -> None:
 
 def test_extract_job_id() -> None:
     assert (
-        queue_module.RedisQueueAdapter._extract_job_id(
-            json.dumps({"job_id": 9})
-        )
-        == "9"
+        queue_module.RedisQueueAdapter._extract_job_id(json.dumps({"job_id": 9})) == "9"
     )
     assert queue_module.RedisQueueAdapter._extract_job_id("not-json") is None
     assert queue_module.RedisQueueAdapter._extract_job_id(json.dumps([1])) is None
@@ -744,15 +735,14 @@ def test_run_worker_raises_on_placeholder_db(
 
     monkeypatch.setattr(grader_main, "RedisQueueAdapter", _FakeQueueAdapter)
     placeholder = grader_main.PlaceholderDatabaseAdapter(RuntimeError("boom"))
-    monkeypatch.setattr(
-        grader_main, "create_database_adapter", lambda _: placeholder
-    )
+    monkeypatch.setattr(grader_main, "create_database_adapter", lambda _: placeholder)
 
     with pytest.raises(RuntimeError):
         _run(grader_main.run_worker(settings=_make_settings(), once=True))
 
 
 # Additional comprehensive tests for missing coverage
+
 
 def test_parser_rejects_wrong_data_types() -> None:
     """Test parser rejects invalid data types in required fields."""
@@ -832,24 +822,28 @@ def test_parser_rejects_invalid_rubric_breakdown() -> None:
         parse_and_validate_json(json.dumps(payload))
 
     # Invalid rubric item (wrong types)
-    payload["rubric_breakdown"] = [{
-        "criterion_id_or_name": 123,  # Should be string
-        "earned_points": "not-a-number",  # Should be number
-        "max_points": 5,
-        "rationale": "test",
-        "evidence_from_code_or_logs": "test"
-    }]
+    payload["rubric_breakdown"] = [
+        {
+            "criterion_id_or_name": 123,  # Should be string
+            "earned_points": "not-a-number",  # Should be number
+            "max_points": 5,
+            "rationale": "test",
+            "evidence_from_code_or_logs": "test",
+        }
+    ]
     with pytest.raises(JSONValidationError):
         parse_and_validate_json(json.dumps(payload))
 
     # Negative earned_points
-    payload["rubric_breakdown"] = [{
-        "criterion_id_or_name": "Test",
-        "earned_points": -1,
-        "max_points": 5,
-        "rationale": "test",
-        "evidence_from_code_or_logs": "test"
-    }]
+    payload["rubric_breakdown"] = [
+        {
+            "criterion_id_or_name": "Test",
+            "earned_points": -1,
+            "max_points": 5,
+            "rationale": "test",
+            "evidence_from_code_or_logs": "test",
+        }
+    ]
     with pytest.raises(JSONValidationError):
         parse_and_validate_json(json.dumps(payload))
 
@@ -962,6 +956,7 @@ def test_prompt_builder_large_inputs() -> None:
 
 def test_llm_client_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test LLM client handles timeouts."""
+
     def handler(_: httpx.Request) -> httpx.Response:
         # Simulate timeout by not responding
         raise httpx.TimeoutException("timeout")
@@ -976,6 +971,7 @@ def test_llm_client_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_llm_client_empty_response(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test LLM client handles empty responses."""
+
     def handler(_: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"choices": []})
 
@@ -989,6 +985,7 @@ def test_llm_client_empty_response(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_llm_client_malformed_content(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test LLM client handles malformed content in response."""
+
     def handler(_: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
@@ -1016,8 +1013,13 @@ def test_grading_schema_structure() -> None:
 
     # Check required fields are present
     required_fields = [
-        "submission_id", "total_score", "max_score", "rubric_breakdown",
-        "feedback", "error_classification", "confidence"
+        "submission_id",
+        "total_score",
+        "max_score",
+        "rubric_breakdown",
+        "feedback",
+        "error_classification",
+        "confidence",
     ]
     for field in required_fields:
         assert field in schema["properties"]
@@ -1098,7 +1100,7 @@ def test_payload_inputs_from_raw_edge_cases() -> None:
     payload = {
         "transcribed_text": "code",
         "rubric_json": {"criteria": []},
-        "sandbox_result": {"result": {"compilation_result": {"success": True}}}
+        "sandbox_result": {"result": {"compilation_result": {"success": True}}},
     }
     parsed = grader_main._payload_inputs_from_raw(json.dumps(payload))
     assert parsed is not None
@@ -1247,10 +1249,7 @@ def test_run_worker_once_processes_job(
     assert adapter.closed is True
     assert adapter.pushed
     queue_name, payload = adapter.pushed[0]
-    assert (
-        queue_name
-        == f"{settings.ready_queue_name}:completed:job-21"
-    )
+    assert queue_name == f"{settings.ready_queue_name}:completed:job-21"
     payload_json = json.loads(payload)
     assert payload_json["submission_id"] == 21
     assert payload_json["status"] == "COMPLETED"

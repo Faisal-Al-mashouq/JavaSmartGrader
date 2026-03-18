@@ -1586,12 +1586,12 @@ summary {
     .analytics-layout {
         grid-template-columns: 1fr;
     }
-    
+
     .chatbot-sidebar {
         position: static;
         max-height: none;
     }
-    
+
     .kpi-cards-grid {
         grid-template-columns: repeat(3, 1fr);
     }
@@ -1601,16 +1601,16 @@ summary {
     .kpi-cards-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .submissions-header {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .submissions-filters {
         width: 100%;
     }
-    
+
     .submissions-filters .search-input {
         flex: 1;
         width: auto;
