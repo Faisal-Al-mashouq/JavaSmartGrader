@@ -61,6 +61,7 @@ class GraderPayload(BaseModel):
         default=JobType.GRADER, description="discriminator"
     )
     job_id: UUID
+    submission_id: int
     transcribed_text: str
     sandbox_result: SandboxJobResult
     rubric_json: dict
