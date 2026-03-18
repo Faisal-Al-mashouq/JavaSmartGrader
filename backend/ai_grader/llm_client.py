@@ -10,11 +10,11 @@ import httpx
 
 from .config import Settings
 
-#provides LLMClient, an async HTTP client that wraps 
-#the OpenAI-compatible /chat/completions endpoint
-#it handles prompt delivery, error classification, 
-#exponential backoff with jitter, and response text extraction.
-#it never blocks the event loop.
+# provides LLMClient, an async HTTP client that wraps
+# the OpenAI-compatible /chat/completions endpoint
+# it handles prompt delivery, error classification,
+# exponential backoff with jitter, and response text extraction.
+# it never blocks the event loop.
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,8 @@ class LLMClient:
     @staticmethod
     def _build_chat_completions_url(base_url: str) -> str:
         """
-        Normalises base_url by stripping trailing slashes and appending /chat/completions if needed
+        Normalises base_url by stripping trailing slashes and appending
+        /chat/completions if needed
         Handles bases that already end in /v1 or /chat/completions
         Returns: str (full endpoint URL)
         """
@@ -116,7 +117,7 @@ class LLMClient:
 
     async def _call_once(self, prompt: str) -> str:
         """
-        Makes a single HTTP POST to the completions endpoint 
+        Makes a single HTTP POST to the completions endpoint
         Returns: str (raw content text)
         """
         headers = {

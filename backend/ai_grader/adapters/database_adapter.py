@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 class DatabaseAdapter(Protocol):
     """
-    defines the essential contract for interacting with student submission data and AI feedback
+    defines the essential contract for interacting with student submission
+    data and AI feedback
     output: a protocol ensuring any adapter can fetch code, rubrics, and save results
     how: uses Python's Protocol to enforce a standard interface for database operations
     """
+
     async def get_transcription(self, submission_id: int) -> str:
         """Return transcribed student code."""
 
@@ -55,8 +57,10 @@ class SQLAlchemyDatabaseAdapter:
     """
     implements the adapter using SQLAlchemy to communicate with a relational database
     output: performs real-time CRUD operations for grading data and submission statuses
-    how: dynamically loads backend modules and uses asynchronous sessions to execute queries
+    how: dynamically loads backend modules and uses asynchronous sessions to
+    execute queries
     """
+
     def __init__(self, backend_path: Path):
         self._load_backend_modules(backend_path)
 
@@ -70,13 +74,13 @@ class SQLAlchemyDatabaseAdapter:
         sqlalchemy_module = importlib.import_module("sqlalchemy")
         sqlalchemy_orm_module = importlib.import_module("sqlalchemy.orm")
 
-        self._async_session_factory = getattr(session_module, "async_session")
-        self._Submission = getattr(models_module, "Submission")
-        self._SubmissionState = getattr(models_module, "SubmissionState")
-        self._AIFeedback = getattr(models_module, "AIFeedback")
-        self._select = getattr(sqlalchemy_module, "select")
-        self._update = getattr(sqlalchemy_module, "update")
-        self._selectinload = getattr(sqlalchemy_orm_module, "selectinload")
+        self._async_session_factory = session_module.async_session
+        self._Submission = models_module.Submission
+        self._SubmissionState = models_module.SubmissionState
+        self._AIFeedback = models_module.AIFeedback
+        self._select = sqlalchemy_module.select
+        self._update = sqlalchemy_module.update
+        self._selectinload = sqlalchemy_orm_module.selectinload
 
     @staticmethod
     def _normalize_status(value: str) -> str:
@@ -122,7 +126,11 @@ class SQLAlchemyDatabaseAdapter:
                 "runtime_errors:",
                 compile_result.runtime_errors or "",
                 "runtime_output:",
-                compile_result.runtime_output or "",
+                (
+                    getattr(compile_result, "runtime_outputs", None)
+                    or getattr(compile_result, "runtime_output", None)
+                    or ""
+                ),
             ]
         )
 
@@ -143,6 +151,12 @@ class SQLAlchemyDatabaseAdapter:
         feedback_text = json.dumps(parsed_feedback, ensure_ascii=True, indent=2)
         total_score = parsed_feedback.get("total_score")
         suggested_grade = float(total_score) if total_score is not None else None
+        feedback_summary = None
+        feedback = parsed_feedback.get("feedback")
+        if isinstance(feedback, dict):
+            summary = feedback.get("summary")
+            if isinstance(summary, str):
+                feedback_summary = summary
 
         async with self._async_session_factory() as session:
             existing_result = await session.execute(
@@ -156,12 +170,14 @@ class SQLAlchemyDatabaseAdapter:
                     self._AIFeedback(
                         submission_id=submission_id,
                         suggested_grade=suggested_grade,
-                        feedback_text=feedback_text,
+                        instructor_guidance=feedback_text,
+                        student_feedback=feedback_summary,
                     )
                 )
             else:
                 existing_feedback.suggested_grade = suggested_grade
-                existing_feedback.feedback_text = feedback_text
+                existing_feedback.instructor_guidance = feedback_text
+                existing_feedback.student_feedback = feedback_summary
 
             await session.commit()
 
@@ -191,12 +207,14 @@ class SQLAlchemyDatabaseAdapter:
                     self._AIFeedback(
                         submission_id=submission_id,
                         suggested_grade=None,
-                        feedback_text=failure_text,
+                        instructor_guidance=failure_text,
+                        student_feedback=None,
                     )
                 )
             else:
                 existing_feedback.suggested_grade = None
-                existing_feedback.feedback_text = failure_text
+                existing_feedback.instructor_guidance = failure_text
+                existing_feedback.student_feedback = None
 
             await session.commit()
 
@@ -244,6 +262,7 @@ class PlaceholderDatabaseAdapter:
     output: raises a descriptive RuntimeError whenever any database method is called
     how: stores the original import error and triggers it via a private helper method
     """
+
     def __init__(self, root_error: Exception):
         self._root_error = root_error
 
@@ -292,7 +311,8 @@ class PlaceholderDatabaseAdapter:
 def create_database_adapter(backend_path: Path) -> DatabaseAdapter:
     """
     a factory function that attempts to initialize the real database connection
-    output: Returns either a fully functional SQLAlchemyDatabaseAdapter or the placeholder
+    output: Returns either a fully functional SQLAlchemyDatabaseAdapter or
+    the placeholder
     how: Uses a try-except block to catch configuration errors and log them as warnings
     """
     try:

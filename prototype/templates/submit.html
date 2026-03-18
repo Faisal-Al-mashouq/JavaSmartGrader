@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <h1>Submit for Assignment #{{ assignment.id }}: {{ assignment.name }}</h1>
+    <p>{{ assignment.description }}</p>
+    <p>
+        <a class="btn" href="{{ url_for('student_dashboard') }}">Back</a>
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+        <p>
+            <label for="upload_file">Upload image/PDF/TXT/JAVA</label><br>
+            <input id="upload_file" name="upload_file" type="file">
+        </p>
+
+        <p><strong>OR</strong></p>
+
+        <p>
+            <label for="typed_code">Paste typed code (bypasses OCR)</label><br>
+            <textarea id="typed_code" name="typed_code" rows="14" placeholder="public class Main { ... }"></textarea>
+        </p>
+
+        <button class="btn" type="submit">Submit</button>
+    </form>
+</section>
+{% endblock %}

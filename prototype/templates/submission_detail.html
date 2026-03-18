@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block head %}
+    {% if submission.status not in ["Done", "Failed", "Failed_OCR"] %}
+        <meta http-equiv="refresh" content="3">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Submission #{{ submission.id }}</h1>
+    <p>
+        Assignment:
+        <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}">
+            {{ assignment.name }}
+        </a>
+    </p>
+    <p>Status: <span class="badge">{{ submission.status }}</span></p>
+    <p>
+        {% if submission.grade_score is not none and submission.grade_max is not none %}
+            Final Grade: <strong>{{ submission.grade_score }} / {{ submission.grade_max }}</strong>
+        {% else %}
+            Final Grade: <strong>Not available yet</strong>
+        {% endif %}
+    </p>
+</section>
+
+<section>
+    <h2>Timeline</h2>
+    <ul class="timeline">
+        {% for step in timeline %}
+            <li class="badge {{ step.state }}">{{ step.name }} - {{ step.state }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panels">
+    <h2>Details</h2>
+
+    <details open>
+        <summary>Upload Preview</summary>
+        {% if submission.upload_path %}
+            {% if is_image %}
+                <p><img src="{{ url_for('uploaded_file', filename=submission.upload_path) }}" alt="Uploaded image" style="max-width: 100%;"></p>
+            {% elif is_pdf %}
+                <p><a class="btn" href="{{ url_for('uploaded_file', filename=submission.upload_path) }}" target="_blank">Open PDF</a></p>
+            {% else %}
+                <p><a class="btn" href="{{ url_for('uploaded_file', filename=submission.upload_path) }}" target="_blank">Download file</a></p>
+            {% endif %}
+        {% else %}
+            <p>No uploaded file (typed code submission).</p>
+        {% endif %}
+    </details>
+
+    <details>
+        <summary>OCR Text</summary>
+        <pre>{{ submission.ocr_text or "(empty)" }}</pre>
+        {% if submission.ocr_confidence is not none %}
+            <p>OCR confidence: {{ submission.ocr_confidence }}</p>
+        {% endif %}
+    </details>
+
+    <details>
+        <summary>Sandbox Logs</summary>
+        <pre>{{ submission.sandbox_logs or "(empty)" }}</pre>
+    </details>
+
+    <details>
+        <summary>Grader JSON</summary>
+        <pre>{{ grade_json_pretty or "(empty)" }}</pre>
+    </details>
+
+    <details>
+        <summary>Final Grade Summary</summary>
+        {% if submission.grade_score is not none and submission.grade_max is not none %}
+            <p><strong>{{ submission.grade_score }} / {{ submission.grade_max }}</strong></p>
+        {% else %}
+            <p>No final grade yet.</p>
+        {% endif %}
+    </details>
+</section>
+{% endblock %}

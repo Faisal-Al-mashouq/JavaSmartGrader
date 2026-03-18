@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <h1>Student Dashboard</h1>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assignment in assignments %}
+                <tr>
+                    <td>{{ assignment.id }}</td>
+                    <td>{{ assignment.name }}</td>
+                    <td>{{ assignment.description }}</td>
+                    <td>
+                        <a class="btn" href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}">Submit</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">No assignments available.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

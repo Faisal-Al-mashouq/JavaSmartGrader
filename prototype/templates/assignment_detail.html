@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <h1>Assignment #{{ assignment.id }}: {{ assignment.name }}</h1>
+    <p>{{ assignment.description }}</p>
+    <p>
+        <a class="btn" href="{{ url_for('instructor_dashboard') }}">Back</a>
+        <a class="btn" href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}">Student Submit Page</a>
+    </p>
+
+    <h2>Rubric JSON</h2>
+    <pre>{{ assignment.rubric_json }}</pre>
+
+    <h2>Load Demo Set (High / Mid / Low)</h2>
+    <form method="post" action="{{ url_for('load_demo_set', assignment_id=assignment.id) }}" enctype="multipart/form-data">
+        <p>
+            <label for="high_file">High file</label><br>
+            <input id="high_file" name="high_file" type="file" required>
+        </p>
+        <p>
+            <label for="mid_file">Mid file</label><br>
+            <input id="mid_file" name="mid_file" type="file" required>
+        </p>
+        <p>
+            <label for="low_file">Low file</label><br>
+            <input id="low_file" name="low_file" type="file" required>
+        </p>
+        <button class="btn" type="submit">Load Demo Set</button>
+    </form>
+
+    <h2>Submissions</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Label</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Submitted</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+                <tr>
+                    <td>{{ sub.id }}</td>
+                    <td>
+                        {% if sub.label %}
+                            <span class="badge">{{ sub.label }}</span>
+                        {% else %}
+                            <span class="badge">Standard</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge">{{ sub.status }}</span></td>
+                    <td>
+                        {% if sub.grade_score is not none and sub.grade_max is not none %}
+                            {{ sub.grade_score }} / {{ sub.grade_max }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ sub.submitted_at }}</td>
+                    <td>
+                        <a class="btn" href="{{ url_for('submission_detail', submission_id=sub.id) }}">Open</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6">No submissions yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

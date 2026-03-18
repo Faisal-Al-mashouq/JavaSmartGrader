@@ -8,13 +8,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#Centralises all runtime configuration
+# Centralises all runtime configuration
 # Settings are loaded once at startup from environment variables
-# All values are validated at load time so misconfiguration is caught immediately rather than at first use
+# All values are validated at load time so misconfiguration is caught
+# immediately rather than at first use
+
 
 def _read_int(name: str, default: int, minimum: int | None = None) -> int:
     """
-    Reads an integer env var and raises ValueError if the value cannot be cast or falls below min
+    Reads an integer env var and raises ValueError if the value cannot be cast
+    or falls below min
     Returns: int
     """
     raw = os.getenv(name)
@@ -59,8 +62,8 @@ def _read_csv(name: str, default: str) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class Settings:
     """
-    model: Fine-tuned model ID 
-    api_key: API key  
+    model: Fine-tuned model ID
+    api_key: API key
     base_url: OpenAI-compatible base URL
     timeout_s: HTTP request timeout
     max_retries: Number of additional attempts after failure
@@ -69,11 +72,12 @@ class Settings:
     redis_url: Redis connection URL
     ready_queue_name: Redis list name for worker pops.
     queue_poll_timeout_s: BRPOP blocking timeout in seconds
-    temperature: LLM sampling temperature 
+    temperature: LLM sampling temperature
     pending_review_status: Status applied after successful grading.
     failure_status_candidates: Ordered list of status strings for failures
     backend_path: Filesystem path added to sys.path for DB imports
     """
+
     model: str
     api_key: str
     base_url: str
@@ -92,11 +96,24 @@ class Settings:
 
 def load_settings() -> Settings:
     """
-    Constructs and returns the single Settings instance. Called once in main() and passed to all components.
+    Constructs and returns the single Settings instance. Called once in main()
+    and passed to all components.
     Returns: Settings (frozen dataclass)
     """
     repo_root = Path(__file__).resolve().parents[1]
     backend_path = Path(os.getenv("BACKEND_PATH", str(repo_root / "backend")))
+
+    queue_namespace = os.getenv("QUEUE_NAMESPACE", "jsg.v1")
+    ready_queue_base = os.getenv("READY_GRADING_QUEUE", "Ready_Grading")
+    if queue_namespace:
+        prefix = f"{queue_namespace}:"
+        ready_queue_name = (
+            ready_queue_base
+            if ready_queue_base.startswith(prefix)
+            else f"{prefix}{ready_queue_base}"
+        )
+    else:
+        ready_queue_name = ready_queue_base
 
     return Settings(
         model=os.getenv("MODEL", "ft:gpt-4.1-nano-"),
@@ -108,9 +125,9 @@ def load_settings() -> Settings:
         backoff_max_s=_read_float("BACKOFF_MAX_S", 30.0, minimum=0.1),
         redis_url=os.getenv(
             "REDIS_ENDPOINT",
-            os.getenv("REDIS_URL", "redis://localhost:6379"),
+            os.getenv("REDIS_URL", "redis://redis:6379"),
         ),
-        ready_queue_name=os.getenv("READY_GRADING_QUEUE", "Ready_Grading"),
+        ready_queue_name=ready_queue_name,
         queue_poll_timeout_s=_read_int("QUEUE_POLL_TIMEOUT_S", 5, minimum=0),
         pending_review_status=os.getenv("PENDING_REVIEW_STATUS", "Pending_Review"),
         failure_status_candidates=_read_csv(

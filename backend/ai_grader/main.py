@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
+from typing import Any
 
 from .adapters import (
     PlaceholderDatabaseAdapter,
@@ -24,7 +26,7 @@ The orchestration layer
 Contain:
     the worker loop
     the per-job processing logic
-    the repair attempt flow 
+    the repair attempt flow
     the CLI entry point
 """
 
@@ -46,7 +48,8 @@ async def _parse_with_single_repair(
     if validation fails (JSONValidationError)
     it constructs a repair prompt and makes exactly one additional LLM call
     if the repair response also fails validation, JSONValidationError is re-raised
-    This is the only place where repair logic lives, keeping main process_submission clean
+    This is the only place where repair logic lives, keeping main
+    process_submission clean
     returns: (parsed_dict, raw_json_string_that_was_used)
     notes: maximum two LLM calls per job: one main + one repair
     """
@@ -81,7 +84,8 @@ async def process_submission(
     db_adapter,
     llm_client: LLMClient,
     settings: Settings,
-) -> None:
+    payload_inputs: dict | None = None,
+) -> dict:
     """
     core per-job handler
     fetches code, logs, and rubric from DB
@@ -95,9 +99,14 @@ async def process_submission(
     """
     logger.info("Processing AI grading for submission_id=%s", submission_id)
 
-    code = await db_adapter.get_transcription(submission_id)
-    logs = await db_adapter.get_sandbox_results(submission_id)
-    rubric = await db_adapter.get_rubric(submission_id)
+    if payload_inputs:
+        code = payload_inputs.get("code", "")
+        logs = payload_inputs.get("logs", "")
+        rubric = payload_inputs.get("rubric", {})
+    else:
+        code = await db_adapter.get_transcription(submission_id)
+        logs = await db_adapter.get_sandbox_results(submission_id)
+        rubric = await db_adapter.get_rubric(submission_id)
 
     schema = grading_schema()
     prompt = construct_prompt(
@@ -116,7 +125,7 @@ async def process_submission(
             submission_id,
             exc,
         )
-        return
+        return {"status": "FAILED", "error": str(exc)}
 
     try:
         parsed, raw_json_used = await _parse_with_single_repair(
@@ -152,7 +161,11 @@ async def process_submission(
                 submission_id,
                 db_exc,
             )
-        return
+        return {
+            "status": "FAILED",
+            "error": str(exc),
+            "raw_output": response.text,
+        }
 
     await db_adapter.save_feedback(submission_id=submission_id, parsed_feedback=parsed)
 
@@ -179,6 +192,142 @@ async def process_submission(
         submission_id,
         raw_json_used,
     )
+    return {
+        "status": "COMPLETED",
+        "parsed_feedback": parsed,
+    }
+
+
+def _build_completion_payload(
+    *,
+    job,
+    outcome: dict,
+) -> dict:
+    payload = {
+        "job_id": job.job_id,
+        "submission_id": job.submission_id,
+        "status": outcome.get("status", "FAILED"),
+    }
+
+    if payload["status"] == "COMPLETED":
+        parsed = outcome.get("parsed_feedback") or {}
+        payload["rubric_result_json"] = parsed
+        if isinstance(parsed, dict) and "total_score" in parsed:
+            try:
+                payload["final_grade"] = float(parsed["total_score"])
+            except (TypeError, ValueError):
+                payload["final_grade"] = None
+        summary = (
+            parsed.get("feedback", {}).get("summary")
+            if isinstance(parsed, dict)
+            else None
+        )
+        if summary:
+            payload["student_feedback"] = summary
+        return payload
+
+    error = outcome.get("error")
+    if error:
+        payload["error"] = error
+    raw_output = outcome.get("raw_output")
+    if raw_output:
+        payload["raw_output"] = raw_output
+    return payload
+
+
+def _coerce_lines(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join(str(item) for item in value)
+    return str(value)
+
+
+def _format_sandbox_logs(sandbox_result: dict | None) -> str:
+    if not sandbox_result or not isinstance(sandbox_result, dict):
+        return ""
+
+    result = sandbox_result.get("result")
+    if not isinstance(result, dict):
+        return ""
+
+    compilation = result.get("compilation_result") or {}
+    execution = result.get("execution_result") or {}
+    test_cases = result.get("test_cases_results") or {}
+
+    outputs = execution.get("outputs") or []
+    output_lines = []
+    for index, output in enumerate(outputs, start=1):
+        if not isinstance(output, dict):
+            continue
+        test_case = output.get("test_case") or {}
+        output_lines.append(
+            "case {idx}: returncode={returncode}\nstdout:\n{stdout}\n"
+            "stderr:\n{stderr}\n"
+            "input={input}\nexpected={expected}\nactual={actual}".format(
+                idx=index,
+                returncode=output.get("returncode"),
+                stdout=_coerce_lines(output.get("stdout")),
+                stderr=_coerce_lines(output.get("stderr")),
+                input=test_case.get("input"),
+                expected=test_case.get("expected_output"),
+                actual=output.get("stdout"),
+            )
+        )
+
+    test_results = test_cases.get("results") or []
+    test_case_lines = []
+    for index, case in enumerate(test_results, start=1):
+        if not isinstance(case, dict):
+            continue
+        test_case_lines.append(
+            "testcase {idx}: input={input} expected={expected} "
+            "actual={actual} passed={passed}".format(
+                idx=index,
+                input=case.get("input"),
+                expected=case.get("expected_output"),
+                actual=case.get("actual_output"),
+                passed=case.get("passed"),
+            )
+        )
+
+    return "\n".join(
+        [
+            f"compiled_ok: {compilation.get('success')}",
+            "compile_errors:",
+            _coerce_lines(compilation.get("errors")),
+            "runtime_errors:",
+            _coerce_lines(execution.get("errors")),
+            "runtime_output:",
+            "\n".join(output_lines),
+            "test_case_results:",
+            "\n".join(test_case_lines),
+        ]
+    ).strip()
+
+
+def _payload_inputs_from_raw(raw_payload: str) -> dict | None:
+    try:
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    transcribed_text = payload.get("transcribed_text")
+    rubric_json = payload.get("rubric_json")
+    sandbox_result = payload.get("sandbox_result")
+
+    if transcribed_text is None and rubric_json is None and sandbox_result is None:
+        return None
+
+    logs = _format_sandbox_logs(sandbox_result)
+    return {
+        "code": transcribed_text or "",
+        "rubric": rubric_json or {},
+        "logs": logs,
+    }
 
 
 async def run_worker(*, settings: Settings, once: bool = False) -> None:
@@ -190,7 +339,7 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
     """
     Initialises the Redis queue adapter, DB adapter, and LLM client
     enters a continuous loop calling queue_adapter.dequeue()
-    for each job received, calls process_submission inside a broad try/except so 
+    for each job received, calls process_submission inside a broad try/except so
     a crash on one job never kills the worker
     if once is passed, exits after the first job (or immediately if no job is available)
     notes: raises RuntimeError at startup if the DB adapter is still a placeholder
@@ -201,7 +350,8 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
 
     if isinstance(db_adapter, PlaceholderDatabaseAdapter):
         raise RuntimeError(
-            "DB adapter is placeholder; cannot run worker until adapter mapping is configured."
+            "DB adapter is placeholder; cannot run worker until adapter "
+            "mapping is configured."
         )
 
     logger.info(
@@ -224,18 +374,38 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
                 continue
 
             processed_count += 1
+            outcome: dict | None = None
             try:
-                await process_submission(
+                payload_inputs = _payload_inputs_from_raw(job.raw_payload)
+                outcome = await process_submission(
                     submission_id=job.submission_id,
                     db_adapter=db_adapter,
                     llm_client=llm_client,
                     settings=settings,
+                    payload_inputs=payload_inputs,
                 )
-            except Exception:
+            except Exception as exc:
                 logger.exception(
                     "Unhandled worker error while processing submission_id=%s",
                     job.submission_id,
                 )
+                outcome = {"status": "FAILED", "error": str(exc)}
+            finally:
+                if job.job_id:
+                    completion_payload = _build_completion_payload(
+                        job=job,
+                        outcome=outcome or {"status": "FAILED"},
+                    )
+                    try:
+                        await queue_adapter.push(
+                            f"{settings.ready_queue_name}:completed:{job.job_id}",
+                            json.dumps(completion_payload),
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to publish AI grading completion for job_id=%s",
+                            job.job_id,
+                        )
 
             if once:
                 logger.info("Processed one job and exiting due to --once.")

@@ -1,45 +1,127 @@
 # AI Grader Worker
 
-Standalone AI grading worker for JavaSmartGrader. All implementation is isolated under `ai_grader/` and can run without modifying existing repo files.
+The AI Grader is a standalone worker that consumes grading jobs from Redis, calls an OpenAI-compatible LLM endpoint, validates the JSON response, and writes feedback + status updates back to the database. It is designed to operate safely during OCR rollout by preferring payload inputs and falling back to the DB when needed.
 
-## Behavior Implemented
+## Pipeline Integration (Recent Changes)
 
-Worker loop follows the required flow:
+- Wired the AI grader into the main job pipeline using the same queue pattern as the sandbox (push to queue, wait on `:completed:{job_id}`).
+- Implemented `process_grader_job` to enqueue `GraderPayload`, await completion, and store `GraderResult` on the job.
+- Added `submission_id` to `GraderPayload` so queue messages are self-contained.
+- Enhanced the AI grader worker to parse payload inputs (transcribed text, sandbox results, rubric) and build logs directly from sandbox output.
+- Added payload-first behavior with DB fallback for robustness during OCR rollout.
+- Added job completion publishing from the AI grader worker to `Ready_Grading:completed:{job_id}`.
+- Updated queue adapter to extract `job_id` and support pushing completion payloads.
+- Normalized queue naming to respect namespace prefixes across core + `ai_grader`.
+- Added a single-repair pass for invalid LLM JSON output to improve resilience.
+- Persisted failure feedback and attempted failure status updates when grading cannot be recovered.
+- Standardized completion payloads to include `final_grade` and `student_feedback` when available.
 
-1. `job = QueueAdapter.dequeue("Ready_Grading")`
-2. `code = DatabaseAdapter.get_transcription(submission_id)`
-3. `logs = DatabaseAdapter.get_sandbox_results(submission_id)`
-4. `rubric = DatabaseAdapter.get_rubric(submission_id)`
-5. `prompt = construct_prompt(...)`
-6. `response = LLMClient.call(model, prompt)` with retries/backoff+jitter
-7. `parsed = parse_and_validate_json(response.text)`
-8. `DatabaseAdapter.save_feedback(submission_id, parsed)` (`ai_feedback`)
-9. `DatabaseAdapter.update_status(submission_id, "Pending_Review")`
-10. Retryable API errors (timeouts/429/5xx/network) are retried exponentially with jitter.
+## Unit Tests (General Coverage)
 
-If output JSON is invalid:
+The AI grader unit tests focus on core behavior across modules, with external services mocked or stubbed:
 
-- Exactly one repair call is made with `construct_repair_prompt(...)`.
-- If still invalid, a failure feedback record is persisted when possible.
-- Failure status update is attempted only if a compatible state exists; otherwise status is left unchanged.
+- **LLM client**: URL normalization, retries/backoff paths, error classification, payload shape, and content extraction.
+- **Parser/validator**: JSON schema validation, submission_id matching, and failure handling.
+- **Prompt builder**: Verbatim inclusion of rubric/code/logs and schema presence.
+- **Orchestration**: single-repair flow, success and failure branches, completion payloads, and log formatting.
+- **Queue adapter**: extraction of `submission_id`/`job_id` from multiple payload formats.
+- **Database adapter**: placeholder behavior and fallback adapter creation.
+
+Run tests locally:
+
+```bash
+pytest backend/ai_grader/self_test.py
+```
+
+## Worker Flow
+
+1. Dequeue a job from `Ready_Grading` (namespace-aware).
+2. Build inputs:
+   - Prefer payload fields (`transcribed_text`, `sandbox_result`, `rubric_json`).
+   - Fallback to DB (`get_transcription`, `get_sandbox_results`, `get_rubric`).
+3. Construct the grading prompt with schema and rubric.
+4. Call the LLM with retries/backoff + jitter for retryable failures.
+5. Parse and validate JSON; if invalid, perform a single repair call.
+6. On success: save feedback + update status to `Pending_Review`.
+7. On failure: persist failure feedback and attempt failure status update.
+8. Publish completion to `Ready_Grading:completed:{job_id}`.
+
+## Queue Payloads
+
+### Grader Payload (Input)
+
+Queue message is JSON and includes `submission_id` (self-contained), plus optional payload data to avoid DB dependency during OCR rollout.
+
+Example:
+
+```json
+{
+  "job_id": "job-123",
+  "submission_id": 123,
+  "transcribed_text": "class Main { ... }",
+  "sandbox_result": {
+    "result": {
+      "compilation_result": { "success": true, "errors": "" },
+      "execution_result": { "errors": "", "outputs": [] },
+      "test_cases_results": { "results": [] }
+    }
+  },
+  "rubric_json": { "criteria": [{ "name": "Correctness", "points": 10 }] }
+}
+```
+
+### Completion Payload (Output)
+
+Published to `Ready_Grading:completed:{job_id}`.
+
+Example success:
+
+```json
+{
+  "job_id": "job-123",
+  "submission_id": 123,
+  "status": "COMPLETED",
+  "rubric_result_json": { "total_score": 9, "feedback": { "summary": "Nice job." } },
+  "final_grade": 9.0,
+  "student_feedback": "Nice job."
+}
+```
+
+Example failure:
+
+```json
+{
+  "job_id": "job-123",
+  "submission_id": 123,
+  "status": "FAILED",
+  "error": "LLM call failed after 2 attempts",
+  "raw_output": "{ ... }"
+}
+```
+
+## Queue Naming and Namespaces
+
+- `READY_GRADING_QUEUE` defaults to `Ready_Grading`.
+- If `QUEUE_NAMESPACE` is set (e.g., `jsg.v1`), the worker ensures queues are prefixed, e.g. `jsg.v1:Ready_Grading`.
+- Completion queues are always `:completed:{job_id}` off the same base queue.
 
 ## Required Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `MODEL` | No | `ft:gpt-4.1-` | Fine-tuned (or regular) model id used by LLM API |
+| `MODEL` | No | `ft:gpt-4.1-nano-` | Model id used by the LLM API |
 | `API_KEY` | Yes | `""` | LLM API key |
-| `BASE_URL` | No | `https://api.openai.com/v1` | LLM base URL (OpenAI-compatible chat completions endpoint) |
+| `BASE_URL` | No | `https://api.openai.com/v1` | OpenAI-compatible base URL |
 | `TIMEOUT_S` | No | `30` | HTTP timeout in seconds |
-| `MAX_RETRIES` | No | `3` | Number of retries for retryable API failures |
-| `BACKOFF_BASE_S` | No | `1.0` | Initial exponential backoff delay |
-| `BACKOFF_MAX_S` | No | `30.0` | Max backoff delay |
-| `REDIS_ENDPOINT` | No | uses `REDIS_URL` or `redis://localhost:6379` | Redis URL for queue |
-| `READY_GRADING_QUEUE` | No | `Ready_Grading` | Queue name consumed by this worker |
+| `MAX_RETRIES` | No | `3` | Retry count for retryable failures |
+| `BACKOFF_BASE_S` | No | `1.0` | Exponential backoff base |
+| `BACKOFF_MAX_S` | No | `30.0` | Exponential backoff cap |
+| `REDIS_ENDPOINT` | No | uses `REDIS_URL` or `redis://localhost:6379` | Redis URL |
+| `READY_GRADING_QUEUE` | No | `Ready_Grading` | Base queue name |
 | `QUEUE_POLL_TIMEOUT_S` | No | `5` | BRPOP timeout |
-| `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Success status value to apply |
-| `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Comma-separated failure states to try in order |
-| `BACKEND_PATH` | No | `<repo>/backend` | Path added to import existing `db.*` modules |
+| `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Status applied on success |
+| `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Ordered failure statuses to attempt |
+| `BACKEND_PATH` | No | `<repo>/backend` | Added to `sys.path` for DB imports |
 
 ## How to Run Locally
 
@@ -49,16 +131,23 @@ From repo root:
 python -m ai_grader.main
 ```
 
+On startup, `main` loads settings, initializes the Redis queue adapter, database
+adapter, and LLM client, then enters the worker loop. The worker waits on the
+queue, processes jobs using the payload-first flow, publishes completion payloads,
+and keeps running until interrupted.
+
 Single-job mode:
 
 ```bash
 python -m ai_grader.main --once
 ```
 
-Self-test script:
+## Tests
+
+Run the unit test suite:
 
 ```bash
-python -m ai_grader.self_test
+pytest backend/ai_grader/self_test.py
 ```
 
 ## Integration Notes
@@ -67,11 +156,7 @@ python -m ai_grader.self_test
 
 - File: `ai_grader/adapters/queue_adapter.py`
 - Uses Redis list queue via `BRPOP`.
-- Expected payload forms:
-  - integer string: `"123"`
-  - JSON object: `{"submission_id": 123}`
-  - JSON object: `{"id": 123}`
-  - JSON object: `{"submission": {"id": 123}}`
+- Extracts `submission_id` from several payload formats and supports `job_id`.
 
 ### Database Adapter
 
@@ -80,69 +165,10 @@ python -m ai_grader.self_test
   - `db.session.async_session`
   - `db.models.Submission`, `db.models.AIFeedback`, `db.models.SubmissionState`
 - Maps data sources to current schema:
-  - `Get_Transcription` -> `submissions.transcription.transcribed_text`
-  - `Get_Sandbox_Results` -> `submissions.compile_results` fields (`compiled_ok`, `compile_errors`, `runtime_errors`, `runtime_output`)
-  - `Get_Rubric` -> `submissions.assignment.rubric_json`
-  - `Save_Feedback` -> upsert `ai_feedback` (`suggested_grade = total_score`, `feedback_text = full JSON`)
-  - `Update_Status` -> updates `submissions.state` only if target status exists in enum
+  - `get_transcription` -> `submissions.transcription.transcribed_text`
+  - `get_sandbox_results` -> `submissions.compile_results` fields
+  - `get_rubric` -> `submissions.assignment.rubric_json`
+  - `save_feedback` -> upsert `ai_feedback` (`suggested_grade = total_score`)
+  - `update_status` -> updates `submissions.state` only if target status exists in enum
 
 If backend imports are not discoverable in another repo layout, the adapter falls back to a placeholder with clear runtime errors. Map methods in `PlaceholderDatabaseAdapter` to your infrastructure.
-
-## Example Expected AI JSON Output
-
-```json
-{
-  "submission_id": 123,
-  "total_score": 17.5,
-  "max_score": 20,
-  "rubric_breakdown": [
-    {
-      "criterion_id_or_name": "Compilation",
-      "earned_points": 5,
-      "max_points": 5,
-      "rationale": "Code compiles successfully.",
-      "evidence_from_code_or_logs": "compiled_ok: true"
-    },
-    {
-      "criterion_id_or_name": "Correctness",
-      "earned_points": 8.5,
-      "max_points": 10,
-      "rationale": "Most expected outputs match; one edge case fails.",
-      "evidence_from_code_or_logs": "runtime_output mismatch on input=0"
-    },
-    {
-      "criterion_id_or_name": "Style",
-      "earned_points": 4,
-      "max_points": 5,
-      "rationale": "Readable but missing comments in key method.",
-      "evidence_from_code_or_logs": "Method parseInput lacks inline explanation."
-    }
-  ],
-  "feedback": {
-    "summary": "Strong submission with one edge-case bug and minor style issues.",
-    "issues": [
-      {
-        "location": "Line 27",
-        "description": "Division by zero not handled for input=0.",
-        "severity": "high"
-      }
-    ],
-    "suggestions": [
-      "Add guard clauses for zero and null inputs.",
-      "Include comments for non-obvious logic."
-    ],
-    "next_steps": [
-      "Re-run tests including boundary inputs.",
-      "Refactor error handling into helper methods."
-    ]
-  },
-  "error_classification": {
-    "handwriting_ocr_suspected": false,
-    "syntax_or_compile": false,
-    "runtime": true,
-    "logic": true,
-    "notes": "Runtime mismatch on edge case indicates logic branch gap."
-  },
-  "confidence": 0.84
-}
-```

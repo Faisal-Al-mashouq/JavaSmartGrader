@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <h1>Create Assignment</h1>
+    <form method="post">
+        <p>
+            <label for="name">Name</label><br>
+            <input id="name" name="name" type="text" required>
+        </p>
+        <p>
+            <label for="description">Description</label><br>
+            <textarea id="description" name="description" rows="4" required></textarea>
+        </p>
+        <p>
+            <label for="rubric_json">Rubric JSON</label><br>
+            <textarea id="rubric_json" name="rubric_json" rows="10" required>{
+  "criteria": [
+    {"name": "Correctness", "points": 60},
+    {"name": "Code Quality", "points": 40}
+  ],
+  "max_score": 100
+}</textarea>
+        </p>
+        <p>
+            <button class="btn" type="submit">Save Assignment</button>
+            <a class="btn" href="{{ url_for('instructor_dashboard') }}">Cancel</a>
+        </p>
+    </form>
+</section>
+{% endblock %}

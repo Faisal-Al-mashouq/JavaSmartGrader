@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     redis_endpoint: str = "redis://redis:6379"
     queue_namespace: str = "jsg.v1"
+    ready_grading_queue: str = "Ready_Grading"
     redis_port: int = 6379
     max_concurrency: int = 10
 

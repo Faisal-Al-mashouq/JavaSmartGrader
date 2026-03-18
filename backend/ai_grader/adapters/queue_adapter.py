@@ -12,9 +12,12 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class QueueJob:
     """
-    an immutable object containing the ID, the raw message, and the source queue name
+    An immutable object containing the ID, optional job id, the raw message,
+    and the source queue name.
     """
+
     submission_id: int
+    job_id: str | None
     raw_payload: str
     queue_name: str
 
@@ -23,18 +26,24 @@ class QueueAdapter(Protocol):
     """
     defines the mandatory blueprint for any queue implementation (like Redis)
     ensures any subclass provides a standard dequeue method
-    how: Uses Python's protocol to support structural typing 
+    how: Uses Python's protocol to support structural typing
     """
+
     async def dequeue(self, queue_name: str) -> QueueJob | None:
         """Pop one job from queue_name."""
+
+    async def push(self, queue_name: str, payload: str) -> None:
+        """Push a payload onto a queue."""
 
 
 class RedisQueueAdapter:
     """
     handles the actual communication with a Redis server to fetch and parse jobs
     output: a QueueJob object or None if the queue is empty
-    uses brpop for non-blocking asynchronous polling and includes logic to extract IDs from various JSON formats
+    uses brpop for non-blocking asynchronous polling and includes logic to
+    extract IDs from various JSON formats
     """
+
     def __init__(self, redis_url: str, poll_timeout_s: int = 5):
         redis_module = importlib.import_module("redis.asyncio")
         self._redis = redis_module.Redis.from_url(redis_url, decode_responses=True)
@@ -56,11 +65,16 @@ class RedisQueueAdapter:
             )
             return None
 
+        job_id = self._extract_job_id(raw_payload)
         return QueueJob(
             submission_id=submission_id,
+            job_id=job_id,
             raw_payload=raw_payload,
             queue_name=queue_name_from_redis,
         )
+
+    async def push(self, queue_name: str, payload: str) -> None:
+        await self._redis.lpush(queue_name, payload)
 
     async def close(self) -> None:
         await self._redis.aclose()
@@ -68,9 +82,11 @@ class RedisQueueAdapter:
     @staticmethod
     def _extract_submission_id(raw_payload: str) -> int:
         """
-        a defensive helper that hunts for an ID inside potentially messy or nested JSON payloads
+        a defensive helper that hunts for an ID inside potentially messy or
+        nested JSON payloads
         output: a clean integer submission_id
-        how: systematically checks for direct integers, top-level keys (id, submission_id), or nested fields
+        how: systematically checks for direct integers, top-level keys (id,
+        submission_id), or nested fields
         """
         stripped = raw_payload.strip()
         if stripped.isdigit():
@@ -106,3 +122,18 @@ class RedisQueueAdapter:
                 return int(nested_value)
 
         raise ValueError("Could not extract submission_id from payload")
+
+    @staticmethod
+    def _extract_job_id(raw_payload: str) -> str | None:
+        stripped = raw_payload.strip()
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError:
+            return None
+
+        if isinstance(payload, dict):
+            job_id = payload.get("job_id")
+            if job_id is None:
+                return None
+            return str(job_id)
+        return None
