@@ -1,68 +1,14 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
+import logging
 from pathlib import Path
+from typing import Any
 
-from dotenv import load_dotenv
-
-# Load .env once so local development values are available before reading
-# os.getenv(...) in load_settings().
-load_dotenv()
-
-# Centralises all runtime configuration
-# Settings are loaded once at startup from environment variables
-# All values are validated at load time so misconfiguration is caught
-# immediately rather than at first use
+from pydantic import AliasChoices, Field, ValidationInfo, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _read_int(name: str, default: int, minimum: int | None = None) -> int:
-    """
-    Reads an integer env var and raises ValueError if the value cannot be cast
-    or falls below min
-    Returns: int
-    """
-    raw = os.getenv(name)
-    if not raw:
-        return default
-    try:
-        value = int(raw)
-    except ValueError as exc:
-        raise ValueError(f"{name} must be an integer. Got: {raw!r}") from exc
-    if minimum is not None and value < minimum:
-        raise ValueError(f"{name} must be >= {minimum}. Got: {value}")
-    return value
-
-
-def _read_float(name: str, default: float, minimum: float | None = None) -> float:
-    """
-    Reads a float env var with the same validation logic as _read_int.
-    Returns: float
-    """
-    raw = os.getenv(name)
-    if not raw:
-        return default
-    try:
-        value = float(raw)
-    except ValueError as exc:
-        raise ValueError(f"{name} must be a number. Got: {raw!r}") from exc
-    if minimum is not None and value < minimum:
-        raise ValueError(f"{name} must be >= {minimum}. Got: {value}")
-    return value
-
-
-def _read_csv(name: str, default: str) -> tuple[str, ...]:
-    """
-    Reads a comma-separated env var and returns a tuple of non-empty stripped strings.
-    Returns: tuple[str, ...]
-    """
-    raw = os.getenv(name, default)
-    values = [item.strip() for item in raw.split(",")]
-    return tuple(item for item in values if item)
-
-
-@dataclass(frozen=True)
-class Settings:
+class Settings(BaseSettings):
     """
     model: Fine-tuned model ID
     api_key: API key
@@ -73,76 +19,122 @@ class Settings:
     backoff_max_s: Cap on backoff delay (adds jitter)
     redis_url: Redis connection URL
     ready_queue_name: Redis list name for worker pops.
-    queue_poll_timeout_s: BRPOP blocking timeout in seconds
+    queue_poll_timeout_s: BRPOPLPUSH blocking timeout in seconds
     temperature: LLM sampling temperature
     pending_review_status: Status applied after successful grading.
     failure_status_candidates: Ordered list of status strings for failures
     backend_path: Filesystem path added to sys.path for DB imports
+    log_level: Root logging level for the worker process
     """
 
-    model: str
-    api_key: str
-    base_url: str
-    timeout_s: float
-    max_retries: int
-    backoff_base_s: float
-    backoff_max_s: float
-    redis_url: str
-    ready_queue_name: str
-    queue_poll_timeout_s: int
-    temperature: float
-    pending_review_status: str
-    failure_status_candidates: tuple[str, ...]
-    backend_path: Path
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        frozen=True,
+        populate_by_name=True,
+        validate_default=True,
+    )
+
+    model: str = Field(default="ft:gpt-4.1-nano-", validation_alias="MODEL")
+    api_key: str = Field(default="", validation_alias="API_KEY")
+    base_url: str = Field(
+        default="https://api.openai.com/v1",
+        validation_alias="BASE_URL",
+    )
+    timeout_s: float = Field(default=30.0, validation_alias="TIMEOUT_S", ge=1.0)
+    max_retries: int = Field(default=3, validation_alias="MAX_RETRIES", ge=0)
+    backoff_base_s: float = Field(
+        default=1.0,
+        validation_alias="BACKOFF_BASE_S",
+        ge=0.0,
+    )
+    backoff_max_s: float = Field(
+        default=30.0,
+        validation_alias="BACKOFF_MAX_S",
+        gt=0.0,
+    )
+    redis_url: str = Field(
+        default="redis://redis:6379",
+        validation_alias=AliasChoices("REDIS_ENDPOINT", "REDIS_URL"),
+    )
+    queue_namespace: str = Field(
+        default="jsg.v1",
+        validation_alias="QUEUE_NAMESPACE",
+        exclude=True,
+        repr=False,
+    )
+    ready_queue_name: str = Field(
+        default="Ready_Grading",
+        validation_alias="READY_GRADING_QUEUE",
+    )
+    queue_poll_timeout_s: int = Field(
+        default=5,
+        validation_alias="QUEUE_POLL_TIMEOUT_S",
+        ge=0,
+    )
+    temperature: float = Field(
+        default=0.0,
+        validation_alias="LLM_TEMPERATURE",
+        ge=0.0,
+    )
+    pending_review_status: str = Field(
+        default="Pending_Review",
+        validation_alias="PENDING_REVIEW_STATUS",
+    )
+    failure_status_candidates: tuple[str, ...] = Field(
+        default=("Grading_Failed", "failed"),
+        validation_alias="FAILURE_STATUS_CANDIDATES",
+    )
+    backend_path: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parents[1],
+        validation_alias="BACKEND_PATH",
+    )
+    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+
+    @field_validator("ready_queue_name")
+    @classmethod
+    def _prefix_ready_queue(cls, value: str, info: ValidationInfo) -> str:
+        queue_namespace = str(info.data.get("queue_namespace", "")).strip()
+        if not queue_namespace:
+            return value
+        prefix = f"{queue_namespace}:"
+        if value.startswith(prefix):
+            return value
+        return f"{prefix}{value}"
+
+    @field_validator("failure_status_candidates", mode="before")
+    @classmethod
+    def _parse_failure_status_candidates(cls, value: Any) -> tuple[str, ...]:
+        if isinstance(value, str):
+            parsed = tuple(item.strip() for item in value.split(",") if item.strip())
+            if not parsed:
+                raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")
+            return parsed
+        if isinstance(value, list):
+            parsed = tuple(str(item).strip() for item in value if str(item).strip())
+            if not parsed:
+                raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")
+            return parsed
+        return value
 
 
 def load_settings() -> Settings:
     """
-    Constructs and returns the single Settings instance. Called once in main()
-    and passed to all components.
-    Returns: Settings (frozen dataclass)
+    Constructs and returns the single Settings instance.
+    Called once in main() and passed to all components.
     """
-    repo_root = Path(__file__).resolve().parents[1]
-    # BACKEND_PATH is where `db.*` modules live (for dynamic adapter imports).
-    # Override this in .env when running outside the expected project layout.
-    backend_path = Path(os.getenv("BACKEND_PATH", str(repo_root / "backend")))
+    return Settings()
 
-    # Queue names are namespace-aware so multiple environments can share one
-    # Redis instance safely.
-    queue_namespace = os.getenv("QUEUE_NAMESPACE", "jsg.v1")
-    ready_queue_base = os.getenv("READY_GRADING_QUEUE", "Ready_Grading")
-    if queue_namespace:
-        prefix = f"{queue_namespace}:"
-        ready_queue_name = (
-            ready_queue_base
-            if ready_queue_base.startswith(prefix)
-            else f"{prefix}{ready_queue_base}"
-        )
-    else:
-        ready_queue_name = ready_queue_base
 
-    return Settings(
-        # LLM endpoint configuration.
-        model=os.getenv("MODEL", "ft:gpt-4.1-nano-"),
-        api_key=os.getenv("API_KEY", ""),
-        base_url=os.getenv("BASE_URL", "https://api.openai.com/v1"),
-        timeout_s=_read_float("TIMEOUT_S", 30.0, minimum=1.0),
-        max_retries=_read_int("MAX_RETRIES", 3, minimum=0),
-        backoff_base_s=_read_float("BACKOFF_BASE_S", 1.0, minimum=0.0),
-        backoff_max_s=_read_float("BACKOFF_MAX_S", 30.0, minimum=0.1),
-        # Redis URL priority: REDIS_ENDPOINT > REDIS_URL > hardcoded default.
-        redis_url=os.getenv(
-            "REDIS_ENDPOINT",
-            os.getenv("REDIS_URL", "redis://redis:6379"),
-        ),
-        ready_queue_name=ready_queue_name,
-        queue_poll_timeout_s=_read_int("QUEUE_POLL_TIMEOUT_S", 5, minimum=0),
-        # Submission state transitions after success/failure.
-        pending_review_status=os.getenv("PENDING_REVIEW_STATUS", "Pending_Review"),
-        failure_status_candidates=_read_csv(
-            "FAILURE_STATUS_CANDIDATES",
-            "Grading_Failed,failed",
-        ),
-        temperature=_read_float("LLM_TEMPERATURE", 0.0, minimum=0.0),
-        backend_path=backend_path,
+def configure_logging(settings: Settings) -> None:
+    """
+    Applies root logging configuration for the ai_grader worker process.
+    """
+    level_name = settings.log_level.strip().upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        force=True,
     )

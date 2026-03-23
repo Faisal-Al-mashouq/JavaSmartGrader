@@ -41,16 +41,13 @@ class LLMClient:
     @staticmethod
     def _build_chat_completions_url(base_url: str) -> str:
         """
-        Normalises base_url by stripping trailing slashes and appending
-        /chat/completions if needed
-        Handles bases that already end in /v1 or /chat/completions
+        Uses the provided URL as-is when it already targets chat completions;
+        otherwise appends /chat/completions.
         Returns: str (full endpoint URL)
         """
         normalized = base_url.rstrip("/")
         if normalized.endswith("/chat/completions"):
             return normalized
-        if normalized.endswith("/v1"):
-            return f"{normalized}/chat/completions"
         return f"{normalized}/chat/completions"
 
     def _compute_backoff_with_jitter(self, attempt: int) -> float:

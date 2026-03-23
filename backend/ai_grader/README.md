@@ -36,6 +36,7 @@ pytest backend/ai_grader/self_test.py
 ## Worker Flow
 
 1. Dequeue a job from `Ready_Grading` (namespace-aware).
+   - Claim is atomic via `BRPOPLPUSH` into `Ready_Grading:processing`.
 2. Build inputs:
    - Prefer payload fields (`transcribed_text`, `sandbox_result`, `rubric_json`).
    - Fallback to DB (`get_transcription`, `get_sandbox_results`, `get_rubric`).
@@ -45,6 +46,7 @@ pytest backend/ai_grader/self_test.py
 6. On success: save feedback + update status to `Pending_Review`.
 7. On failure: persist failure feedback and attempt failure status update.
 8. Publish completion to `Ready_Grading:completed:{job_id}`.
+9. Remove the handled job from `Ready_Grading:processing` via `LREM` (success/failure).
 
 ## Queue Payloads
 
@@ -121,10 +123,11 @@ Example failure:
 | `REDIS_URL` | No | `redis://redis:6379` | Fallback Redis URL when `REDIS_ENDPOINT` is unset |
 | `QUEUE_NAMESPACE` | No | `jsg.v1` | Prefix used for queue names (e.g. `jsg.v1:Ready_Grading`) |
 | `READY_GRADING_QUEUE` | No | `Ready_Grading` | Base queue name |
-| `QUEUE_POLL_TIMEOUT_S` | No | `5` | BRPOP timeout |
+| `QUEUE_POLL_TIMEOUT_S` | No | `5` | BRPOPLPUSH timeout |
 | `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Status applied on success |
 | `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Ordered failure statuses to attempt |
 | `BACKEND_PATH` | No | computed from runtime path | Path added to `sys.path` for DB imports (`db.*`) |
+| `LOG_LEVEL` | No | `INFO` | Root log level for the ai_grader worker |
 
 Notes:
 
@@ -166,8 +169,9 @@ pytest backend/ai_grader/self_test.py
 ### Queue Adapter
 
 - File: `ai_grader/adapters/queue_adapter.py`
-- Uses Redis list queue via `BRPOP`.
+- Uses Redis list queue via `BRPOPLPUSH` for atomic claim into `:processing`.
 - Extracts `submission_id` from several payload formats and supports `job_id`.
+- Removes handled items from `:processing` with `LREM`.
 
 ### Database Adapter
 

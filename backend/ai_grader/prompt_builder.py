@@ -4,9 +4,11 @@ import json
 from typing import Any
 
 """
-stateless module containing two pure functions that format the data into
-strings the LLM can understand
-no side effects, no I/O
+Stateless module containing pure prompt-formatting helpers.
+It builds:
+- the main grading prompt
+- an output-repair prompt when prior model output is invalid
+No side effects, no I/O.
 """
 
 
@@ -71,18 +73,18 @@ def construct_prompt(
     )
 
 
-def construct_repair_prompt(
+def construct_output_repair_prompt(
     *,
     submission_id: int,
     previous_output: str,
     schema: dict[str, Any],
 ) -> str:
     """
-    constructs a shorter follow-up prompt sent when the first LLM response
-    fails validation
-    includes the correct submission_id, the required schema, and the previous
-    invalid output so the model can self-correct.
-    instructs the model to return ONLY valid JSON with no omitted keys
+    Builds a shorter follow-up prompt sent when the first LLM output
+    fails JSON/schema validation.
+    This repairs the model output, not prompt construction.
+    Includes submission_id, required schema, and previous invalid output so
+    the model can self-correct and return complete valid JSON.
     Returns: str
     """
     schema_text = _as_json_block(schema)

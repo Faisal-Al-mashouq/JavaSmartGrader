@@ -25,23 +25,29 @@ class QueueJob:
 class QueueAdapter(Protocol):
     """
     defines the mandatory blueprint for any queue implementation (like Redis)
-    ensures any subclass provides a standard dequeue method
+    ensures any subclass provides a standard claim/push/ack/fail workflow
     how: Uses Python's protocol to support structural typing
     """
 
     async def dequeue(self, queue_name: str) -> QueueJob | None:
-        """Pop one job from queue_name."""
+        """Atomically claim one job from queue_name."""
 
     async def push(self, queue_name: str, payload: str) -> None:
         """Push a payload onto a queue."""
+
+    async def ack(self, job: QueueJob) -> None:
+        """Remove a completed/handled job from the processing queue."""
+
+    async def fail(self, job: QueueJob) -> None:
+        """Remove a failed job from the processing queue."""
 
 
 class RedisQueueAdapter:
     """
     handles the actual communication with a Redis server to fetch and parse jobs
     output: a QueueJob object or None if the queue is empty
-    uses brpop for non-blocking asynchronous polling and includes logic to
-    extract IDs from various JSON formats
+    uses BRPOPLPUSH for atomic claim into a :processing queue and includes
+    logic to extract IDs from various JSON formats
     """
 
     def __init__(self, redis_url: str, poll_timeout_s: int = 5):
@@ -49,20 +55,29 @@ class RedisQueueAdapter:
         self._redis = redis_module.Redis.from_url(redis_url, decode_responses=True)
         self._poll_timeout_s = poll_timeout_s
 
+    @staticmethod
+    def _processing_queue_name(queue_name: str) -> str:
+        return f"{queue_name}:processing"
+
     async def dequeue(self, queue_name: str) -> QueueJob | None:
-        item = await self._redis.brpop(queue_name, timeout=self._poll_timeout_s)
-        if item is None:
+        processing_queue = self._processing_queue_name(queue_name)
+        raw_payload = await self._redis.brpoplpush(
+            src=queue_name,
+            dst=processing_queue,
+            timeout=self._poll_timeout_s,
+        )
+        if raw_payload is None:
             return None
 
-        queue_name_from_redis, raw_payload = item
         try:
             submission_id = self._extract_submission_id(raw_payload)
         except ValueError as exc:
             logger.error(
                 "Skipping queue payload with missing submission_id on queue=%s: %s",
-                queue_name_from_redis,
+                queue_name,
                 exc,
             )
+            await self._redis.lrem(processing_queue, 1, raw_payload)
             return None
 
         job_id = self._extract_job_id(raw_payload)
@@ -70,11 +85,19 @@ class RedisQueueAdapter:
             submission_id=submission_id,
             job_id=job_id,
             raw_payload=raw_payload,
-            queue_name=queue_name_from_redis,
+            queue_name=queue_name,
         )
 
     async def push(self, queue_name: str, payload: str) -> None:
         await self._redis.lpush(queue_name, payload)
+
+    async def ack(self, job: QueueJob) -> None:
+        processing_queue = self._processing_queue_name(job.queue_name)
+        await self._redis.lrem(processing_queue, 1, job.raw_payload)
+
+    async def fail(self, job: QueueJob) -> None:
+        processing_queue = self._processing_queue_name(job.queue_name)
+        await self._redis.lrem(processing_queue, 1, job.raw_payload)
 
     async def close(self) -> None:
         await self._redis.aclose()

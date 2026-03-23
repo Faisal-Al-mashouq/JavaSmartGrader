@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 from collections.abc import Awaitable
-from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -107,7 +106,7 @@ def _make_settings(**overrides: object) -> Settings:
         failure_status_candidates=("Grading_Failed",),
         backend_path=Path("."),
     )
-    return replace(base, **overrides)
+    return base.model_copy(update=overrides)
 
 
 def _patch_async_client(
@@ -550,6 +549,77 @@ def test_extract_job_id() -> None:
     assert queue_module.RedisQueueAdapter._extract_job_id(json.dumps([1])) is None
 
 
+def test_redis_queue_adapter_dequeue_uses_brpoplpush() -> None:
+    class _FakeRedis:
+        def __init__(self) -> None:
+            self.claim_args: tuple[str, str, int] | None = None
+
+        async def brpoplpush(self, src: str, dst: str, timeout: int):
+            self.claim_args = (src, dst, timeout)
+            return json.dumps({"submission_id": 17, "job_id": "job-17"})
+
+    adapter = object.__new__(queue_module.RedisQueueAdapter)
+    adapter._redis = _FakeRedis()
+    adapter._poll_timeout_s = 7
+
+    job = _run(adapter.dequeue("jsg.v1:Ready_Grading"))
+    assert job is not None
+    assert job.submission_id == 17
+    assert job.job_id == "job-17"
+    assert job.queue_name == "jsg.v1:Ready_Grading"
+    assert adapter._redis.claim_args == (
+        "jsg.v1:Ready_Grading",
+        "jsg.v1:Ready_Grading:processing",
+        7,
+    )
+
+
+def test_redis_queue_adapter_dequeue_invalid_payload_removed() -> None:
+    class _FakeRedis:
+        def __init__(self) -> None:
+            self.removed: tuple[str, int, str] | None = None
+
+        async def brpoplpush(self, src: str, dst: str, timeout: int):
+            return "not-json"
+
+        async def lrem(self, queue_name: str, count: int, payload: str) -> None:
+            self.removed = (queue_name, count, payload)
+
+    adapter = object.__new__(queue_module.RedisQueueAdapter)
+    adapter._redis = _FakeRedis()
+    adapter._poll_timeout_s = 3
+
+    job = _run(adapter.dequeue("queue"))
+    assert job is None
+    assert adapter._redis.removed == ("queue:processing", 1, "not-json")
+
+
+def test_redis_queue_adapter_ack_and_fail_remove_processing_item() -> None:
+    class _FakeRedis:
+        def __init__(self) -> None:
+            self.removed: list[tuple[str, int, str]] = []
+
+        async def lrem(self, queue_name: str, count: int, payload: str) -> None:
+            self.removed.append((queue_name, count, payload))
+
+    adapter = object.__new__(queue_module.RedisQueueAdapter)
+    adapter._redis = _FakeRedis()
+    job = queue_module.QueueJob(
+        submission_id=1,
+        job_id="job-1",
+        raw_payload='{"submission_id":1}',
+        queue_name="queue",
+    )
+
+    _run(adapter.ack(job))
+    _run(adapter.fail(job))
+
+    assert adapter._redis.removed == [
+        ("queue:processing", 1, '{"submission_id":1}'),
+        ("queue:processing", 1, '{"submission_id":1}'),
+    ]
+
+
 def test_placeholder_database_adapter_raises() -> None:
     adapter = db_module.PlaceholderDatabaseAdapter(RuntimeError("nope"))
     with pytest.raises(RuntimeError):
@@ -744,6 +814,12 @@ def test_run_worker_raises_on_placeholder_db(
             return None
 
         async def push(self, queue_name: str, payload: str) -> None:
+            return None
+
+        async def ack(self, job: queue_module.QueueJob) -> None:
+            return None
+
+        async def fail(self, job: queue_module.QueueJob) -> None:
             return None
 
         async def close(self) -> None:
@@ -1219,6 +1295,8 @@ def test_run_worker_once_processes_job(
 
         def __init__(self, redis_url: str, poll_timeout_s: int = 5):
             self.pushed: list[tuple[str, str]] = []
+            self.acked: list[queue_module.QueueJob] = []
+            self.failed: list[queue_module.QueueJob] = []
             self.dequeued = False
             self.closed = False
             self.last_queue = None
@@ -1238,6 +1316,12 @@ def test_run_worker_once_processes_job(
 
         async def push(self, queue_name: str, payload: str) -> None:
             self.pushed.append((queue_name, payload))
+
+        async def ack(self, job: queue_module.QueueJob) -> None:
+            self.acked.append(job)
+
+        async def fail(self, job: queue_module.QueueJob) -> None:
+            self.failed.append(job)
 
         async def close(self) -> None:
             self.closed = True
@@ -1267,3 +1351,5 @@ def test_run_worker_once_processes_job(
     payload_json = json.loads(payload)
     assert payload_json["submission_id"] == 21
     assert payload_json["status"] == "COMPLETED"
+    assert len(adapter.acked) == 1
+    assert not adapter.failed

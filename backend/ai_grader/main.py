@@ -11,7 +11,7 @@ from .adapters import (
     RedisQueueAdapter,
     create_database_adapter,
 )
-from .config import Settings, load_settings
+from .config import Settings, configure_logging, load_settings
 from .llm_client import LLMAPIError, LLMClient
 from .parser_validator import (
     JSONValidationError,
@@ -19,7 +19,7 @@ from .parser_validator import (
     parse_and_validate_json,
     validate_submission_id,
 )
-from .prompt_builder import construct_prompt, construct_repair_prompt
+from .prompt_builder import construct_output_repair_prompt, construct_prompt
 
 """
 The orchestration layer
@@ -30,10 +30,6 @@ Contain:
     the CLI entry point
 """
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +62,7 @@ async def _parse_with_single_repair(
             first_error,
         )
 
-    repair_prompt = construct_repair_prompt(
+    repair_prompt = construct_output_repair_prompt(
         submission_id=submission_id,
         previous_output=first_response_text,
         schema=schema,
@@ -341,6 +337,8 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
     enters a continuous loop calling queue_adapter.dequeue()
     for each job received, calls process_submission inside a broad try/except so
     a crash on one job never kills the worker
+    claims jobs atomically into :processing and removes them via ack/fail
+    once handled.
     if once is passed, exits after the first job (or immediately if no job is available)
     notes: raises RuntimeError at startup if the DB adapter is still a placeholder
 
@@ -375,6 +373,7 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
 
             processed_count += 1
             outcome: dict | None = None
+            completion_published = True
             try:
                 payload_inputs = _payload_inputs_from_raw(job.raw_payload)
                 outcome = await process_submission(
@@ -396,16 +395,38 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
                         job=job,
                         outcome=outcome or {"status": "FAILED"},
                     )
+                    completion_published = False
                     try:
                         await queue_adapter.push(
                             f"{settings.ready_queue_name}:completed:{job.job_id}",
                             json.dumps(completion_payload),
                         )
+                        completion_published = True
                     except Exception:
                         logger.exception(
                             "Failed to publish AI grading completion for job_id=%s",
                             job.job_id,
                         )
+
+                if not job.job_id or completion_published:
+                    try:
+                        if (outcome or {}).get("status") == "COMPLETED":
+                            await queue_adapter.ack(job)
+                        else:
+                            await queue_adapter.fail(job)
+                    except Exception:
+                        logger.exception(
+                            "Failed to remove processed job from queue=%s "
+                            "submission_id=%s",
+                            job.queue_name,
+                            job.submission_id,
+                        )
+                else:
+                    logger.error(
+                        "Leaving job_id=%s in processing queue because completion "
+                        "publish failed.",
+                        job.job_id,
+                    )
 
             if once:
                 logger.info("Processed one job and exiting due to --once.")
@@ -439,6 +460,7 @@ def main() -> int:
     """
     args = _parse_args()
     settings = load_settings()
+    configure_logging(settings)
     try:
         asyncio.run(run_worker(settings=settings, once=args.once))
         return 0
