@@ -2,7 +2,7 @@
 OCR Worker — async job consumer from Redis queue.
 
 Mirrors the sandbox_worker.py architecture:
-- Async Redis with brpoplpush (source → processing queue)
+- Async Redis with blmove (source → processing queue)
 - N concurrent coroutines via asyncio.gather
 - Job lifecycle: initialize → process → return result
 - Graceful shutdown via KeyboardInterrupt
@@ -56,9 +56,13 @@ async def start():
         logger.exception("OCR Worker initialization error: %s", e)
         raise
     logger.info("OCR Worker started")
-    await asyncio.gather(
-        *(main_loop(client, pid) for pid in range(client.max_concurrency))
-    )
+    try:
+        await asyncio.gather(
+            *(main_loop(client, pid) for pid in range(client.max_concurrency))
+        )
+    finally:
+        await client.redis_client.aclose()
+        logger.info("Redis connection closed.")
 
 
 async def main_loop(
@@ -72,9 +76,11 @@ async def main_loop(
                 process_id,
                 OCR_QUEUE,
             )
-            result = await client.redis_client.brpoplpush(
-                src=OCR_QUEUE,
-                dst=f"{OCR_QUEUE}:processing",
+            result = await client.redis_client.blmove(
+                OCR_QUEUE,
+                f"{OCR_QUEUE}:processing",
+                "RIGHT",
+                "LEFT",
                 timeout=0,
             )
         except asyncio.CancelledError:
@@ -85,29 +91,25 @@ async def main_loop(
             return
 
         logger.info("OCR Job Received.")
-        if result:
-            logger.debug("Details: %s", result)
-            initialized_job = await initialize_job(result)
-            if not initialized_job:
-                logger.error("Failed to initialize job, skipping")
-                await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
-                continue
+        logger.debug("Details: %s", result)
 
-            processed_job = await process_job(initialized_job)
-            if (
-                processed_job.status != JobStatus.COMPLETED
-                and processed_job.status != JobStatus.FAILED
-            ):
-                logger.error("Failed to process job, skipping")
-                await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
-                continue
-
-            await return_result(client, processed_job)
-            await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
-        else:
-            logger.error("No job found in %s", OCR_QUEUE)
+        initialized_job = await initialize_job(result)
+        if not initialized_job:
+            logger.error("Failed to initialize job, skipping")
             await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
             continue
+
+        processed_job = await process_job(initialized_job)
+        if (
+            processed_job.status != JobStatus.COMPLETED
+            and processed_job.status != JobStatus.FAILED
+        ):
+            logger.error("Failed to process job, skipping")
+            await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
+            continue
+
+        await return_result(client, processed_job)
+        await client.redis_client.lrem(f"{OCR_QUEUE}:processing", 1, result)
 
 
 async def initialize_job(
@@ -119,7 +121,7 @@ async def initialize_job(
         job = OCRJob(
             job_id=ocr_job_request.job_id,
             status=JobStatus.PENDING,
-            created_at=datetime.datetime.now(),
+            created_at=datetime.datetime.now(datetime.UTC),
             request=ocr_job_request,
             result=None,
         )
@@ -170,14 +172,16 @@ async def process_job(job: OCRJob) -> OCRJobResult:
         return await set_result(job, JobStatus.ERROR)
 
 
+RESULT_TTL_SECONDS = 3600  # 1 hour
+
+
 async def return_result(
     client: OCRWorkerClient,
     job: OCRJobResult,
 ):
-    await client.redis_client.lpush(
-        f"{OCR_QUEUE}:completed:{job.job_id}",
-        job.model_dump_json(),
-    )
+    result_key = f"{OCR_QUEUE}:completed:{job.job_id}"
+    await client.redis_client.lpush(result_key, job.model_dump_json())
+    await client.redis_client.expire(result_key, RESULT_TTL_SECONDS)
     logger.debug(
         "OCR Job: %s result returned successfully",
         job.job_id,

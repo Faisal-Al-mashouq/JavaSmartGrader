@@ -20,24 +20,32 @@ from azure.ai.formrecognizer import (
 )
 from azure.core.credentials import AzureKeyCredential
 from google import genai
+from google.genai import types
 from settings import settings
 
-from .prompts import build_correction_prompt
+from .prompts import build_user_input, get_system_prompt
 from .schemas import LLMUncertainWord, OCRFlag, OCRLine, OCRWord
 
 logger = logging.getLogger(__name__)
 
 FLAG_CONFIDENCE_THRESHOLD = 0.30  # 30%
 
+# Module-level singletons — initialized once, reused across jobs
+_ocr_client: DocumentAnalysisClient | None = None
+_llm_client: genai.Client | None = None
+
 
 # ── Azure OCR ────────────────────────────────────────────────────
 
 
 def _build_ocr_client() -> DocumentAnalysisClient:
-    return DocumentAnalysisClient(
-        endpoint=settings.azure_endpoint,
-        credential=AzureKeyCredential(settings.azure_key),
-    )
+    global _ocr_client
+    if _ocr_client is None:
+        _ocr_client = DocumentAnalysisClient(
+            endpoint=settings.azure_ocr_endpoint,
+            credential=AzureKeyCredential(settings.api_azure),
+        )
+    return _ocr_client
 
 
 def extract_words(image_path: str) -> list[OCRLine]:
@@ -111,7 +119,10 @@ def extract_words(image_path: str) -> list[OCRLine]:
 
 
 def _build_llm_client() -> genai.Client:
-    return genai.Client(api_key=settings.gemini_key)
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = genai.Client(api_key=settings.api_gemini)
+    return _llm_client
 
 
 def correct_ocr(
@@ -143,7 +154,7 @@ def correct_ocr(
         If the Gemini API call fails.
     """
     model_name = model or settings.gemini_model
-    prompt = build_correction_prompt(annotated_lines)
+    user_input = build_user_input(annotated_lines)
 
     logger.info(
         "Sending %d lines to %s...",
@@ -155,7 +166,10 @@ def correct_ocr(
     try:
         response = client.models.generate_content(
             model=model_name,
-            contents=prompt,
+            contents=user_input,
+            config=types.GenerateContentConfig(
+                system_instruction=get_system_prompt(),
+            ),
         )
         raw_response = response.text.strip()
         logger.info(
@@ -378,8 +392,3 @@ def _lookup_confidence(
     except (ValueError, IndexError):
         pass
     return None
-
-
-def _normalize(text: str) -> str:
-    """Lowercase and strip for comparison."""
-    return text.strip().lower()

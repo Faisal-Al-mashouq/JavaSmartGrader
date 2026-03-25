@@ -106,7 +106,7 @@ class LLMUncertainWord(BaseModel):
     original_word: str
     confidence_pct: int
     coordinates: str  # "line:L:word:W"
-    suggestions: list[str]  # 5 ranked suggestions
+    suggestions: list[str]  # up to 5 ranked suggestions
 
 
 class LLMCorrectionResult(BaseModel):

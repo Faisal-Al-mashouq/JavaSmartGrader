@@ -15,6 +15,8 @@ Step sequence:
 import asyncio
 import logging
 
+from settings import settings
+
 from .helpers import correct_ocr, detect_flags, extract_words
 from .schemas import (
     FlagDetectionResult,
@@ -98,6 +100,14 @@ async def correct_job(job: OCRJob) -> OCRJob | None:
     Returns the job with llm_result populated, or None on failure.
     """
     ocr_lines = job.result.ocr_result.lines
+    if not ocr_lines:
+        logger.error("Job %s has no OCR lines to correct", job.job_id)
+        job.result.llm_result = LLMCorrectionResult(
+            success=False,
+            errors=["No OCR lines available for correction."],
+        )
+        return None
+
     annotated_lines = [line.annotated() for line in ocr_lines]
 
     try:
@@ -108,7 +118,7 @@ async def correct_job(job: OCRJob) -> OCRJob | None:
         job.result.llm_result = LLMCorrectionResult(
             success=True,
             corrected_code=corrected_code,
-            model_used="gemini",
+            model_used=settings.gemini_model,
             uncertain_words=(uncertain_words if uncertain_words else None),
         )
         logger.info(
@@ -153,7 +163,7 @@ def flag_job(job: OCRJob) -> OCRJob:
 
     Always returns the job (flag detection is non-blocking).
     """
-    ocr_lines = job.result.ocr_result.lines
+    ocr_lines = job.result.ocr_result.lines or []
     uncertain_words = job.result.llm_result.uncertain_words or []
 
     try:

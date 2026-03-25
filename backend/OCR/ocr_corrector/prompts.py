@@ -100,9 +100,12 @@ In this example:
 """.strip()
 
 
-def build_correction_prompt(annotated_lines: list[str]) -> str:
-    """
-    Combine the system prompt with annotated OCR lines.
-    """
+def get_system_prompt() -> str:
+    """Return the system instruction for the Gemini model."""
+    return SYSTEM_PROMPT
+
+
+def build_user_input(annotated_lines: list[str]) -> str:
+    """Format annotated OCR lines as the user content block."""
     input_block = "\n".join(annotated_lines)
-    return f"{SYSTEM_PROMPT}\n\n" f"### RAW OCR INPUT:\n{input_block}"
+    return f"### RAW OCR INPUT:\n{input_block}"

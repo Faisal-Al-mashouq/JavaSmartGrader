@@ -16,3 +16,4 @@ select = [
 "backend/api/routes/*.py" = ["B008"]  # Allow Depends() in function signatures (FastAPI pattern)
 "backend/api/auth.py" = ["B008"]
 "backend/OCR/ocr_corrector/prompts.py" = ["E501"]
+"backend/OCR/ocr_corrector/SETTINGS_GUIDE.py" = ["ALL"]
