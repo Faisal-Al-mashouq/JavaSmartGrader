@@ -7,19 +7,25 @@ export default function Login() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const fakeUser = {
-      username: form.username,
-      role: form.username === "instructor" ? "INSTRUCTOR" : "STUDENT",
-    };
-
-    login(fakeUser);
-    navigate(fakeUser.role === "INSTRUCTOR" ? "/instructor" : "/dashboard");
+    setError("");
+    setLoading(true);
+    try {
+      const userData = await login(form.username, form.password);
+      navigate(userData.role === "INSTRUCTOR" ? "/instructor" : "/dashboard");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Login failed. Check your credentials."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,17 +60,30 @@ export default function Login() {
             />
           </div>
 
+          {error && (
+            <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded-lg px-4 py-2">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-lg font-semibold"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
           >
-            Sign In
+            {loading ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Signing in…
+              </>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
-
-        <p className="text-xs text-gray-400 mt-4 text-center">
-          Use username "instructor" to login as Instructor
-        </p>
       </div>
     </div>
   );

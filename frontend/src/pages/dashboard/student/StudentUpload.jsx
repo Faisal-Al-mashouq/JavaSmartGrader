@@ -1,52 +1,72 @@
-import { useState, useRef } from "react";
-import { useAuth } from "../../../context/AuthContext";
-import { useSubmissions } from "../../../context/SubmissionsContext";
+import { useState, useRef, useEffect } from "react";
+import { getMyCourses, getCourseAssignments, getQuestions, createSubmission } from "../../../services/api";
 
-/** Detect which demo case the file belongs to based on its name */
-function detectCase(filename) {
-  const lower = filename.toLowerCase();
-  if (lower.includes("file_1") || lower.includes("file1")) return 1;
-  if (lower.includes("file_2") || lower.includes("file2")) return 2;
-  return null;
+/* ── Row helper ──────────────────────────────────────────────────────── */
+function Row({ label, value, highlight }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
+      <span className={`text-xs font-semibold ${highlight ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}`}>{value}</span>
+    </div>
+  );
 }
 
-const CASE_INFO = {
-  1: {
-    label: "Good Code Submission Detected",
-    sub: "This file will be graded by the AI as a high-quality submission.",
-    color: "border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700",
-    textColor: "text-emerald-700 dark:text-emerald-400",
-    icon: (
-      <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  2: {
-    label: "Code Submission Detected",
-    sub: "This file has been identified as a Java code assignment submission.",
-    color: "border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700",
-    textColor: "text-blue-700 dark:text-blue-400",
-    icon: (
-      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-};
-
 export default function StudentUpload() {
-  const { user }                    = useAuth();
-  const { addSubmission }           = useSubmissions();
+  /* ── Assignment / question selection state ───────────────────────── */
+  const [courses,     setCourses]     = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [questions,   setQuestions]   = useState([]);
+  const [selectedCourse,     setSelectedCourse]     = useState("");
+  const [selectedAssignment, setSelectedAssignment] = useState("");
+  const [selectedQuestion,   setSelectedQuestion]   = useState("");
+  const [loadingCourses,     setLoadingCourses]     = useState(true);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [loadingQuestions,   setLoadingQuestions]   = useState(false);
 
-  const [file, setFile]             = useState(null);
-  const [preview, setPreview]       = useState(null);
-  const [caseType, setCaseType]     = useState(null);
-  const [dragging, setDragging]     = useState(false);
-  const [stage, setStage]           = useState("idle"); // idle | processing | done | error
-  const [errorMsg, setErrorMsg]     = useState("");
-  const inputRef                    = useRef(null);
+  /* ── File upload state ───────────────────────────────────────────── */
+  const [file,     setFile]     = useState(null);
+  const [preview,  setPreview]  = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [stage,    setStage]    = useState("idle"); // idle | processing | done | error
+  const [errorMsg, setErrorMsg] = useState("");
+  const inputRef = useRef(null);
 
+  /* ── Fetch courses on mount ──────────────────────────────────────── */
+  useEffect(() => {
+    // For students there is no "get my courses" endpoint, so we try to fetch
+    // all courses the student has submissions for, or fall back gracefully.
+    // We use a general GET /courses list via the assignments mechanism.
+    // Since only instructors have GET /courses/me, we load from the student's
+    // submissions to discover which courses they're enrolled in.
+    // Alternatively, instructors can use GET /courses/me — we attempt it and
+    // fall back to an empty list.
+    getMyCourses()
+      .then((res) => setCourses(res.data))
+      .catch(() => setCourses([]))
+      .finally(() => setLoadingCourses(false));
+  }, []);
+
+  /* ── Fetch assignments when course changes ───────────────────────── */
+  useEffect(() => {
+    if (!selectedCourse) { setAssignments([]); setSelectedAssignment(""); return; }
+    setLoadingAssignments(true);
+    getCourseAssignments(selectedCourse)
+      .then((res) => { setAssignments(res.data); setSelectedAssignment(""); setSelectedQuestion(""); })
+      .catch(() => setAssignments([]))
+      .finally(() => setLoadingAssignments(false));
+  }, [selectedCourse]);
+
+  /* ── Fetch questions when assignment changes ─────────────────────── */
+  useEffect(() => {
+    if (!selectedAssignment) { setQuestions([]); setSelectedQuestion(""); return; }
+    setLoadingQuestions(true);
+    getQuestions(selectedAssignment)
+      .then((res) => { setQuestions(res.data); setSelectedQuestion(""); })
+      .catch(() => setQuestions([]))
+      .finally(() => setLoadingQuestions(false));
+  }, [selectedAssignment]);
+
+  /* ── File handling ───────────────────────────────────────────────── */
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
     if (!selectedFile.type.startsWith("image/")) {
@@ -56,7 +76,6 @@ export default function StudentUpload() {
     }
     setFile(selectedFile);
     setPreview(URL.createObjectURL(selectedFile));
-    setCaseType(detectCase(selectedFile.name));
     setStage("idle");
     setErrorMsg("");
   };
@@ -71,29 +90,39 @@ export default function StudentUpload() {
   const handleRemove = () => {
     setFile(null);
     setPreview(null);
-    setCaseType(null);
     setStage("idle");
     setErrorMsg("");
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const handleSubmit = () => {
+  /* ── Submit ──────────────────────────────────────────────────────── */
+  const handleSubmit = async () => {
     if (!file) { setErrorMsg("Please select a file first."); setStage("error"); return; }
+    if (!selectedAssignment) { setErrorMsg("Please select an assignment."); setStage("error"); return; }
+    if (!selectedQuestion && questions.length > 0) { setErrorMsg("Please select a question."); setStage("error"); return; }
+
     setStage("processing");
+    setErrorMsg("");
 
-    const resolvedCase = caseType ?? 1; // default to case 1 for unknown files
-    addSubmission({
-      studentName: user?.username ?? "Student",
-      fileUrl: preview,
-      filename: file.name,
-      caseType: resolvedCase,
-    });
+    // Use the first question if none selected and none available
+    const questionId = selectedQuestion || (questions[0]?.id ?? null);
+    if (!questionId) { setErrorMsg("No question available for this assignment."); setStage("error"); return; }
 
-    // After 3 s the context will mark it "AI Graded" — mirror that here
-    setTimeout(() => setStage("done"), 3000);
+    try {
+      await createSubmission(questionId, selectedAssignment);
+      setStage("done");
+    } catch (err) {
+      setErrorMsg(err.response?.data?.detail || "Submission failed. Please try again.");
+      setStage("error");
+    }
   };
 
-  /* ── Done state ─────────────────────────────────────────────────── */
+  const selectedAssignmentObj = assignments.find((a) => String(a.id) === String(selectedAssignment));
+  const selectedCourseObj     = courses.find((c) => String(c.id) === String(selectedCourse));
+
+  const selectCls = "w-full text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm";
+
+  /* ── Done state ──────────────────────────────────────────────────── */
   if (stage === "done") {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
@@ -115,13 +144,13 @@ export default function StudentUpload() {
             </p>
           </div>
           <div className="w-full bg-slate-50 dark:bg-slate-700/50 rounded-xl px-5 py-4 text-left space-y-1.5">
-            <Row label="Assignment" value="Final Project - Banking System" />
-            <Row label="Course"     value="CS201 – Object Oriented Programming" />
+            <Row label="Assignment" value={selectedAssignmentObj?.title ?? "—"} />
+            <Row label="Course"     value={selectedCourseObj?.name ?? "—"} />
             <Row label="File"       value={file?.name} />
-            <Row label="Status"     value="AI Grading in progress…" highlight />
+            <Row label="Status"     value="Processing…" highlight />
           </div>
           <button
-            onClick={handleRemove}
+            onClick={() => { handleRemove(); setSelectedCourse(""); }}
             className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm transition-all active:scale-95"
           >
             Submit Another File
@@ -131,7 +160,7 @@ export default function StudentUpload() {
     );
   }
 
-  /* ── Main upload form ───────────────────────────────────────────── */
+  /* ── Main upload form ─────────────────────────────────────────────── */
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -142,20 +171,69 @@ export default function StudentUpload() {
         </p>
       </div>
 
-      {/* Assignment info banner */}
-      <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl px-5 py-4 flex items-start gap-3">
-        <svg className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <div>
-          <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Active Assignment</p>
-          <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-0.5">Final Project – Banking System &nbsp;·&nbsp; CS201 &nbsp;·&nbsp; Due Dec 15, 2024</p>
+      {/* Assignment selector card */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Select Assignment</p>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {/* Course */}
+          <div>
+            <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Course</label>
+            {loadingCourses ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">Loading courses…</p>
+            ) : courses.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">No courses available. Contact your instructor.</p>
+            ) : (
+              <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className={selectCls}>
+                <option value="">— Select a course —</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+          </div>
+
+          {/* Assignment */}
+          {selectedCourse && (
+            <div>
+              <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Assignment</label>
+              {loadingAssignments ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Loading assignments…</p>
+              ) : assignments.length === 0 ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">No assignments for this course.</p>
+              ) : (
+                <select value={selectedAssignment} onChange={(e) => setSelectedAssignment(e.target.value)} className={selectCls}>
+                  <option value="">— Select an assignment —</option>
+                  {assignments.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.title}{a.due_date ? ` · Due ${new Date(a.due_date).toLocaleDateString()}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {/* Question */}
+          {selectedAssignment && questions.length > 1 && (
+            <div>
+              <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Question</label>
+              {loadingQuestions ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Loading questions…</p>
+              ) : (
+                <select value={selectedQuestion} onChange={(e) => setSelectedQuestion(e.target.value)} className={selectCls}>
+                  <option value="">— Select a question —</option>
+                  {questions.map((q, i) => (
+                    <option key={q.id} value={q.id}>Question {i + 1}: {q.text?.slice(0, 60) ?? `Q${q.id}`}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Upload card */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-
         {/* Drop zone */}
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -174,9 +252,6 @@ export default function StudentUpload() {
             <div className="w-full">
               <img src={preview} alt="Preview" className="max-h-64 mx-auto rounded-lg object-contain shadow-sm" />
               <div className="flex items-center justify-center gap-2 mt-3">
-                <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[240px]">{file.name}</span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">({(file.size / 1024).toFixed(1)} KB)</span>
               </div>
@@ -191,23 +266,12 @@ export default function StudentUpload() {
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 {dragging ? "Drop your image here" : "Drag & drop or click to upload"}
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">PNG, JPG, JPEG – name your file <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">file_1</code> or <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">file_2</code></p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">PNG, JPG, JPEG accepted</p>
             </>
           )}
         </div>
 
         <input ref={inputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-
-        {/* Detected-case banner */}
-        {caseType && (
-          <div className={`mx-5 mb-4 rounded-xl border px-4 py-3 flex items-start gap-3 ${CASE_INFO[caseType].color}`}>
-            <span className="shrink-0 mt-0.5">{CASE_INFO[caseType].icon}</span>
-            <div>
-              <p className={`text-sm font-bold ${CASE_INFO[caseType].textColor}`}>{CASE_INFO[caseType].label}</p>
-              <p className={`text-xs mt-0.5 ${CASE_INFO[caseType].textColor} opacity-80`}>{CASE_INFO[caseType].sub}</p>
-            </div>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-3">
@@ -227,8 +291,8 @@ export default function StudentUpload() {
                 {stage === "processing" ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                     </svg>
                     Submitting…
                   </>
@@ -267,10 +331,10 @@ export default function StudentUpload() {
         <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide mb-2">Tips for best results</p>
         <ul className="space-y-1">
           {[
-            "Name your file file_1.jpg (good code) or file_2.jpg to trigger the demo cases",
             "Ensure the image is well-lit and all text is clearly visible",
             "Use PNG or JPG format for best OCR accuracy",
             "Crop out any unnecessary background before uploading",
+            "Make sure all code and text is legible and within frame",
           ].map((tip) => (
             <li key={tip} className="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
               <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -281,15 +345,6 @@ export default function StudentUpload() {
           ))}
         </ul>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, highlight }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
-      <span className={`text-xs font-semibold ${highlight ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}`}>{value}</span>
     </div>
   );
 }

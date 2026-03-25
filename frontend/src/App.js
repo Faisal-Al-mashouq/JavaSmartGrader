@@ -4,7 +4,6 @@ import Login from "./pages/Login";
 
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { SubmissionsProvider } from "./context/SubmissionsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 /* Student */
@@ -23,7 +22,6 @@ function App() {
   return (
     <Router>
       <ThemeProvider>
-      <SubmissionsProvider>
       <AuthProvider>
         <Routes>
           {/* Public routes */}
@@ -59,7 +57,6 @@ function App() {
           </Route>
         </Routes>
       </AuthProvider>
-      </SubmissionsProvider>
       </ThemeProvider>
     </Router>
   );
