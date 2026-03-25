@@ -12,10 +12,10 @@ Redis Queue (`jsg.v1:OCRJobQueue`)
         │
         ├── 1. OCR Extract   →  Azure Document Intelligence (high-res)
         ├── 2. LLM Correct   →  Gemini (confidence-aware correction)
-        └── 3. Flag Detect    →  Words with <30% confidence + no LLM fix
+        └── 3. Flag Detect   →  Uncertain words → ConfidenceFlag records
         │
         ▼
-  Result pushed to `jsg.v1:OCRJobQueue:completed:{job_id}`
+  Result pushed to `jsg.v1:OCRJobQueue:completed:{job_id}` (TTL 1h)
   API layer persists flags via create_confidence_flag()
 ```
 
@@ -28,29 +28,26 @@ Redis Queue (`jsg.v1:OCRJobQueue`)
 
 ## Setup
 
-Add these to your shared `settings.py` (or `.env`):
+Add these to your shared `backend/.env`:
 
 ```
-# Azure OCR
-AZURE_KEY="your_azure_document_intelligence_key"
-AZURE_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
+API_AZURE=your_azure_document_intelligence_key
+AZURE_OCR_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+API_GEMINI=your_google_gemini_api_key
+# GEMINI_MODEL=gemini-3.1-flash-preview  (optional override)
 
-# Gemini LLM
-GEMINI_KEY="your_google_gemini_api_key"
-GEMINI_MODEL="gemini-2.0-flash"
-
-# Redis (shared with sandbox)
-REDIS_ENDPOINT="redis://<user>:<password>@localhost:6379"
-QUEUE_NAMESPACE="jsg.v1"
+# Shared with sandbox:
+REDIS_ENDPOINT=redis://localhost:6379/0
+QUEUE_NAMESPACE=jsg.v1
 MAX_CONCURRENCY=5
 ```
 
 ## Running
 
-Start the worker (from `backend/`):
+Start the worker (from `backend/OCR/`):
 
 ```bash
-python -m ocr_corrector.ocr_worker
+python main.py
 ```
 
 Push test jobs to the queue:
@@ -64,12 +61,14 @@ python -m ocr_corrector.test_jobs
 | File | Purpose |
 |------|---------|
 | `ocr_worker.py` | Main loop, job lifecycle orchestration |
-| `jobs.py` | OCR extraction, LLM correction, flag detection logic |
-| `helpers.py` | Azure OCR client, Gemini client, flag detection algorithm |
+| `jobs.py` | OCR extraction, LLM correction, flag detection step functions |
+| `helpers.py` | Azure OCR client, Gemini client, response parsing |
 | `schemas.py` | Pydantic models for jobs, requests, results, and flags |
-| `prompts.py` | LLM prompt templates |
+| `prompts.py` | LLM system prompt and user input formatter |
 | `logs.py` | Rich logging setup |
 | `test_jobs.py` | Pushes sample jobs to Redis for testing |
+| `tests.py` | Unit tests |
+| `SETTINGS_GUIDE.py` | Settings field reference |
 
 ## Job Payload Format
 
@@ -84,35 +83,31 @@ Push a JSON string to the `jsg.v1:OCRJobQueue` Redis list:
 }
 ```
 
-- `transcription_id` is the FK to the existing transcription record
-- The API layer needs it to call `create_confidence_flag()`
+- `transcription_id` is the FK to the existing transcription record — the API layer needs it to call `create_confidence_flag()`
 
 ## Flag Detection
 
-Words are flagged when **both** conditions are true:
-
-1. Azure OCR confidence is **below 30%**
-2. The LLM corrector did **not** produce a clear correction (the word appears unchanged in the corrected output)
+Words are flagged when the LLM reports it cannot confidently determine the correct reading. Each flagged word becomes an `OCRFlag` with up to 5 ranked suggestions.
 
 Each `OCRFlag` in the job result maps directly to the existing `ConfidenceFlag` DB table:
 
 | OCRFlag field | ConfidenceFlag column | Description |
 |---|---|---|
 | `text_segment` | `text_segment` | The original OCR-extracted word |
-| `confidence_score` | `confidence_score` | Azure confidence as Decimal (0.00-1.00) |
+| `confidence_score` | `confidence_score` | Azure confidence as Decimal (0.00–1.00) |
 | `coordinates` | `coordinates` | Position string: `"line:3:word:2"` |
-| `suggestions` | `suggestions` | LLM correction attempt (None if unchanged) |
+| `suggestions` | `suggestions` | Comma-separated ranked suggestions from the LLM |
 
 ## API Layer Integration
 
-When the API route consumes an OCR job result from Redis, it should persist any flags using the existing CRUD:
+When the API route consumes an OCR job result from Redis, persist any flags using the existing CRUD:
 
 ```python
 from api.crud.confidence_flags import create_confidence_flag
 
 # After reading OCRJobResult from Redis:
 if result.result and result.result.flag_result:
-    for flag in result.result.flag_result.flags:
+    for flag in result.result.flag_result.flags or []:
         await create_confidence_flag(
             session=session,
             transcription_id=result.transcription_id,
@@ -123,7 +118,7 @@ if result.result and result.result.flag_result:
         )
 ```
 
-No new DB models or migrations needed -- flags flow directly into the existing `ConfidenceFlag` table.
+No new DB models or migrations needed — flags flow directly into the existing `ConfidenceFlag` table.
 
 ## Comparison with Sandbox Component
 
@@ -131,8 +126,8 @@ No new DB models or migrations needed -- flags flow directly into the existing `
 |--------|---------|---------------|
 | Queue | `jsg.v1:SandboxJobQueue` | `jsg.v1:OCRJobQueue` |
 | Worker | `sandbox_worker.py` | `ocr_worker.py` |
-| Steps | Compile -> Execute -> Test | OCR -> LLM -> Flag |
+| Steps | Compile → Execute → Test | OCR → LLM Correct → Flag |
 | Schemas | Pydantic (`SandboxJob`) | Pydantic (`OCRJob`) |
 | Concurrency | N async coroutines | N async coroutines |
-| Results | Redis completed queue | Redis completed queue |
-| Extra | Docker containers | Flag -> ConfidenceFlag DB table |
+| Results | Redis completed queue | Redis completed queue + TTL |
+| Extra | Docker containers | Flags → ConfidenceFlag DB table |
