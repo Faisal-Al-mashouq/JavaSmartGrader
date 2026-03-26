@@ -9,13 +9,8 @@ from settings import settings
 from .config import JobQueue
 from .process import (
     # process_final_result_job,
-<<<<<<< HEAD
     process_grader_job,
-    # process_ocr_job,
-=======
-    # process_grader_job,
     process_ocr_job,
->>>>>>> ac931112 ( updating core\process\ocr building process_ocr_job())
     process_sandbox_job,
 )
 
