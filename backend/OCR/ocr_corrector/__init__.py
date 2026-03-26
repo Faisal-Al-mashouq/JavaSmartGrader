@@ -1,25 +1,10 @@
 """
 ocr_corrector — Handwritten Java OCR Correction Pipeline.
 
-Uses Azure Document Intelligence for word-level OCR with confidence
-scores, then applies Gemini LLM post-processing to correct machine
-misreads while preserving the student's original logic.
+Uses Azure Document Intelligence for word-level OCR with
+confidence scores, then applies Gemini LLM post-processing
+to correct machine misreads while preserving student logic.
 
-Quick start::
-
-    from ocr_corrector import OCRCorrectionPipeline
-
-    result = OCRCorrectionPipeline().run("exam_scan.jpg")
-    print(result.corrected_code)
+Integrates with the project's Redis job queue (matching
+the sandbox component's architecture).
 """
-
-from .models import CorrectionResult, OCRLine, OCRWord
-from .pipeline import OCRCorrectionPipeline
-
-__all__ = [
-    "OCRCorrectionPipeline",
-    "CorrectionResult",
-    "OCRLine",
-    "OCRWord",
-]
-__version__ = "1.0.0"

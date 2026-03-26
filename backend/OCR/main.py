@@ -1,14 +1,17 @@
 """
-CLI entry point for the OCR correction pipeline.
+Entry point for the OCR worker.
 
 Usage::
 
-    python main.py path/to/image.jpg
-    python main.py path/to/image.jpg --model gemini-2.5-flash
-    python main.py --worker
+    python main.py
 """
 
-from .ocr_corrector.__main__ import main
+import asyncio
+
+from ocr_corrector.ocr_worker import start
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(start())
+    except KeyboardInterrupt:
+        pass

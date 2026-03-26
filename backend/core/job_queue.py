@@ -10,7 +10,7 @@ from .config import JobQueue
 from .process import (
     # process_final_result_job,
     process_grader_job,
-    # process_ocr_job,
+    process_ocr_job,
     process_sandbox_job,
 )
 
@@ -91,12 +91,12 @@ async def process_job(client: JobQueue, job: Job) -> Job:
         logger.debug(f"Processing Job: {job.job_id}")
         job.status = JobStatus.STARTED
 
-        # logger.debug(f"Job {job.job_id} OCR Started")
-        # ocr_result = await process_ocr_job(client, job)
-        # if not ocr_result:
-        #     logger.error(f"Failed to process OCR for Job: {job.job_id}")
-        #     return await set_result(job, JobStatus.FAILED)
-        # logger.debug(f"Job {job.job_id} OCR Completed")
+        logger.debug(f"Job {job.job_id} OCR Started")
+        ocr_result = await process_ocr_job(client, job)
+        if not ocr_result:
+            logger.error(f"Failed to process OCR for Job: {job.job_id}")
+            return await set_result(job, JobStatus.FAILED)
+        logger.debug(f"Job {job.job_id} OCR Completed")
 
         logger.debug(f"Job {job.job_id} Sandbox Started")
         sandbox_result = await process_sandbox_job(client, job)

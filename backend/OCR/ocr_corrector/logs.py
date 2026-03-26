@@ -1,3 +1,10 @@
+"""
+Logging configuration for the OCR worker.
+
+Mirrors the sandbox component's logs.py — uses Rich for
+pretty console output.
+"""
+
 import logging
 
 from rich.logging import RichHandler

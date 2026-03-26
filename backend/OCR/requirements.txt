@@ -2,7 +2,10 @@
 azure-ai-formrecognizer>=3.3.0
 azure-core>=1.30.0
 google-genai>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
+rich>=13.0.0
 
 # Redis job queue (optional — only needed for worker mode)
 redis>=5.0.0
