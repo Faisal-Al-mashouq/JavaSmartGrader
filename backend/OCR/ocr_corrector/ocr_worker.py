@@ -77,11 +77,11 @@ async def main_loop(
                 OCR_QUEUE,
             )
             result = await client.redis_client.blmove(
-                OCR_QUEUE,
-                f"{OCR_QUEUE}:processing",
-                "RIGHT",
-                "LEFT",
+                first_list=OCR_QUEUE,
+                second_list=f"{OCR_QUEUE}:processing",
                 timeout=0,
+                src="RIGHT",
+                dest="LEFT",
             )
         except asyncio.CancelledError:
             logger.debug(

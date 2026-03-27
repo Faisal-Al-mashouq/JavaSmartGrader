@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from OCR.ocr_corrector.schemas import OCRJobResult as _OCRWorkerResult
+from ocr.ocr_corrector.schemas import OCRJobResult as _OCRWorkerResult
 from pydantic import BaseModel, Field
 from sandbox.schemas import SandboxJobResult
 
