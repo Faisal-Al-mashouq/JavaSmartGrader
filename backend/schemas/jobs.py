@@ -108,7 +108,7 @@ class JobRequest(BaseModel):
     question_id: int
     assignment_id: int
     student_id: int
-    image_url: str
+    image_url: str | None = None
     java_code: str
     test_cases: list[TestCase]
     rubric_json: dict
