@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from OCR.ocr_corrector.schemas import OCRJobResult as _OCRWorkerResult
+from ocr.ocr_corrector.schemas import OCRJobResult as _OCRWorkerResult
 from pydantic import BaseModel, Field
 from sandbox.schemas import SandboxJobResult
 
@@ -108,7 +108,7 @@ class JobRequest(BaseModel):
     question_id: int
     assignment_id: int
     student_id: int
-    image_url: str
+    image_url: str | None = None
     java_code: str
     test_cases: list[TestCase]
     rubric_json: dict

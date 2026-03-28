@@ -3,7 +3,7 @@ from datetime import datetime
 from db.crud.confidence_flags import create_confidence_flag
 from db.crud.grading import create_transcription
 from db.session import async_session
-from OCR.ocr_corrector.schemas import OCRJobRequest, OCRJobResult
+from ocr.ocr_corrector.schemas import OCRJobRequest, OCRJobResult
 from schemas import (
     Job,
     JobRequestPayload,
