@@ -1,7 +1,7 @@
 import logging
 
 from db.crud.assignments import get_assignment_by_id
-from db.crud.courses import get_course_by_id
+from db.crud.courses import get_course_by_id, is_student_enrolled
 from db.crud.questions import (
     create_question,
     create_testcase,
@@ -86,13 +86,18 @@ async def create_new_question(
 async def get_assignment_questions(
     assignment_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug("Fetching questions for assignment %d", assignment_id)
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         logger.warning("Assignment not found: %d", assignment_id)
         raise HTTPException(status_code=404, detail="Assignment not found")
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(
+            session, current_user.id, assignment.course_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
     return await get_questions_by_assignment_id(session, assignment_id)
 
 
@@ -101,9 +106,17 @@ async def get_question(
     assignment_id: int,
     question_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug("Fetching question %d for assignment %d", question_id, assignment_id)
+    assignment = await get_assignment_by_id(session, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(
+            session, current_user.id, assignment.course_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
         logger.warning(
@@ -205,13 +218,21 @@ async def get_testcases(
     assignment_id: int,
     question_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug(
         "Fetching testcases for question %d in assignment %d",
         question_id,
         assignment_id,
     )
+    assignment = await get_assignment_by_id(session, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(
+            session, current_user.id, assignment.course_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")

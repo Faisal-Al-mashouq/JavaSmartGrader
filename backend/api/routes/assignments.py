@@ -8,7 +8,7 @@ from db.crud.assignments import (
     get_assignments_by_course_id,
     update_assignment,
 )
-from db.crud.courses import get_course_by_id
+from db.crud.courses import get_course_by_id, is_student_enrolled
 from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
 from schemas import AssignmentBase
@@ -95,9 +95,15 @@ async def create_new_assignment(
 async def get_course_assignments(
     course_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug("Fetching assignments for course %d", course_id)
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(session, current_user.id, course_id):
+            logger.warning(
+                "Student %d not enrolled in course %d", current_user.id, course_id
+            )
+            raise HTTPException(status_code=403, detail="Forbidden")
     return await get_assignments_by_course_id(session, course_id)
 
 
@@ -105,13 +111,23 @@ async def get_course_assignments(
 async def get_assignment(
     assignment_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug("Fetching assignment %d", assignment_id)
     assignment = await get_assignment_by_id(session, assignment_id)
     if not assignment:
         logger.warning("Assignment not found: %d", assignment_id)
         raise HTTPException(status_code=404, detail="Assignment not found")
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(
+            session, current_user.id, assignment.course_id
+        ):
+            logger.warning(
+                "Student %d forbidden from assignment %d",
+                current_user.id,
+                assignment_id,
+            )
+            raise HTTPException(status_code=403, detail="Forbidden")
     return assignment
 
 
