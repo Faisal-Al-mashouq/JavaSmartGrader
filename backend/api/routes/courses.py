@@ -5,14 +5,17 @@ from db.crud.courses import (
     delete_course,
     enroll_student,
     get_course_by_id,
+    get_course_students,
     get_courses_by_instructor_id,
+    get_courses_by_student_id,
+    is_student_enrolled,
     unenroll_student,
     update_course,
 )
 from db.crud.users import get_user_by_id
 from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import CourseBase
+from schemas import CourseBase, UserBase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,24 +54,46 @@ async def create_new_course(
 @router.get("/me", response_model=list[CourseBase])
 async def get_my_courses(
     session: AsyncSession = Depends(get_db),
-    current_user=Depends(require_role(UserRole.instructor)),
+    current_user=Depends(get_current_user),
 ):
-    logger.debug("Fetching courses for instructor %d", current_user.id)
-    return await get_courses_by_instructor_id(session, current_user.id)
+    if current_user.role == UserRole.instructor:
+        logger.debug("Fetching courses for instructor %d", current_user.id)
+        return await get_courses_by_instructor_id(session, current_user.id)
+    if current_user.role == UserRole.student:
+        logger.debug("Fetching enrolled courses for student %d", current_user.id)
+        return await get_courses_by_student_id(session, current_user.id)
+    raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @router.get("/{course_id}", response_model=CourseBase)
 async def get_course(
     course_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     logger.debug("Fetching course %d", course_id)
     course = await get_course_by_id(session, course_id)
     if not course:
         logger.warning("Course not found: %d", course_id)
         raise HTTPException(status_code=404, detail="Course not found")
+    if current_user.role == UserRole.student:
+        if not await is_student_enrolled(session, current_user.id, course_id):
+            raise HTTPException(status_code=403, detail="Forbidden")
     return course
+
+
+@router.get("/{course_id}/students", response_model=list[UserBase])
+async def list_course_students(
+    course_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
+    course = await get_course_by_id(session, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if course.instructor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return await get_course_students(session, course_id)
 
 
 @router.put("/{course_id}", response_model=CourseBase)

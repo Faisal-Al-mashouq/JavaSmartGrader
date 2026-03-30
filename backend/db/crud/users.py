@@ -5,6 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import User, UserRole
 
+
+async def list_users_by_role(session: AsyncSession, role: UserRole) -> list[User]:
+    result = await session.execute(select(User).where(User.role == role))
+    return list(result.scalars().all())
+
+
 logger = logging.getLogger(__name__)
 
 
