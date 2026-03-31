@@ -104,6 +104,7 @@ async def process_job(client: JobQueue, job: Job) -> Job:
             logger.error(f"Failed to process Sandbox for Job: {job.job_id}")
             return await set_result(job, JobStatus.FAILED)
         logger.debug(f"Job {job.job_id} Sandbox Completed")
+
         logger.debug(f"Job {job.job_id} Grader Started")
         grader_result = await process_grader_job(client, job)
         if not grader_result:
@@ -121,6 +122,7 @@ async def process_job(client: JobQueue, job: Job) -> Job:
         logger.info(f"Job {job.job_id} Completed Successfully")
         logger.debug(f"Job {job.job_id} Result: {job.job_result_payload}")
         return await set_result(job, JobStatus.COMPLETED)
+
     except Exception as e:
         logger.error(f"Failed to process job: {e}")
         return await set_result(job, JobStatus.ERROR)

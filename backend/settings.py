@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     azure_ocr_endpoint: str = "https://gpfirsttrydoc.cognitiveservices.azure.com/"
     gemini_model: str = "gemini-3.1-flash-preview"
 
+    storage_backend: str = "s3"
+    s3_endpoint_url: str = "http://localhost:9000"
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket: str = "submissions-local"
+    s3_region: str = "us-east-1"
+
+    api_key: str = ""
+    model: str = ""
+
     model_config = {
         "env_file": ENV_FILE,
         "env_file_encoding": "utf-8",

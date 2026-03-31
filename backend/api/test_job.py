@@ -102,7 +102,14 @@ async def main() -> None:
             params={
                 "question_id": question_id,
                 "assignment_id": assignment_id,
-                "image_url": "https://example.com/img.jpg",
+                "image_url": "https://drive.google.com/drive/u/1/folders/11QxXcx-24xeJY3dl_-Z0mY7CuSX4TshW",
+                "java_code": """
+                public class Main {
+                public static void main(String[] args) {
+                System.out.println("Hello, World!");
+                }
+                }
+                """,
             },
             headers={"Authorization": f"Bearer {student_token}"},
         )

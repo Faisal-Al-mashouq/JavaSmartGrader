@@ -36,12 +36,14 @@ async def lifespan(app: FastAPI):
     logger.info("Job queue started successfully")
 
     if settings.app_env == "all":
-        from ocr.ocr_corrector.tasks import run_worker as start_ocr_worker
+        from ai_grader.main import start as start_grader_worker
+        from ocr.main import start as start_ocr_worker
         from sandbox.sandbox_worker import start as start_sandbox_worker
 
+        app.state.ocr_worker = asyncio.create_task(start_ocr_worker())
         app.state.sandbox_worker = asyncio.create_task(start_sandbox_worker())
-        app.state.ocr_worker = asyncio.create_task(asyncio.to_thread(start_ocr_worker))
-        logger.debug("Sandbox and OCR workers started successfully")
+        app.state.grader_worker = asyncio.create_task(start_grader_worker())
+        logger.debug("Sandbox, OCR and Grader workers started successfully")
 
     try:
         yield
@@ -59,17 +61,22 @@ async def lifespan(app: FastAPI):
         logger.debug("Job queue shut down successfully")
 
         if settings.app_env == "all":
-            app.state.sandbox_worker.cancel()
-            try:
-                await app.state.sandbox_worker
-            except asyncio.CancelledError:
-                pass
             app.state.ocr_worker.cancel()
             try:
                 await app.state.ocr_worker
             except asyncio.CancelledError:
                 pass
-            logger.debug("Sandbox and OCR workers shut down successfully")
+            app.state.sandbox_worker.cancel()
+            try:
+                await app.state.sandbox_worker
+            except asyncio.CancelledError:
+                pass
+            app.state.grader_worker.cancel()
+            try:
+                await app.state.grader_worker
+            except asyncio.CancelledError:
+                pass
+            logger.debug("Sandbox, OCR and Grader workers shut down successfully")
 
         await engine.dispose()
         logger.info("Shutdown complete")
