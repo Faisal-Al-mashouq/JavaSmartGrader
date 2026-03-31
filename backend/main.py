@@ -38,12 +38,11 @@ async def lifespan(app: FastAPI):
     if settings.app_env == "all":
         from ocr.main import start as start_ocr_worker
         from sandbox.sandbox_worker import start as start_sandbox_worker
-        from ai_grader.main import main as start_grader_worker
+        from ai_grader.main import start as start_grader_worker
 
         app.state.ocr_worker = asyncio.create_task(start_ocr_worker())
         app.state.sandbox_worker = asyncio.create_task(start_sandbox_worker())
         app.state.grader_worker = asyncio.create_task(start_grader_worker())
-
         logger.debug("Sandbox, OCR and Grader workers started successfully")
 
     try:

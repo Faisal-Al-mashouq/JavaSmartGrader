@@ -17,6 +17,7 @@ dependencies = [
     "opencv-python>=4.13.0.92",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
