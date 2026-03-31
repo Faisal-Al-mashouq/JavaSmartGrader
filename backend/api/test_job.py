@@ -3,6 +3,7 @@ Run: uv run python -m api.test_job
 """
 
 import asyncio
+from pathlib import Path
 
 from httpx import AsyncClient
 
@@ -48,14 +49,10 @@ async def main() -> None:
             params={"name": "Test Course", "description": "E2E"},
             headers=inst_headers,
         )
-        if course.status_code == 400 and "already exists" in (
-            course.json().get("detail") or ""
-        ):
+        if course.status_code == 400 and "already exists" in (course.json().get("detail") or ""):
             my_courses = await client.get("/courses/me", headers=inst_headers)
             my_courses.raise_for_status()
-            existing = next(
-                (c for c in my_courses.json() if c["name"] == "Test Course"), None
-            )
+            existing = next((c for c in my_courses.json() if c["name"] == "Test Course"), None)
             if not existing:
                 course.raise_for_status()
             course_id = existing["id"]
@@ -84,9 +81,7 @@ async def main() -> None:
         question.raise_for_status()
         question_id = question.json()["id"]
 
-        me = await client.get(
-            "/users/me", headers={"Authorization": f"Bearer {student_token}"}
-        )
+        me = await client.get("/users/me", headers={"Authorization": f"Bearer {student_token}"})
         me.raise_for_status()
         student_id = me.json()["id"]
 
@@ -97,12 +92,14 @@ async def main() -> None:
         if enroll.status_code not in (200, 201, 409):
             enroll.raise_for_status()
 
+        image_url = Path(__file__).parent.parent / "ocr" / "uploads" / "page_105.png"
+
         resp = await client.post(
             "/submissions/",
             params={
                 "question_id": question_id,
                 "assignment_id": assignment_id,
-                "image_url": "https://drive.google.com/drive/u/1/folders/11QxXcx-24xeJY3dl_-Z0mY7CuSX4TshW",
+                "image_url": image_url,
                 "java_code": """
                 public class Main {
                 public static void main(String[] args) {

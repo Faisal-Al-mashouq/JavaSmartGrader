@@ -36,7 +36,7 @@ dev = [
 ]
 
 [tool.taskipy.tasks]
-lint = "black . && ruff check --fix ."
+lint = "cd .. && black . && ruff check --fix ."
 base = "uvicorn main:app --reload --log-level error"
 dev = "APP_ENV=dev LOG_LEVEL=DEBUG uv run task base"
 local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
@@ -50,4 +50,4 @@ win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
 
 [tool.black]
 target-version = ["py312"]
-line-length = 88
+line-length = 110
