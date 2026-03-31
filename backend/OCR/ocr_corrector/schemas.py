@@ -8,22 +8,11 @@ Mirrors the sandbox component's schema design:
 """
 
 import datetime
-import enum
 import uuid
 from decimal import Decimal
 
 from pydantic import BaseModel
-
-# ── Job Status ───────────────────────────────────────────────────
-
-
-class JobStatus(enum.Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    ERROR = "ERROR"
-
+from schemas.shared import JobStatus
 
 # ── OCR Word / Line Models ───────────────────────────────────────
 
