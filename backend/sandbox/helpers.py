@@ -7,8 +7,9 @@ import sys
 import uuid
 from pathlib import Path
 
-SANDBOX_DIR = Path(__file__).parent
-SANDBOX_TMP_DIR = Path(__file__).parent / "tmp"
+SANDBOX_DIR = Path(__file__).parent 
+SANDBOX_DOCKER_DIR = SANDBOX_DIR / "docker"
+SANDBOX_TMP_DIR = SANDBOX_DIR / "tmp"
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +58,12 @@ async def docker_build_images():
     logger.info("Building sandbox Docker images...")
     if sys.platform == "win32":
         # Sequential builds to avoid Windows Docker contention
-        await _docker_build_image("compiler-image", SANDBOX_DIR / "Dockerfile.compiler")
-        await _docker_build_image("executer-image", SANDBOX_DIR / "Dockerfile.executer")
+        await _docker_build_image("compiler-image", SANDBOX_DOCKER_DIR / "Dockerfile.compiler")
+        await _docker_build_image("executer-image", SANDBOX_DOCKER_DIR / "Dockerfile.executer")
     else:
         await asyncio.gather(
-            _docker_build_image("compiler-image", SANDBOX_DIR / "Dockerfile.compiler"),
-            _docker_build_image("executer-image", SANDBOX_DIR / "Dockerfile.executer"),
+            _docker_build_image("compiler-image", SANDBOX_DOCKER_DIR / "Dockerfile.compiler"),
+            _docker_build_image("executer-image", SANDBOX_DOCKER_DIR / "Dockerfile.executer"),
         )
     logger.info("All sandbox Docker images built successfully")
 

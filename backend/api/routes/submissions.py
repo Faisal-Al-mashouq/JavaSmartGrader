@@ -65,7 +65,13 @@ async def submit_answer(
             student_id=current_user.id,
             image_url=image_url,
         )
-        java_code = ""  # TODO: Implement Editable Java Code Editor
+        java_code = """
+        public class Main {
+        public static void main(String[] args) {
+        System.out.println("Hello, World!");
+        }
+        }
+        """  # TODO: Implement Editable Java Code Editor
         await start_job_process(
             submission_id=submission.id,
             question_id=question_id,
