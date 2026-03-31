@@ -1,17 +1,13 @@
 import datetime
-import enum
 import uuid
 from typing import Any
 
 from pydantic import BaseModel
-
-
-class JobStatus(enum.Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    ERROR = "ERROR"
+from schemas.shared import (
+    # TestCase replaces the old TestCaseRequest
+    JobStatus,
+    TestCase,
+)
 
 
 class CompilationJobRequest(BaseModel):
@@ -23,13 +19,8 @@ class CompilationJobResult(BaseModel):
     errors: list[str] | None
 
 
-class TestCaseRequest(BaseModel):
-    input: Any
-    expected_output: Any
-
-
 class TestCasesRequest(BaseModel):
-    test_cases: list[TestCaseRequest] | None
+    test_cases: list[TestCase] | None
 
 
 class TestCaseResult(BaseModel):
@@ -52,7 +43,7 @@ class ExecutionOutput(BaseModel):
     returncode: int
     stdout: str
     stderr: str
-    test_case: TestCaseRequest | None
+    test_case: TestCase | None
 
 
 class ExecutionJobResult(BaseModel):
@@ -64,7 +55,7 @@ class ExecutionJobResult(BaseModel):
 class SandboxJobRequest(BaseModel):
     job_id: uuid.UUID
     java_code: str
-    test_cases: list[TestCaseRequest] | None
+    test_cases: list[TestCase] | None
 
 
 class SandboxResult(BaseModel):

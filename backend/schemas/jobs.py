@@ -1,20 +1,13 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from ocr.ocr_corrector.schemas import OCRJobResult as _OCRWorkerResult
 from pydantic import BaseModel, Field
 from sandbox.schemas import SandboxJobResult
 
-
-class JobStatus(StrEnum):
-    STARTED = "STARTED"
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    ERROR = "ERROR"
+from .shared import JobStatus, TestCase
 
 
 class JobType(StrEnum):
@@ -22,11 +15,6 @@ class JobType(StrEnum):
     SANDBOX = "SANDBOX"
     GRADER = "GRADER"
     FINAL_RESULT = "FINAL_RESULT"
-
-
-class TestCase(BaseModel):
-    input: Any
-    expected_output: Any
 
 
 class OCRPayload(BaseModel):
