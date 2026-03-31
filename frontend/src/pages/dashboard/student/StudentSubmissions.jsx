@@ -1,282 +1,614 @@
-import { useState } from "react";
-import { useSubmissions } from "../../../context/SubmissionsContext";
+import { useEffect, useMemo, useState } from "react";
+import { getMySubmissions } from "../../../services/submissionService";
+import {
+  getAssignment,
+  getAssignmentQuestions,
+  getCourseAssignments,
+  getMyCourses,
+} from "../../../services/courseService";
+import { getAIFeedback } from "../../../services/gradingService";
 
-/* ── Static historical submissions ─────────────────────────────────── */
-const STATIC = [
-  { id: "s1", name: "Midterm Exam - OOP Concepts",    course: "CS201", courseFull: "Object Oriented Programming", submittedAt: "Nov 30, 2024 · 11:42 AM", status: "Published", grade: 87, maxGrade: 100, feedback: "Great understanding of encapsulation and polymorphism." },
-  { id: "s2", name: "Lab Assignment 3 - Inheritance", course: "CS201", courseFull: "Object Oriented Programming", submittedAt: "Dec 4, 2024 · 09:15 PM",  status: "Pending Review", grade: null, maxGrade: 100, feedback: null },
-  { id: "s3", name: "Quiz 2 - Exception Handling",    course: "CS201", courseFull: "Object Oriented Programming", submittedAt: "Dec 7, 2024 · 02:30 PM",  status: "Processing",     grade: null, maxGrade: 50,  feedback: null },
-  { id: "s4", name: "Assignment 2 - Data Structures", course: "CS301", courseFull: "Algorithms",                 submittedAt: "Dec 9, 2024 · 10:00 AM",  status: "Published", grade: 92, maxGrade: 100, feedback: "Excellent implementation of tree traversal algorithms." },
-  { id: "s5", name: "Practical Exam 1",               course: "CS150", courseFull: "Introduction to Programming", submittedAt: "Nov 27, 2024 · 03:45 PM", status: "Published", grade: 78, maxGrade: 100, feedback: "Good work, but review loop conditions." },
-];
+const stateToStatus = (state) =>
+  ({
+    submitted: "Processing",
+    processing: "Processing",
+    graded: "AI Graded",
+    failed: "Failed",
+  })[state] ?? state;
 
-/* ── Helpers ────────────────────────────────────────────────────────── */
 const STATUS_CLS = {
-  Published:       "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
-  "Pending Review":"bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
-  Processing:      "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
-  "AI Graded":     "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
+  Processing:
+    "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  "AI Graded":
+    "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
+  Failed:
+    "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  "Not submitted":
+    "bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700",
 };
+
 const STATUS_DOT = {
-  Published: "bg-emerald-500", "Pending Review": "bg-amber-500",
-  Processing: "bg-blue-500",   "AI Graded": "bg-indigo-500",
+  Processing: "bg-blue-500 animate-pulse",
+  "AI Graded": "bg-indigo-500",
+  Failed: "bg-red-500",
+  "Not submitted": "bg-slate-400",
 };
 
 function StatusBadge({ status }) {
-  const cls = STATUS_CLS[status] ?? "bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600";
-  const dot = STATUS_DOT[status] ?? "bg-slate-400";
+  const cls = STATUS_CLS[status] ?? STATUS_CLS["Not submitted"];
+  const dot = STATUS_DOT[status] ?? STATUS_DOT["Not submitted"];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dot} ${status === "Processing" ? "animate-pulse" : ""}`} />
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
       {status}
     </span>
   );
 }
 
-function GradeCircle({ grade, max }) {
-  const pct = Math.round((grade / max) * 100);
-  const [color, bg] = pct >= 85
-    ? ["text-emerald-600 dark:text-emerald-400", "bg-emerald-50 dark:bg-emerald-900/30"]
-    : pct >= 70
-    ? ["text-blue-600 dark:text-blue-400",       "bg-blue-50 dark:bg-blue-900/30"]
-    : ["text-amber-600 dark:text-amber-400",     "bg-amber-50 dark:bg-amber-900/30"];
+function RubricBlock({ data }) {
+  if (!data) return null;
+  if (typeof data !== "object") {
+    return (
+      <pre className="text-xs bg-slate-100 dark:bg-slate-900 rounded-lg p-3 overflow-x-auto text-slate-700 dark:text-slate-300">
+        {String(data)}
+      </pre>
+    );
+  }
+
+  const criteria = data.criteria ?? data;
+
+  if (Array.isArray(criteria)) {
+    return (
+      <ul className="space-y-2">
+        {criteria.map((c, idx) => {
+          const name = c.criterion ?? c.name ?? `Criterion ${idx + 1}`;
+          const desc = c.desc ?? c.description ?? null;
+          const weight = c.weight ?? c.max ?? null;
+          return (
+            <li
+              key={name + idx}
+              className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 text-sm border-b border-slate-100 dark:border-slate-700/80 pb-2 last:border-0 last:pb-0"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  {name}
+                </p>
+                {desc && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
+                    {String(desc)}
+                  </p>
+                )}
+              </div>
+              {weight != null && (
+                <span className="shrink-0 text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
+                  {weight} pts
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  if (typeof criteria === "object" && criteria !== null) {
+    const entries = Object.entries(criteria);
+    if (entries.length === 0) return null;
+    return (
+      <ul className="space-y-2">
+        {entries.map(([name, val], idx) => {
+          const description = val?.description ?? val?.desc ?? null;
+          const weight = val?.weight ?? val?.max ?? null;
+          return (
+            <li
+              key={name + idx}
+              className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 text-sm border-b border-slate-100 dark:border-slate-700/80 pb-2 last:border-0 last:pb-0"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  {name}
+                </p>
+                {description && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
+                    {String(description)}
+                  </p>
+                )}
+              </div>
+              {weight != null && (
+                <span className="shrink-0 text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
+                  {weight} pts
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   return (
-    <div className={`w-14 h-14 rounded-full ${bg} flex flex-col items-center justify-center shrink-0`}>
-      <span className={`text-base font-extrabold leading-none ${color}`}>{grade}</span>
-      <span className="text-xs text-slate-400 dark:text-slate-500 leading-none">/{max}</span>
-    </div>
+    <pre className="text-xs bg-slate-100 dark:bg-slate-900 rounded-lg p-4 overflow-auto max-h-64 text-slate-700 dark:text-slate-300 font-mono leading-relaxed">
+      {JSON.stringify(data, null, 2)}
+    </pre>
   );
 }
 
-/* ── Dynamic submission card (from context) ─────────────────────────── */
-function DynamicCard({ sub, expanded, onToggle }) {
-  const result = sub.aiResult;
-  const isAI   = sub.status === "AI Graded";
-
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-      <div className="px-6 py-4 flex items-center gap-4">
-
-        {/* Grade circle or processing spinner */}
-        <div className="shrink-0">
-          {isAI && result ? (
-            <GradeCircle grade={result.total} max={result.max} />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-300 dark:text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{sub.assignment}</p>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">{sub.course}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{sub.courseFull}</span>
-              </div>
-            </div>
-            <StatusBadge status={sub.status} />
-          </div>
-          <div className="flex items-center gap-1 mt-2 text-xs text-slate-400 dark:text-slate-500">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Submitted {sub.submittedAt}
-            {sub.filename && <span className="ml-2 italic">· {sub.filename}</span>}
-          </div>
-        </div>
-
-        {/* Expand AI results */}
-        {isAI && result && (
-          <button
-            onClick={onToggle}
-            className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            AI Results
-            <svg className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* AI grading breakdown */}
-      {isAI && result && expanded && (
-        <div className="px-6 pb-5 border-t border-slate-100 dark:border-slate-700 pt-4 bg-slate-50 dark:bg-slate-900/40 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">AI Rubric Breakdown</p>
-              <div className="space-y-2">
-                {result.rubric.map((r) => {
-                  const pct = Math.round((r.score / r.max) * 100);
-                  const bar = pct >= 85 ? "bg-emerald-500" : pct >= 70 ? "bg-blue-500" : "bg-amber-500";
-                  return (
-                    <div key={r.criterion}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span className="text-slate-600 dark:text-slate-300 font-medium">{r.criterion}</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.score}/{r.max}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="shrink-0 text-center">
-              <div className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-4 ${result.total >= 70 ? "border-emerald-400 dark:border-emerald-600" : "border-amber-400 dark:border-amber-600"}`}>
-                <span className={`text-2xl font-extrabold ${result.total >= 70 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>{result.total}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">/{result.max}</span>
-              </div>
-              <p className={`text-xs font-bold mt-1 ${result.total >= 70 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>{result.verdict}</p>
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">AI Feedback</p>
-            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{result.feedback}</p>
-          </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Awaiting instructor review before grade is published.</p>
-        </div>
-      )}
-    </div>
-  );
+function formatDT(dt) {
+  try {
+    return new Date(dt).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return String(dt);
+  }
 }
 
-/* ── Static submission card ─────────────────────────────────────────── */
-function StaticCard({ s, expanded, onToggle }) {
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-      <div className="px-6 py-4 flex items-center gap-4">
-        <div className="shrink-0">
-          {s.grade !== null ? (
-            <GradeCircle grade={s.grade} max={s.maxGrade} />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-300 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{s.name}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">{s.course}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{s.courseFull}</span>
-              </div>
-            </div>
-            <StatusBadge status={s.status} />
-          </div>
-          <div className="flex items-center gap-1 mt-2 text-xs text-slate-400 dark:text-slate-500">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Submitted {s.submittedAt}
-          </div>
-        </div>
-        {s.feedback && (
-          <button onClick={onToggle} className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors">
-            Feedback
-            <svg className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        )}
-      </div>
-      {s.feedback && expanded && (
-        <div className="px-6 pb-4 pt-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Instructor Feedback</p>
-          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{s.feedback}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Page ───────────────────────────────────────────────────────────── */
 export default function StudentSubmissions() {
-  const { submissions } = useSubmissions();
-  const [expanded, setExpanded] = useState(null);
-  const toggle = (id) => setExpanded((prev) => (prev === id ? null : id));
+  const [mySubmissions, setMySubmissions] = useState([]); // SubmissionBase[]
+  const [courses, setCourses] = useState([]); // CourseBase[]
+  const [assignments, setAssignments] = useState([]); // AssignmentBase[]
+  const [questions, setQuestions] = useState([]); // QuestionBase[]
 
-  const graded = STATIC.filter((s) => s.grade !== null);
-  const dynGraded = submissions.filter((s) => s.status === "AI Graded" || s.status === "Published");
-  const avgPct = graded.length > 0
-    ? Math.round(graded.reduce((sum, s) => sum + (s.grade / s.maxGrade) * 100, 0) / graded.length)
-    : null;
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+
+  const [loading, setLoading] = useState(true);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  const [aiFeedbackBySubmissionId, setAiFeedbackBySubmissionId] = useState({});
+  const [loadingAI, setLoadingAI] = useState(false);
+
+  const [expandedQuestionId, setExpandedQuestionId] = useState(null);
+
+  const selectCourse = (courseId) => {
+    setSelectedCourseId(courseId);
+    setSelectedAssignmentId(null);
+    setAssignments([]);
+    setQuestions([]);
+    setSelectedAssignment(null);
+    setAiFeedbackBySubmissionId({});
+    setExpandedQuestionId(null);
+  };
+
+  const selectAssignment = (assignmentId) => {
+    setSelectedAssignmentId(assignmentId);
+    setQuestions([]);
+    setSelectedAssignment(
+      assignments.find((a) => a.id === assignmentId) ?? null,
+    );
+    setAiFeedbackBySubmissionId({});
+    setExpandedQuestionId(null);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [subsRes, coursesRes] = await Promise.all([
+          getMySubmissions(),
+          getMyCourses(),
+        ]);
+        if (cancelled) return;
+
+        setMySubmissions(subsRes.data ?? []);
+        const courseList = coursesRes.data ?? [];
+        setCourses(courseList);
+        if (courseList.length > 0) {
+          setSelectedCourseId(courseList[0].id);
+        }
+      } catch (e) {
+        console.error("StudentSubmissions load error:", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCourseId) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoadingAssignments(true);
+      try {
+        const res = await getCourseAssignments(selectedCourseId);
+        if (cancelled) return;
+        const list = res.data ?? [];
+        setAssignments(list);
+        if (list.length > 0) {
+          setSelectedAssignmentId(list[0].id);
+          setSelectedAssignment(list[0]);
+        } else {
+          setSelectedAssignmentId(null);
+          setSelectedAssignment(null);
+          setQuestions([]);
+        }
+      } catch (e) {
+        console.error("StudentSubmissions assignments error:", e);
+        if (!cancelled) setAssignments([]);
+      } finally {
+        if (!cancelled) setLoadingAssignments(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCourseId]);
+
+  useEffect(() => {
+    if (!selectedAssignmentId) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoadingQuestions(true);
+      try {
+        const [qsRes] = await Promise.all([
+          getAssignmentQuestions(selectedAssignmentId),
+        ]);
+        if (cancelled) return;
+        setQuestions(qsRes.data ?? []);
+
+        // Ensure we have the selected assignment rubric (if it wasn't in the list)
+        const maybe = assignments.find((a) => a.id === selectedAssignmentId);
+        if (maybe) {
+          setSelectedAssignment(maybe);
+        } else {
+          const asgRes = await getAssignment(selectedAssignmentId);
+          if (!cancelled) setSelectedAssignment(asgRes.data ?? null);
+        }
+      } catch (e) {
+        console.error("StudentSubmissions questions error:", e);
+      } finally {
+        if (!cancelled) setLoadingQuestions(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssignmentId, assignments]);
+
+  // Fetch AI feedback for graded submissions on this assignment
+  useEffect(() => {
+    if (!selectedAssignmentId) return;
+    const subsForAssignment = mySubmissions.filter(
+      (s) => s.assignment_id === selectedAssignmentId,
+    );
+    const graded = subsForAssignment.filter((s) => s.state === "graded");
+    let cancelled = false;
+
+    (async () => {
+      setLoadingAI(true);
+      try {
+        const results = await Promise.all(
+          graded.map((s) => getAIFeedback(s.id).catch(() => null)),
+        );
+        if (cancelled) return;
+        const map = {};
+        results.forEach((fb, i) => {
+          if (fb) map[graded[i].id] = fb.data;
+        });
+        setAiFeedbackBySubmissionId(map);
+      } catch (e) {
+        console.error("StudentSubmissions AI feedback error:", e);
+        if (!cancelled) setAiFeedbackBySubmissionId({});
+      } finally {
+        if (!cancelled) setLoadingAI(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssignmentId, mySubmissions]);
+
+  const submissionsByQuestionId = useMemo(() => {
+    const m = new Map();
+    for (const s of mySubmissions) {
+      if (selectedAssignmentId && s.assignment_id !== selectedAssignmentId)
+        continue;
+      m.set(s.question_id, s);
+    }
+    return m;
+  }, [mySubmissions, selectedAssignmentId]);
+
+  const aiAvg = useMemo(() => {
+    const subsForAssignment = selectedAssignmentId
+      ? mySubmissions.filter((s) => s.assignment_id === selectedAssignmentId)
+      : [];
+    const graded = subsForAssignment.filter((s) => s.state === "graded");
+    const vals = graded
+      .map((s) => aiFeedbackBySubmissionId[s.id]?.suggested_grade)
+      .filter((v) => v != null);
+    if (vals.length === 0) return null;
+    const avg = vals.reduce((sum, v) => sum + Number(v), 0) / vals.length;
+    return Math.round(avg);
+  }, [aiFeedbackBySubmissionId, mySubmissions, selectedAssignmentId]);
+
+  const totalSubmittedForAssignment = useMemo(() => {
+    if (!selectedAssignmentId) return 0;
+    return mySubmissions.filter((s) => s.assignment_id === selectedAssignmentId)
+      .length;
+  }, [mySubmissions, selectedAssignmentId]);
+
+  const aiGradedForAssignment = useMemo(() => {
+    if (!selectedAssignmentId) return 0;
+    return mySubmissions.filter(
+      (s) => s.assignment_id === selectedAssignmentId && s.state === "graded",
+    ).length;
+  }, [mySubmissions, selectedAssignmentId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            My Submissions
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            Loading your assignments…
+          </p>
+        </div>
+        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+          Loading submissions…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Submissions</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Review all your submitted exams and grades</p>
+        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          My Submissions
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          Pick a course and assignment to see every question and your grading
+          status.
+        </p>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Total Submitted", value: STATIC.length + submissions.length, iconCls: "text-blue-600 dark:text-blue-400",    bg: "bg-blue-50 dark:bg-blue-900/30",    path: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
-          { label: "Graded",          value: graded.length + dynGraded.length,    iconCls: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/30", path: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-          { label: "Average Score",   value: avgPct !== null ? `${avgPct}%` : "—", iconCls: "text-indigo-600 dark:text-indigo-400",  bg: "bg-indigo-50 dark:bg-indigo-900/30",  path: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
-        ].map(({ label, value, iconCls, bg, path }) => (
-          <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm px-5 py-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-              <svg className={`w-5 h-5 ${iconCls}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={path} />
-              </svg>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+              Course
+            </label>
+            <select
+              value={selectedCourseId ?? ""}
+              onChange={(e) =>
+                selectCourse(e.target.value ? Number(e.target.value) : null)
+              }
+              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+              Assignment
+            </label>
+            <select
+              value={selectedAssignmentId ?? ""}
+              onChange={(e) =>
+                selectAssignment(e.target.value ? Number(e.target.value) : null)
+              }
+              disabled={loadingAssignments || assignments.length === 0}
+              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+            >
+              {assignments.length === 0 ? (
+                <option value="">No assignments</option>
+              ) : (
+                assignments.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {!selectedAssignmentId ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            Choose a course and assignment to view questions and grading status.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Rubric + mini summary */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+                    {selectedAssignment ? "Assignment" : ""}
+                  </p>
+                  <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {selectedAssignment?.title ?? ""}
+                  </h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    {selectedAssignment ? "Rubric & grading status" : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">
+                    Submitted: {totalSubmittedForAssignment}
+                  </span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">
+                    AI Graded: {aiGradedForAssignment}
+                  </span>
+                  {aiAvg != null && (
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">
+                      Avg AI: {aiAvg}/100
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{label}</p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white">{value}</p>
+
+            <div className="px-6 py-5 space-y-4">
+              {selectedAssignment?.rubric_json ? (
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
+                    Rubric
+                  </h3>
+                  <RubricBlock data={selectedAssignment.rubric_json} />
+                </div>
+              ) : null}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Dynamic submissions (from upload) */}
-      {submissions.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
-            Recently Submitted
-          </h2>
-          {submissions.map((sub) => (
-            <DynamicCard
-              key={sub.id}
-              sub={sub}
-              expanded={expanded === sub.id}
-              onToggle={() => toggle(sub.id)}
-            />
-          ))}
+          {/* Questions */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+              Questions ({questions.length})
+            </h3>
+
+            {loadingQuestions ? (
+              <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
+                Loading questions…
+              </div>
+            ) : questions.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
+                No questions found for this assignment.
+              </div>
+            ) : (
+              <ol className="space-y-4">
+                {questions.map((q, idx) => {
+                  const sub = submissionsByQuestionId.get(q.id) ?? null;
+                  const status = sub
+                    ? stateToStatus(sub.state)
+                    : "Not submitted";
+                  const aiFb = sub
+                    ? (aiFeedbackBySubmissionId[sub.id] ?? null)
+                    : null;
+                  const grade =
+                    aiFb?.suggested_grade != null
+                      ? Math.round(aiFb.suggested_grade)
+                      : null;
+                  const expanded = expandedQuestionId === q.id;
+                  const canExpand = Boolean(aiFb);
+
+                  return (
+                    <li
+                      key={q.id}
+                      className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-3">
+                            <span className="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
+                                {q.question_text}
+                              </p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <StatusBadge status={status} />
+                                {sub && (
+                                  <span>
+                                    Submitted {formatDT(sub.submitted_at)}
+                                  </span>
+                                )}
+                                {grade != null && (
+                                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                    AI grade: {grade}/100
+                                  </span>
+                                )}
+                                {loadingAI && sub?.state === "graded" && (
+                                  <span className="text-slate-500">
+                                    Loading AI…
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {aiFb && expanded && (
+                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                          {aiFb.student_feedback && (
+                            <div>
+                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
+                                AI Feedback
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                {aiFb.student_feedback}
+                              </p>
+                            </div>
+                          )}
+                          {aiFb.instructor_guidance && (
+                            <div>
+                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
+                                Instructor Guidance (from AI)
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                                {aiFb.instructor_guidance}
+                              </p>
+                            </div>
+                          )}
+                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                            Awaiting instructor review before grade is
+                            published.
+                          </p>
+                        </div>
+                      )}
+
+                      {!expanded && canExpand && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedQuestionId(q.id)}
+                            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            View AI grading
+                          </button>
+                        </div>
+                      )}
+                      {expanded && canExpand && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedQuestionId(null)}
+                            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            Hide
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Static submissions */}
-      <div className="space-y-3">
-        {submissions.length > 0 && (
-          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
-            Previous Submissions
-          </h2>
-        )}
-        {STATIC.map((s) => (
-          <StaticCard
-            key={s.id}
-            s={s}
-            expanded={expanded === s.id}
-            onToggle={() => toggle(s.id)}
-          />
-        ))}
-      </div>
     </div>
   );
 }

@@ -5,15 +5,17 @@ from db.crud.users import (
     create_user,
     delete_user,
     get_user_by_username,
+    list_users_by_role,
     update_user_email,
 )
+from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from schemas import RegisterRequest, UserBase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import create_access_token, get_current_user
+from ..auth import create_access_token, get_current_user, require_role
 from ..dependencies import get_db
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,15 @@ async def get_user(
 ):
     logger.debug("Fetching current user profile: %s", current_user.username)
     return current_user
+
+
+@router.get("/students", response_model=list[UserBase])
+async def list_students(
+    session: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(UserRole.instructor)),
+):
+    logger.debug("Listing all student accounts (instructor)")
+    return await list_users_by_role(session, UserRole.student)
 
 
 @router.patch("/me/email")

@@ -1,5 +1,6 @@
 import logging
 
+from db.crud.courses import is_student_enrolled
 from db.crud.submissions import (
     create_submission,
     delete_submission,
@@ -40,6 +41,10 @@ async def submit_answer(
         assignment = await get_assignment_by_id(session, assignment_id)
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
+        if not await is_student_enrolled(
+            session, current_user.id, assignment.course_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
         rubric_json = assignment.rubric_json
         if not rubric_json:
             raise HTTPException(status_code=404, detail="Rubric not found")
