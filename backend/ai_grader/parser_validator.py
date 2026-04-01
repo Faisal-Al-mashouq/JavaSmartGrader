@@ -80,7 +80,7 @@ def parse_and_validate_json(raw_text: str) -> dict[str, Any]:
     """
     three-step validation:
         1. json.loads to check valid JSON (with fallback extraction of the
-           first balanced JSON object if extra text is present)
+        first balanced JSON object if extra text is present)
         2. isinstance check that the root is a dict object
         3. GradingResponse.model_validate to enforce all field types, value
         ranges, and constraints.
