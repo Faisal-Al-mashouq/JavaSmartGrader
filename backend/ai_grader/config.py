@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from pydantic import AliasChoices, Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from rich.logging import RichHandler
 
 
 class Settings(BaseSettings):
@@ -152,6 +153,7 @@ def configure_logging(settings: Settings) -> None:
     level = getattr(logging, level_name, logging.INFO)
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        force=True,
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(rich_tracebacks=True)],
     )

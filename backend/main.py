@@ -16,6 +16,7 @@ from api.routes import (
 from core.job_queue import start as start_job_queue
 from db.session import engine
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from logs import setup_logging
 from settings import settings
 
@@ -36,11 +37,11 @@ async def lifespan(app: FastAPI):
 
     if settings.app_env == "all":
         from ai_grader.main import start as start_ai_grader_worker
-        from ocr.ocr_corrector.tasks import run_worker as start_ocr_worker
+        from ocr.main import start as start_ocr_worker
         from sandbox.sandbox_worker import start as start_sandbox_worker
 
+        app.state.ocr_worker = asyncio.create_task(start_ocr_worker())
         app.state.sandbox_worker = asyncio.create_task(start_sandbox_worker())
-        app.state.ocr_worker = asyncio.create_task(asyncio.to_thread(start_ocr_worker))
         app.state.ai_grader_worker = asyncio.create_task(start_ai_grader_worker())
         logger.debug("Sandbox, OCR, and AI grader workers started successfully")
 
@@ -60,14 +61,14 @@ async def lifespan(app: FastAPI):
         logger.debug("Job queue shut down successfully")
 
         if settings.app_env == "all":
-            app.state.sandbox_worker.cancel()
-            try:
-                await app.state.sandbox_worker
-            except asyncio.CancelledError:
-                pass
             app.state.ocr_worker.cancel()
             try:
                 await app.state.ocr_worker
+            except asyncio.CancelledError:
+                pass
+            app.state.sandbox_worker.cancel()
+            try:
+                await app.state.sandbox_worker
             except asyncio.CancelledError:
                 pass
             app.state.ai_grader_worker.cancel()
@@ -84,6 +85,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(courses.router, prefix="/courses", tags=["courses"])

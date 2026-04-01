@@ -1,25 +1,33 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login }   = useAuth();
+  const navigate    = useNavigate();
 
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm]           = useState({ username: "", password: "" });
+  const [error, setError]         = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const fakeUser = {
-      username: form.username,
-      role: form.username === "instructor" ? "INSTRUCTOR" : "STUDENT",
-    };
-
-    login(fakeUser);
-    navigate(fakeUser.role === "INSTRUCTOR" ? "/instructor" : "/dashboard");
+    setError("");
+    setSubmitting(true);
+    try {
+      // login() calls POST /users/login then GET /users/me and returns the user
+      const user = await login(form.username, form.password);
+      // role comes from the backend: "instructor" or "student"
+      navigate(user.role === "instructor" ? "/instructor" : "/dashboard");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ?? "Login failed. Please check your credentials."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -54,16 +62,26 @@ export default function Login() {
             />
           </div>
 
+          {error && (
+            <p className="text-sm text-red-400 bg-red-900/30 border border-red-800 px-3 py-2 rounded-lg">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-lg font-semibold"
+            disabled={submitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition text-white py-2 rounded-lg font-semibold"
           >
-            Sign In
+            {submitting ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 mt-4 text-center">
-          Use username "instructor" to login as Instructor
+        <p className="text-center text-gray-400 text-sm mt-4">
+          Don't have an account?{" "}
+          <Link to="/register" className="text-blue-400 hover:text-blue-300 font-semibold">
+            Register
+          </Link>
         </p>
       </div>
     </div>

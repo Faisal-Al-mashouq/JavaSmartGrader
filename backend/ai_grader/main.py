@@ -438,6 +438,15 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+async def start():
+    settings = load_settings()
+    configure_logging(settings)
+    try:
+        await run_worker(settings=settings, once=False)
+    except KeyboardInterrupt:
+        logger.info("AI Grader worker stopped.")
+
+
 def main() -> int:
     """
     CLI entrypoint.

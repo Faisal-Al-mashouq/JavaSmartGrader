@@ -44,8 +44,8 @@ MAX_CONCURRENCY=10
 
 ```bash
 # From project root
-docker build -f backend/sandbox/Dockerfile.compiler -t compiler-image backend/sandbox/
-docker build -f backend/sandbox/Dockerfile.executer -t executer-image backend/sandbox/
+docker build -f backend/sandbox/docker/Dockerfile.compiler -t compiler-image backend/sandbox/docker
+docker build -f backend/sandbox/docker/Dockerfile.executer -t executer-image backend/sandbox/docker
 ```
 
 ## Running

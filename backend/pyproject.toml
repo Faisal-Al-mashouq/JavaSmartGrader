@@ -17,6 +17,7 @@ dependencies = [
     "opencv-python>=4.13.0.92",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
@@ -42,7 +43,7 @@ local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
 all_debug = "clear && APP_ENV=all LOG_LEVEL=DEBUG uv run task base"
 all = "APP_ENV=all LOG_LEVEL=INFO uv run task base"
 sandbox = "uv run -m sandbox.sandbox_worker"
-ocr = "uv run -m ocr.main --worker"
+ocr = "uv run -m ocr.main"
 ai_grader = "uv run -m ai_grader.main"
 win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
 win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"

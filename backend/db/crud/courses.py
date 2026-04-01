@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..models import Course, User
+from ..models.main_db import course_students
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,18 @@ async def get_course_by_id(session: AsyncSession, course_id: int) -> Course | No
     return result.scalar_one_or_none()
 
 
+async def get_course_students(session: AsyncSession, course_id: int) -> list[User]:
+    result = await session.execute(
+        select(Course)
+        .where(Course.id == course_id)
+        .options(selectinload(Course.students))
+    )
+    course = result.scalar_one_or_none()
+    if course is None:
+        return []
+    return list(course.students)
+
+
 async def get_courses_by_instructor_id(
     session: AsyncSession, instructor_id: int
 ) -> list[Course]:
@@ -42,6 +55,33 @@ async def get_courses_by_instructor_id(
         select(Course).where(Course.instructor_id == instructor_id)
     )
     return result.scalars().all()
+
+
+async def get_courses_by_student_id(
+    session: AsyncSession, student_id: int
+) -> list[Course]:
+    logger.debug("Fetching enrolled courses for student %d", student_id)
+    result = await session.execute(
+        select(User)
+        .where(User.id == student_id)
+        .options(selectinload(User.enrolled_courses))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        return []
+    return list(user.enrolled_courses)
+
+
+async def is_student_enrolled(
+    session: AsyncSession, student_id: int, course_id: int
+) -> bool:
+    result = await session.execute(
+        select(course_students.c.course_id).where(
+            course_students.c.course_id == course_id,
+            course_students.c.student_id == student_id,
+        )
+    )
+    return result.first() is not None
 
 
 async def update_course(
