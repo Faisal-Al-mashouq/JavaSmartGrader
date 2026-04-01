@@ -7,6 +7,7 @@ Python 3.12 FastAPI backend for JavaSmartGrader, including:
 - Redis-backed job orchestration (`core/job_queue.py`)
 - Docker-isolated Java sandbox execution
 - OCR correction worker integration
+- AI grader queue worker integration
 
 ## Requirements
 
@@ -81,6 +82,9 @@ uv run task sandbox
 
 # Run OCR worker only
 uv run task ocr
+
+# Run AI grader worker only
+uv run task ai_grader
 ```
 
 ## Component Docs

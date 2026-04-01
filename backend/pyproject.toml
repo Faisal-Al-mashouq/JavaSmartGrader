@@ -43,6 +43,7 @@ all_debug = "clear && APP_ENV=all LOG_LEVEL=DEBUG uv run task base"
 all = "APP_ENV=all LOG_LEVEL=INFO uv run task base"
 sandbox = "uv run -m sandbox.sandbox_worker"
 ocr = "uv run -m ocr.main --worker"
+ai_grader = "uv run -m ai_grader.main"
 win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
 win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
 

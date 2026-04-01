@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import AliasChoices, Field, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     redis_url: Redis connection URL
     ready_queue_name: Redis list name for worker pops.
     queue_poll_timeout_s: BRPOPLPUSH blocking timeout in seconds
+    max_concurrency: Number of parallel worker loops for queue consumption
     temperature: LLM sampling temperature
     pending_review_status: Status applied after successful grading.
     failure_status_candidates: Ordered list of status strings for failures
@@ -36,8 +37,14 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
-    model: str = Field(default="ft:gpt-4.1-nano-", validation_alias="MODEL")
-    api_key: str = Field(default="", validation_alias="API_KEY")
+    model: str = Field(
+        default="ft:gpt-4.1-nano-",
+        validation_alias=AliasChoices("OPENAI_MODEL", "MODEL"),
+    )
+    api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("OPENAI_API_KEY", "API_KEY"),
+    )
     base_url: str = Field(
         default="https://api.openai.com/v1",
         validation_alias="BASE_URL",
@@ -73,17 +80,22 @@ class Settings(BaseSettings):
         validation_alias="QUEUE_POLL_TIMEOUT_S",
         ge=0,
     )
+    max_concurrency: int = Field(
+        default=1,
+        validation_alias="MAX_CONCURRENCY",
+        ge=1,
+    )
     temperature: float = Field(
         default=0.0,
         validation_alias="LLM_TEMPERATURE",
         ge=0.0,
     )
     pending_review_status: str = Field(
-        default="Pending_Review",
+        default="graded",
         validation_alias="PENDING_REVIEW_STATUS",
     )
-    failure_status_candidates: tuple[str, ...] = Field(
-        default=("Grading_Failed", "failed"),
+    failure_status_candidates: Annotated[tuple[str, ...], NoDecode] = Field(
+        default=("failed",),
         validation_alias="FAILURE_STATUS_CANDIDATES",
     )
     backend_path: Path = Field(
@@ -112,6 +124,11 @@ class Settings(BaseSettings):
                 raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")
             return parsed
         if isinstance(value, list):
+            parsed = tuple(str(item).strip() for item in value if str(item).strip())
+            if not parsed:
+                raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")
+            return parsed
+        if isinstance(value, tuple):
             parsed = tuple(str(item).strip() for item in value if str(item).strip())
             if not parsed:
                 raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")

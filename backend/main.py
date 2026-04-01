@@ -35,12 +35,14 @@ async def lifespan(app: FastAPI):
     logger.info("Job queue started successfully")
 
     if settings.app_env == "all":
+        from ai_grader.main import start as start_ai_grader_worker
         from ocr.ocr_corrector.tasks import run_worker as start_ocr_worker
         from sandbox.sandbox_worker import start as start_sandbox_worker
 
         app.state.sandbox_worker = asyncio.create_task(start_sandbox_worker())
         app.state.ocr_worker = asyncio.create_task(asyncio.to_thread(start_ocr_worker))
-        logger.debug("Sandbox and OCR workers started successfully")
+        app.state.ai_grader_worker = asyncio.create_task(start_ai_grader_worker())
+        logger.debug("Sandbox, OCR, and AI grader workers started successfully")
 
     try:
         yield
@@ -68,7 +70,12 @@ async def lifespan(app: FastAPI):
                 await app.state.ocr_worker
             except asyncio.CancelledError:
                 pass
-            logger.debug("Sandbox and OCR workers shut down successfully")
+            app.state.ai_grader_worker.cancel()
+            try:
+                await app.state.ai_grader_worker
+            except asyncio.CancelledError:
+                pass
+            logger.debug("Sandbox, OCR, and AI grader workers shut down successfully")
 
         await engine.dispose()
         logger.info("Shutdown complete")
