@@ -49,10 +49,14 @@ async def main() -> None:
             params={"name": "Test Course", "description": "E2E"},
             headers=inst_headers,
         )
-        if course.status_code == 400 and "already exists" in (course.json().get("detail") or ""):
+        if course.status_code == 400 and "already exists" in (
+            course.json().get("detail") or ""
+        ):
             my_courses = await client.get("/courses/me", headers=inst_headers)
             my_courses.raise_for_status()
-            existing = next((c for c in my_courses.json() if c["name"] == "Test Course"), None)
+            existing = next(
+                (c for c in my_courses.json() if c["name"] == "Test Course"), None
+            )
             if not existing:
                 course.raise_for_status()
             course_id = existing["id"]
@@ -81,7 +85,9 @@ async def main() -> None:
         question.raise_for_status()
         question_id = question.json()["id"]
 
-        me = await client.get("/users/me", headers={"Authorization": f"Bearer {student_token}"})
+        me = await client.get(
+            "/users/me", headers={"Authorization": f"Bearer {student_token}"}
+        )
         me.raise_for_status()
         student_id = me.json()["id"]
 
