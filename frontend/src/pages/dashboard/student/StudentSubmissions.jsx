@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { getMySubmissions } from "../../../services/submissionService";
 import {
   getAssignment,
-  getAssignmentQuestions,
   getCourseAssignments,
   getMyCourses,
 } from "../../../services/courseService";
@@ -150,19 +149,16 @@ function formatDT(dt) {
 }
 
 export default function StudentSubmissions() {
-  const [mySubmissions, setMySubmissions] = useState([]); // SubmissionBase[]
-  const [courses, setCourses] = useState([]); // CourseBase[]
-  const [assignments, setAssignments] = useState([]); // AssignmentBase[]
-  const [questions, setQuestions] = useState([]); // QuestionBase[]
+  const [mySubmissions, setMySubmissions] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [assignments, setAssignments] = useState([]);
 
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
-
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   const [aiFeedbackBySubmissionId, setAiFeedbackBySubmissionId] = useState({});
   const [loadingAI, setLoadingAI] = useState(false);
@@ -173,7 +169,6 @@ export default function StudentSubmissions() {
     setSelectedCourseId(courseId);
     setSelectedAssignmentId(null);
     setAssignments([]);
-    setQuestions([]);
     setSelectedAssignment(null);
     setAiFeedbackBySubmissionId({});
     setExpandedQuestionId(null);
@@ -181,10 +176,7 @@ export default function StudentSubmissions() {
 
   const selectAssignment = (assignmentId) => {
     setSelectedAssignmentId(assignmentId);
-    setQuestions([]);
-    setSelectedAssignment(
-      assignments.find((a) => a.id === assignmentId) ?? null,
-    );
+    setSelectedAssignment(assignments.find((a) => a.id === assignmentId) ?? null);
     setAiFeedbackBySubmissionId({});
     setExpandedQuestionId(null);
   };
@@ -235,8 +227,7 @@ export default function StudentSubmissions() {
         } else {
           setSelectedAssignmentId(null);
           setSelectedAssignment(null);
-          setQuestions([]);
-        }
+              }
       } catch (e) {
         console.error("StudentSubmissions assignments error:", e);
         if (!cancelled) setAssignments([]);
@@ -253,34 +244,20 @@ export default function StudentSubmissions() {
   useEffect(() => {
     if (!selectedAssignmentId) return;
     let cancelled = false;
-
     (async () => {
-      setLoadingQuestions(true);
-      try {
-        const [qsRes] = await Promise.all([
-          getAssignmentQuestions(selectedAssignmentId),
-        ]);
-        if (cancelled) return;
-        setQuestions(qsRes.data ?? []);
-
-        // Ensure we have the selected assignment rubric (if it wasn't in the list)
-        const maybe = assignments.find((a) => a.id === selectedAssignmentId);
-        if (maybe) {
-          setSelectedAssignment(maybe);
-        } else {
+      const maybe = assignments.find((a) => a.id === selectedAssignmentId);
+      if (maybe) {
+        setSelectedAssignment(maybe);
+      } else {
+        try {
           const asgRes = await getAssignment(selectedAssignmentId);
           if (!cancelled) setSelectedAssignment(asgRes.data ?? null);
+        } catch {
+          // ignore
         }
-      } catch (e) {
-        console.error("StudentSubmissions questions error:", e);
-      } finally {
-        if (!cancelled) setLoadingQuestions(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedAssignmentId, assignments]);
 
   // Fetch AI feedback for graded submissions on this assignment
@@ -317,14 +294,9 @@ export default function StudentSubmissions() {
     };
   }, [selectedAssignmentId, mySubmissions]);
 
-  const submissionsByQuestionId = useMemo(() => {
-    const m = new Map();
-    for (const s of mySubmissions) {
-      if (selectedAssignmentId && s.assignment_id !== selectedAssignmentId)
-        continue;
-      m.set(s.question_id, s);
-    }
-    return m;
+  const submissionsForAssignment = useMemo(() => {
+    if (!selectedAssignmentId) return [];
+    return mySubmissions.filter((s) => s.assignment_id === selectedAssignmentId);
   }, [mySubmissions, selectedAssignmentId]);
 
   const aiAvg = useMemo(() => {
@@ -481,72 +453,44 @@ export default function StudentSubmissions() {
             </div>
           </div>
 
-          {/* Questions */}
+          {/* Submissions */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-              Questions ({questions.length})
+              My Submissions ({submissionsForAssignment.length})
             </h3>
 
-            {loadingQuestions ? (
+            {submissionsForAssignment.length === 0 ? (
               <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
-                Loading questions…
-              </div>
-            ) : questions.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
-                No questions found for this assignment.
+                No submissions yet for this assignment.
               </div>
             ) : (
               <ol className="space-y-4">
-                {questions.map((q, idx) => {
-                  const sub = submissionsByQuestionId.get(q.id) ?? null;
-                  const status = sub
-                    ? stateToStatus(sub.state)
-                    : "Not submitted";
-                  const aiFb = sub
-                    ? (aiFeedbackBySubmissionId[sub.id] ?? null)
-                    : null;
-                  const grade =
-                    aiFb?.suggested_grade != null
-                      ? Math.round(aiFb.suggested_grade)
-                      : null;
-                  const expanded = expandedQuestionId === q.id;
+                {submissionsForAssignment.map((sub, idx) => {
+                  const status = stateToStatus(sub.state);
+                  const aiFb = aiFeedbackBySubmissionId[sub.id] ?? null;
+                  const grade = aiFb?.suggested_grade != null ? Math.round(aiFb.suggested_grade) : null;
+                  const expanded = expandedQuestionId === sub.id;
                   const canExpand = Boolean(aiFb);
 
                   return (
-                    <li
-                      key={q.id}
-                      className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
+                    <li key={sub.id} className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">
+                          {idx + 1}
+                        </span>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-start gap-3">
-                            <span className="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">
-                              {idx + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
-                                {q.question_text}
-                              </p>
-                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <StatusBadge status={status} />
-                                {sub && (
-                                  <span>
-                                    Submitted {formatDT(sub.submitted_at)}
-                                  </span>
-                                )}
-                                {grade != null && (
-                                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                    AI grade: {grade}/100
-                                  </span>
-                                )}
-                                {loadingAI && sub?.state === "graded" && (
-                                  <span className="text-slate-500">
-                                    Loading AI…
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <StatusBadge status={status} />
+                            <span>Submitted {formatDT(sub.submitted_at)}</span>
+                            {grade != null && (
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                AI grade: {grade}/100
+                              </span>
+                            )}
+                            {loadingAI && sub.state === "graded" && (
+                              <span className="text-slate-500">Loading AI…</span>
+                            )}
+                          </p>
                         </div>
                       </div>
 
@@ -554,50 +498,24 @@ export default function StudentSubmissions() {
                         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
                           {aiFb.student_feedback && (
                             <div>
-                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
-                                AI Feedback
-                              </p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                                {aiFb.student_feedback}
-                              </p>
-                            </div>
-                          )}
-                          {aiFb.instructor_guidance && (
-                            <div>
-                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
-                                Instructor Guidance (from AI)
-                              </p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                                {aiFb.instructor_guidance}
-                              </p>
+                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">AI Feedback</p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{aiFb.student_feedback}</p>
                             </div>
                           )}
                           <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                            Awaiting instructor review before grade is
-                            published.
+                            Awaiting instructor review before grade is published.
                           </p>
                         </div>
                       )}
 
-                      {!expanded && canExpand && (
+                      {canExpand && (
                         <div className="mt-3">
                           <button
                             type="button"
-                            onClick={() => setExpandedQuestionId(q.id)}
+                            onClick={() => setExpandedQuestionId(expanded ? null : sub.id)}
                             className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                           >
-                            View AI grading
-                          </button>
-                        </div>
-                      )}
-                      {expanded && canExpand && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => setExpandedQuestionId(null)}
-                            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                          >
-                            Hide
+                            {expanded ? "Hide" : "View AI grading"}
                           </button>
                         </div>
                       )}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  getAssignmentQuestions,
   getCourseAssignments,
   getMyCourses,
 } from "../../../services/courseService";
@@ -115,30 +114,6 @@ function RubricBlock({ data }) {
   );
 }
 
-function QuestionCard({ question, index, onUpload }) {
-  return (
-    <li className="rounded-xl border border-slate-100 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-900/40 p-4">
-      <div className="flex items-start gap-3 mb-3">
-        <span className="shrink-0 w-9 h-9 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">
-          {index + 1}
-        </span>
-        <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-wrap flex-1">
-          {question.question_text}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2 items-center">
-        <button
-          type="button"
-          onClick={() => onUpload(question.id)}
-          className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98]"
-        >
-          Upload answer
-        </button>
-      </div>
-    </li>
-  );
-}
-
 export default function StudentAssignmentsFull() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -165,11 +140,6 @@ export default function StudentAssignmentsFull() {
     [assignments, selectedAssignmentId],
   );
 
-  const [questionsCache, setQuestionsCache] = useState({}); // assignmentId -> questions
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
-  const questions = selectedAssignment
-    ? (questionsCache[selectedAssignment.id] ?? [])
-    : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -205,7 +175,6 @@ export default function StudentAssignmentsFull() {
         setAssignments(list);
         const first = list[0]?.id ?? null;
         setSelectedAssignmentId(first);
-        setQuestionsCache({});
       } catch (e) {
         console.error("StudentAssignmentsFull assignments error:", e);
         if (!cancelled)
@@ -220,41 +189,8 @@ export default function StudentAssignmentsFull() {
     };
   }, [courseId]);
 
-  useEffect(() => {
-    if (!selectedAssignmentId) return;
-    if (questionsCache[selectedAssignmentId]) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setLoadingQuestions(true);
-        const res = await getAssignmentQuestions(selectedAssignmentId);
-        if (cancelled) return;
-        setQuestionsCache((prev) => ({
-          ...prev,
-          [selectedAssignmentId]: res.data ?? [],
-        }));
-      } catch (e) {
-        console.error("StudentAssignmentsFull questions error:", e);
-        if (!cancelled)
-          setQuestionsCache((prev) => ({
-            ...prev,
-            [selectedAssignmentId]: [],
-          }));
-      } finally {
-        if (!cancelled) setLoadingQuestions(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAssignmentId, questionsCache]);
-
-  const upload = (assignmentId, questionId) => {
-    navigate("/dashboard/upload", {
-      state: { assignmentId, questionId },
-    });
+  const upload = (assignmentId) => {
+    navigate("/dashboard/upload", { state: { assignmentId } });
   };
 
   if (!courseId) {
@@ -413,37 +349,13 @@ export default function StudentAssignmentsFull() {
                   ) : null}
 
                   <section>
-                    <div className="flex items-center justify-between gap-4 mb-3">
-                      <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                        Questions
-                      </h3>
-                      <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
-                        {loadingQuestions ? "Loading…" : questions.length}
-                      </span>
-                    </div>
-
-                    {loadingQuestions ? (
-                      <div className="text-sm text-slate-400 dark:text-slate-500">
-                        Loading questions…
-                      </div>
-                    ) : questions.length === 0 ? (
-                      <div className="text-sm text-slate-400 dark:text-slate-500">
-                        No questions found for this assignment.
-                      </div>
-                    ) : (
-                      <ol className="space-y-4">
-                        {questions.map((q, idx) => (
-                          <QuestionCard
-                            key={`${q.id}`}
-                            question={q}
-                            index={idx}
-                            onUpload={(qid) =>
-                              upload(selectedAssignment.id, qid)
-                            }
-                          />
-                        ))}
-                      </ol>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => upload(selectedAssignment.id)}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all active:scale-[0.98]"
+                    >
+                      Upload answer
+                    </button>
                   </section>
                 </div>
               </div>

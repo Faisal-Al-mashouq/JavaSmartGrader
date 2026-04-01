@@ -32,9 +32,11 @@ from .jobs import (
     SandboxResult,
     TestCase,
 )
-from .questions import (
-    QuestionBase,
-    TestcaseBase,
+from .rubric import (
+    DEFAULT_RUBRIC,
+    STANDARD_CRITERIA_KEYS,
+    RubricCriterion,
+    RubricSchema,
 )
 from .submissions import (
     SubmissionBase,
@@ -47,11 +49,13 @@ from .users import (
 
 __all__ = [
     "AssignmentBase",
+    "DEFAULT_RUBRIC",
+    "RubricCriterion",
+    "RubricSchema",
+    "STANDARD_CRITERIA_KEYS",
     "ConfidenceFlagBase",
     "CourseBase",
     "GenerateReportBase",
-    "QuestionBase",
-    "TestcaseBase",
     "LoginRequest",
     "RegisterRequest",
     "UserBase",

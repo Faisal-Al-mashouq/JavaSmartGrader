@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 async def create_submission(
     session: AsyncSession,
-    question_id: int,
     assignment_id: int,
     student_id: int,
     image_url: str | None = None,
@@ -19,7 +18,6 @@ async def create_submission(
         "Creating submission for student %d, assignment %d", student_id, assignment_id
     )
     submission = Submission(
-        question_id=question_id,
         assignment_id=assignment_id,
         student_id=student_id,
         image_url=image_url,

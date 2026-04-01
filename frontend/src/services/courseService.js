@@ -1,9 +1,43 @@
 import api from "./api";
 
-/** Default rubric body for POST /assignments/ (JSON body) */
+export const STANDARD_CRITERIA_KEYS = [
+  "correctness",
+  "edge_cases",
+  "code_quality",
+  "efficiency",
+];
+
+/** Default rubric — 4 standard criteria summing to 100% */
 export const DEFAULT_ASSIGNMENT_RUBRIC = {
   criteria: {
-    Correctness: { weight: 100, description: "Solution correctness" },
+    correctness: {
+      label: "Correctness",
+      weight: 40,
+      description:
+        "Does the solution produce correct output for all given test cases?",
+      is_standard: true,
+    },
+    edge_cases: {
+      label: "Edge Cases",
+      weight: 20,
+      description:
+        "Does the solution handle boundary and edge cases properly?",
+      is_standard: true,
+    },
+    code_quality: {
+      label: "Code Quality",
+      weight: 20,
+      description:
+        "Is the code clean, readable, and following good programming practices?",
+      is_standard: true,
+    },
+    efficiency: {
+      label: "Efficiency",
+      weight: 20,
+      description:
+        "Does the solution use appropriate algorithms and data structures to minimize time and space complexity?",
+      is_standard: true,
+    },
   },
 };
 
@@ -56,42 +90,9 @@ export const createAssignment = (
 export const deleteAssignment = (assignmentId) =>
   api.delete(`/assignments/${assignmentId}`);
 
+/** PUT /assignments/{id}/rubric — body: rubric JSON */
+export const updateAssignmentRubric = (assignmentId, rubricJson) =>
+  api.put(`/assignments/${assignmentId}/rubric`, rubricJson);
+
 /** GET /assignments/{id} */
 export const getAssignment = (id) => api.get(`/assignments/${id}`);
-
-/** GET /assignments/{assignmentId}/questions/ */
-export const getAssignmentQuestions = (assignmentId) =>
-  api.get(`/assignments/${assignmentId}/questions/`);
-
-/** POST /assignments/{assignmentId}/questions/ — query: question_text */
-export const createQuestion = (assignmentId, questionText) =>
-  api.post(`/assignments/${assignmentId}/questions/`, null, {
-    params: { question_text: questionText },
-  });
-
-/** DELETE /assignments/{assignmentId}/questions/{questionId} */
-export const deleteQuestion = (assignmentId, questionId) =>
-  api.delete(`/assignments/${assignmentId}/questions/${questionId}`);
-
-/** POST .../questions/{questionId}/testcases — query: input_data, expected_output */
-export const addTestcase = (
-  assignmentId,
-  questionId,
-  inputData,
-  expectedOutput,
-) =>
-  api.post(
-    `/assignments/${assignmentId}/questions/${questionId}/testcases`,
-    null,
-    { params: { input_data: inputData, expected_output: expectedOutput } },
-  );
-
-/** GET .../questions/{questionId}/testcases */
-export const getQuestionTestcases = (assignmentId, questionId) =>
-  api.get(`/assignments/${assignmentId}/questions/${questionId}/testcases`);
-
-/** DELETE .../testcases/{testcaseId} */
-export const deleteTestcase = (assignmentId, questionId, testcaseId) =>
-  api.delete(
-    `/assignments/${assignmentId}/questions/${questionId}/testcases/${testcaseId}`,
-  );
