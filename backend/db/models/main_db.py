@@ -9,7 +9,6 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
-    ForeignKeyConstraint,
     Integer,
     Numeric,
     String,
@@ -122,7 +121,7 @@ class Assignment(Base):
         back_populates="assignments",
         foreign_keys=[course_id],
     )
-    questions: Mapped[list["Question"]] = relationship(
+    submissions: Mapped[list["Submission"]] = relationship(
         back_populates="assignment",
         cascade="all, delete-orphan",
     )
@@ -138,39 +137,13 @@ class Assignment(Base):
         )
 
 
-class Question(Base):
-    __tablename__ = "questions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    assignment_id: Mapped[int] = mapped_column(
-        ForeignKey("assignments.id"), nullable=False, primary_key=True
-    )
-    question_text: Mapped[str] = mapped_column(Text, nullable=False)
-
-    assignment: Mapped["Assignment"] = relationship(back_populates="questions")
-    submissions: Mapped[list["Submission"]] = relationship(
-        back_populates="question",
-        cascade="all, delete-orphan",
-    )
-    testcases: Mapped[list["Testcase"]] = relationship(
-        back_populates="question",
-        cascade="all, delete-orphan",
-    )
-
-
 class Submission(Base):
     __tablename__ = "submissions"
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["question_id", "assignment_id"],
-            ["questions.id", "questions.assignment_id"],
-            name="fk_submissions_question_id_assignment_id",
-        ),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    question_id: Mapped[int] = mapped_column(nullable=False)
-    assignment_id: Mapped[int] = mapped_column(nullable=False)
+    assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("assignments.id"), nullable=False
+    )
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
@@ -185,7 +158,7 @@ class Submission(Base):
         default=lambda: datetime.now(UTC),
     )
 
-    question: Mapped["Question"] = relationship(back_populates="submissions")
+    assignment: Mapped["Assignment"] = relationship(back_populates="submissions")
     student: Mapped["User"] = relationship(
         back_populates="submissions",
         foreign_keys=[student_id],
@@ -213,29 +186,9 @@ class Submission(Base):
 
     def __repr__(self):
         return (
-            f"Submission(id={self.id}, question_id={self.question_id}"
+            f"Submission(id={self.id}, assignment_id={self.assignment_id}"
             f", student_id={self.student_id}, state='{self.state}')"
         )
-
-
-class Testcase(Base):
-    __tablename__ = "testcases"
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["question_id", "assignment_id"],
-            ["questions.id", "questions.assignment_id"],
-            name="fk_testcases_question_id_assignment_id",
-        ),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    question_id: Mapped[int] = mapped_column(nullable=False)
-    assignment_id: Mapped[int] = mapped_column(nullable=False)
-
-    input: Mapped[str] = mapped_column(Text, nullable=False)
-    expected_output: Mapped[str] = mapped_column(Text, nullable=False)
-
-    question: Mapped["Question"] = relationship(back_populates="testcases")
 
 
 class AIFeedback(Base):

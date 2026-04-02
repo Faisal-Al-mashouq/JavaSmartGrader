@@ -105,12 +105,10 @@ JobResultUnion = Annotated[
 
 class JobRequest(BaseModel):
     submission_id: int
-    question_id: int
     assignment_id: int
     student_id: int
     image_url: str | None = None
     java_code: str
-    test_cases: list[TestCase]
     rubric_json: dict
 
 

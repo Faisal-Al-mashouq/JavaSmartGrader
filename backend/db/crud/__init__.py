@@ -37,16 +37,6 @@ from .grading import (
     get_transcription_by_submission_id,
     update_grade,
 )
-from .questions import (
-    create_question,
-    create_testcase,
-    delete_question,
-    delete_testcase,
-    get_question_by_id,
-    get_questions_by_assignment_id,
-    get_testcases_by_question_id,
-    update_question,
-)
 from .submissions import (
     create_submission,
     delete_submission,
@@ -98,14 +88,6 @@ __all__ = [
     "delete_course",
     "enroll_student",
     "unenroll_student",
-    "create_question",
-    "create_testcase",
-    "get_question_by_id",
-    "get_questions_by_assignment_id",
-    "get_testcases_by_question_id",
-    "update_question",
-    "delete_question",
-    "delete_testcase",
     "create_confidence_flag",
     "get_confidence_flags_by_transcription_id",
     "delete_confidence_flag",

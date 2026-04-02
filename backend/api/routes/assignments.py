@@ -11,7 +11,8 @@ from db.crud.assignments import (
 from db.crud.courses import get_course_by_id, is_student_enrolled
 from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import AssignmentBase
+from pydantic import ValidationError
+from schemas import AssignmentBase, RubricSchema
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +58,10 @@ async def create_new_assignment(
         title,
         course_id,
     )
+    try:
+        RubricSchema.model_validate(rubric_json)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     course = await get_course_by_id(session, course_id)
     if not course:
         logger.warning("Course not found: %d", course_id)
@@ -172,3 +177,25 @@ async def remove_assignment(
     await delete_assignment(session, assignment_id)
     logger.info("Assignment %d deleted successfully", assignment_id)
     return {"message": "Assignment deleted successfully"}
+
+
+@router.put("/{assignment_id}/rubric", response_model=AssignmentBase)
+async def update_assignment_rubric(
+    assignment_id: int,
+    rubric_json: dict,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
+    logger.info(
+        "Instructor %d updating rubric for assignment %d",
+        current_user.id,
+        assignment_id,
+    )
+    await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
+    try:
+        RubricSchema.model_validate(rubric_json)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    updated = await update_assignment(session, assignment_id, rubric_json=rubric_json)
+    logger.info("Rubric updated for assignment %d", assignment_id)
+    return updated

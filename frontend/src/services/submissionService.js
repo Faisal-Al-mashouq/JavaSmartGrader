@@ -11,7 +11,7 @@ export const getAssignmentSubmissions = (assignmentId) =>
   api.get(`/submissions/assignment/${assignmentId}`);
 
 /** POST /submissions/  (student) */
-export const submitAnswer = (questionId, assignmentId) =>
+export const submitAnswer = (assignmentId) =>
   api.post("/submissions/", null, {
-    params: { question_id: questionId, assignment_id: assignmentId },
+    params: { assignment_id: assignmentId },
   });

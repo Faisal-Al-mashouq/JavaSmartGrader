@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import InstructorNavButton from "../../../components/InstructorNavButton";
-import { createAssignment } from "../../../services/courseService";
+import RubricEditor from "../../../components/RubricEditor";
+import {
+  createAssignment,
+  DEFAULT_ASSIGNMENT_RUBRIC,
+} from "../../../services/courseService";
 
 export default function InstructorAssignmentNew() {
   const { courseId } = useParams();
@@ -10,6 +14,7 @@ export default function InstructorAssignmentNew() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueLocal, setDueLocal] = useState("");
+  const [rubric, setRubric] = useState(DEFAULT_ASSIGNMENT_RUBRIC);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -18,9 +23,19 @@ export default function InstructorAssignmentNew() {
     setLoading(false);
   }, []);
 
+  const totalWeight = Object.values(rubric.criteria ?? {}).reduce(
+    (s, c) => s + (c.weight ?? 0),
+    0
+  );
+  const rubricValid = Math.abs(totalWeight - 100) < 0.01;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!rubricValid) {
+      setError("Rubric weights must sum to 100%.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -34,9 +49,9 @@ export default function InstructorAssignmentNew() {
         title.trim(),
         description.trim() || undefined,
         dueIso,
-        undefined,
+        rubric,
       );
-      navigate(`/instructor/courses/${id}/assignments/${data.id}/questions`, {
+      navigate(`/instructor/courses/${id}/assignments/${data.id}`, {
         replace: true,
       });
     } catch (err) {
@@ -51,7 +66,7 @@ export default function InstructorAssignmentNew() {
   }
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           New assignment
@@ -73,7 +88,7 @@ export default function InstructorAssignmentNew() {
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm space-y-4"
+          className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm space-y-5"
         >
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -111,10 +126,23 @@ export default function InstructorAssignmentNew() {
               onChange={(e) => setDueLocal(e.target.value)}
             />
           </div>
+
+          {/* Rubric section */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+              Grading Rubric
+            </label>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+              4 standard criteria are required. You may add up to 2 custom criteria.
+              All weights must sum to 100%.
+            </p>
+            <RubricEditor rubric={rubric} onChange={setRubric} />
+          </div>
+
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !rubricValid}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-xl"
             >
               {saving ? "Saving…" : "Create and go to questions"}
