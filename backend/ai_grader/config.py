@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     backoff_base_s: Starting delay for exponential backoff
     backoff_max_s: Cap on backoff delay (adds jitter)
     redis_url: Redis connection URL
-    ready_queue_name: Redis list name for worker pops.
+    ai_grading_queue: Redis list name for worker pops.
     queue_poll_timeout_s: BRPOPLPUSH blocking timeout in seconds
     max_concurrency: Number of parallel worker loops for queue consumption
     temperature: LLM sampling temperature
@@ -72,12 +72,12 @@ class Settings(BaseSettings):
         exclude=True,
         repr=False,
     )
-    ready_queue_name: str = Field(
-        default="Ready_Grading",
-        validation_alias="READY_GRADING_QUEUE",
+    ai_grading_queue: str = Field(
+        default="AIGradingJobQueue",
+        validation_alias="AI_GRADING_QUEUE",
     )
     queue_poll_timeout_s: int = Field(
-        default=5,
+        default=0,
         validation_alias="QUEUE_POLL_TIMEOUT_S",
         ge=0,
     )
@@ -105,16 +105,10 @@ class Settings(BaseSettings):
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
 
-    @field_validator("ready_queue_name")
+    @field_validator("ai_grading_queue")
     @classmethod
-    def _prefix_ready_queue(cls, value: str, info: ValidationInfo) -> str:
-        queue_namespace = str(info.data.get("queue_namespace", "")).strip()
-        if not queue_namespace:
-            return value
-        prefix = f"{queue_namespace}:"
-        if value.startswith(prefix):
-            return value
-        return f"{prefix}{value}"
+    def _prefix_ai_grading_queue(cls, value: str, info: ValidationInfo) -> str:
+        return value
 
     @field_validator("failure_status_candidates", mode="before")
     @classmethod
@@ -135,6 +129,13 @@ class Settings(BaseSettings):
                 raise ValueError("FAILURE_STATUS_CANDIDATES must not be empty.")
             return parsed
         return value
+
+
+def full_ai_grading_queue_name(settings: Settings) -> str:
+    """Match ``core.process.grader.AI_GRADER_QUEUE`` namespace rules."""
+    prefix = f"{settings.queue_namespace}:"
+    q = settings.ai_grading_queue.strip()
+    return q if q.startswith(prefix) else f"{prefix}{q}"
 
 
 def load_settings() -> Settings:

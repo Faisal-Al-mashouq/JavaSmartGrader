@@ -137,7 +137,7 @@ export default function StudentUpload() {
     setStage("submitting");
     setErrorMsg("");
     try {
-      const res = await submitAnswer(qId, aId);
+      const res = await submitAnswer(qId, aId, file);
       setResult(res.data);
       setStage("done");
     } catch (err) {

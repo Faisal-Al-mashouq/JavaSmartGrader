@@ -118,7 +118,7 @@ def _make_settings(**overrides: object) -> Settings:
         backoff_base_s=0.01,
         backoff_max_s=0.05,
         redis_url="redis://localhost:6379",
-        ready_queue_name="jsg.v1:Ready_Grading",
+        ai_grading_queue="AIGradingJobQueue",
         queue_poll_timeout_s=1,
         max_concurrency=1,
         temperature=0.0,

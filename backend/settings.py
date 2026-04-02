@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import Literal
 
+import boto3
 from pydantic_settings import BaseSettings
 
 ENV_FILE = Path(__file__).resolve().parent / ".env"
@@ -7,11 +9,11 @@ ENV_FILE = Path(__file__).resolve().parent / ".env"
 
 class Settings(BaseSettings):
     log_level: str = "INFO"
-    app_env: str = "local"
+    app_env: Literal["local", "dev", "prod", "all"] = "local"
 
     redis_endpoint: str = "redis://redis:6379"
     queue_namespace: str = "jsg.v1"
-    ready_grading_queue: str = "Ready_Grading"
+    ai_grading_queue: str = "AIGradingJobQueue"
     redis_port: int = 6379
     max_concurrency: int = 10
 
@@ -62,3 +64,19 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if settings.app_env == "dev" or settings.app_env == "prod" or settings.app_env == "all":
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=settings.s3_endpoint_url,
+        region_name=settings.s3_region,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
+    )
+else:
+    s3_client = boto3.client(
+        "s3",
+        region_name=settings.s3_region,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
+    )

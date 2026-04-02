@@ -25,4 +25,4 @@ docker run --rm -v $(pwd)/backend/sandbox/tmp/test:/workspace --memory=256m --ne
 - ~~Clean up duplicate imports and constants across modules~~ - Done
 - ~~Add auto initialization for Docker images~~ - Done
 - ~~Build and test Docker images end-to-end~~ - Done
-- Implement result saving logic (Redis/database persistence)
+- ~~Implement result saving logic (Redis/database persistence)~~ - Done

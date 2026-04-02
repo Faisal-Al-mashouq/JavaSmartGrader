@@ -11,7 +11,12 @@ export const getAssignmentSubmissions = (assignmentId) =>
   api.get(`/submissions/assignment/${assignmentId}`);
 
 /** POST /submissions/  (student) */
-export const submitAnswer = (questionId, assignmentId) =>
-  api.post("/submissions/", null, {
-    params: { question_id: questionId, assignment_id: assignmentId },
+export const submitAnswer = (questionId, assignmentId, file) => {
+  const form = new FormData();
+  form.append("question_id", String(questionId));
+  form.append("assignment_id", String(assignmentId));
+  form.append("file", file);
+  return api.post("/submissions/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
+};

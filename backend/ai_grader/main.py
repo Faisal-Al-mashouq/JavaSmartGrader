@@ -135,8 +135,7 @@ def _format_sandbox_logs(sandbox_result: dict | None) -> str:
         if not isinstance(case, dict):
             continue
         test_case_lines.append(
-            "testcase {idx}: input={input} expected={expected} "
-            "actual={actual} passed={passed}".format(
+            "testcase {idx}: input={input} expected={expected} actual={actual} passed={passed}".format(
                 idx=index,
                 input=case.get("input"),
                 expected=case.get("expected_output"),

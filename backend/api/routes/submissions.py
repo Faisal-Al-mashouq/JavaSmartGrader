@@ -7,16 +7,18 @@ from db.crud.submissions import (
     get_submission_by_id,
     get_submissions_by_assignment_id,
     get_submissions_by_student_id,
+    set_submission_image_url,
     update_submission_state,
 )
 from db.models import SubmissionState, UserRole
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from schemas import SubmissionBase, TestCase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_role
 from ..dependencies import get_db
+from ..s3 import save_file
 from .assignments import get_assignment_by_id
 from .helpers import start_job_process
 from .questions import get_question_by_id, get_testcases_by_question_id
@@ -30,7 +32,7 @@ router = APIRouter()
 async def submit_answer(
     question_id: int,
     assignment_id: int,
-    image_url: str | None = None,
+    file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.student)),
 ):
@@ -63,8 +65,9 @@ async def submit_answer(
             question_id=question_id,
             assignment_id=assignment_id,
             student_id=current_user.id,
-            image_url=image_url,
         )
+        image_url = await save_file(file, submission.id)
+        await set_submission_image_url(session, submission.id, image_url)
         java_code = """
         public class Main {
         public static void main(String[] args) {

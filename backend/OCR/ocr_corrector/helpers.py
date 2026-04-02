@@ -12,7 +12,7 @@ functions that jobs.py orchestrates.
 
 import logging
 from decimal import Decimal
-from pathlib import Path
+from io import BytesIO
 
 from azure.ai.formrecognizer import (
     AnalysisFeature,
@@ -21,7 +21,7 @@ from azure.ai.formrecognizer import (
 from azure.core.credentials import AzureKeyCredential
 from google import genai
 from google.genai import types
-from settings import settings
+from settings import s3_client, settings
 
 from .prompts import build_user_input, get_system_prompt
 from .schemas import LLMUncertainWord, OCRFlag, OCRLine, OCRWord
@@ -36,6 +36,11 @@ _llm_client: genai.Client | None = None
 
 
 # ── Azure OCR ────────────────────────────────────────────────────
+
+
+def _get_file(key: str) -> bytes:
+    response = s3_client.get_object(Bucket=settings.s3_bucket, Key=key)
+    return response["Body"].read()
 
 
 def _build_ocr_client() -> DocumentAnalysisClient:
@@ -55,7 +60,7 @@ def extract_words(image_path: str) -> list[OCRLine]:
     Parameters
     ----------
     image_path : str
-        Path to the image file (JPEG, PNG, TIFF, or PDF).
+        S3 object key (e.g. ``submissions/{id}/{filename}``) when using cloud storage.
 
     Returns
     -------
@@ -65,19 +70,19 @@ def extract_words(image_path: str) -> list[OCRLine]:
     Raises
     ------
     FileNotFoundError
-        If the image file does not exist.
+        If the object is missing or empty in storage.
     """
-    path = Path(image_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Image not found: {path}")
+    data = _get_file(image_path)
+    if not data:
+        raise FileNotFoundError(f"Image not found or empty: {image_path}")
 
     logger.info(
         "Analyzing '%s' with Azure high-res layout...",
-        path.name,
+        image_path,
     )
     client = _build_ocr_client()
 
-    with open(path, "rb") as f:
+    with BytesIO(data) as f:
         poller = client.begin_analyze_document(
             "prebuilt-layout",
             document=f,
@@ -110,7 +115,7 @@ def extract_words(image_path: str) -> list[OCRLine]:
     logger.info(
         "Extracted %d lines from '%s'.",
         len(lines),
-        path.name,
+        image_path,
     )
     return lines
 
