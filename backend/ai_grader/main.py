@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from redis.asyncio import Redis
-
 from settings import settings
+
 from .config import Settings, configure_logging, load_settings
 from .llm_client import LLMAPIError, LLMClient
 from .parser_validator import (
