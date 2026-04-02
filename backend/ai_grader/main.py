@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from redis.asyncio import Redis
 
+from settings import settings
 from .config import Settings, configure_logging, load_settings
 from .llm_client import LLMAPIError, LLMClient
 from .parser_validator import (
@@ -29,6 +30,8 @@ Queue-first AI grader worker that mirrors sandbox worker methodology:
 """
 
 logger = logging.getLogger(__name__)
+
+AI_GRADING_QUEUE = f"{settings.queue_namespace}:{settings.ai_grading_queue}"
 
 
 class AIGraderJobRequest(BaseModel):
@@ -309,7 +312,7 @@ async def main_loop(
     process_id: int = 0,
     once: bool = False,
 ) -> None:
-    queue_name = settings.ready_queue_name
+    queue_name = AI_GRADING_QUEUE
     processing_queue = f"{queue_name}:processing"
     processed_count = 0
 
@@ -389,7 +392,7 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
 
     logger.info(
         "AI Grader worker started. queue=%s redis=%s",
-        settings.ready_queue_name,
+        AI_GRADING_QUEUE,
         settings.redis_url,
     )
 

@@ -11,7 +11,7 @@ from db.crud.submissions import (
     update_submission_state,
 )
 from db.models import SubmissionState, UserRole
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from schemas import SubmissionBase, TestCase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,8 +30,8 @@ router = APIRouter()
 
 @router.post("/", response_model=SubmissionBase)
 async def submit_answer(
-    question_id: int,
-    assignment_id: int,
+    question_id: int = Form(),
+    assignment_id: int = Form(),
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.student)),

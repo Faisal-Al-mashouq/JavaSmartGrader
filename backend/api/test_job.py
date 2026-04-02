@@ -105,17 +105,16 @@ async def main() -> None:
         if enroll.status_code not in (200, 201, 409):
             enroll.raise_for_status()
 
-        file = BytesIO(get_file(IMAGE_KEY))
+        file_obj = BytesIO(get_file(IMAGE_KEY))
 
         resp = await client.post(
             "/submissions/",
-            params={
-                "question_id": question_id,
-                "assignment_id": assignment_id,
-                "file": file,
+            data={
+                "question_id": str(question_id),
+                "assignment_id": str(assignment_id),
             },
             headers={"Authorization": f"Bearer {student_token}"},
-            files={"file": file},
+            files={"file": ("submission.png", file_obj, "image/png")},
         )
         resp.raise_for_status()
         print("Submission created:", resp.json()["id"])

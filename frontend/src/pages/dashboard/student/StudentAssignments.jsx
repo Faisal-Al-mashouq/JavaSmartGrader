@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { getApiErrorMessage } from "../../../services/api";
 import { submitAnswer } from "../../../services/submissionService";
 import {
   getAssignmentQuestions,
@@ -390,12 +391,10 @@ function QuestionSubmit({ assignmentId, questionId }) {
     setStage("submitting");
     setErrorMsg("");
     try {
-      await submitAnswer(questionId, assignmentId);
+      await submitAnswer(questionId, assignmentId, file);
       setStage("done");
     } catch (err) {
-      setErrorMsg(
-        err.response?.data?.detail ?? "Submission failed. Try again.",
-      );
+      setErrorMsg(getApiErrorMessage(err, "Submission failed. Try again."));
       setStage("error");
     }
   };

@@ -5,6 +5,7 @@ import {
   useSearchParams,
   Link,
 } from "react-router-dom";
+import { getApiErrorMessage } from "../../../services/api";
 import { submitAnswer } from "../../../services/submissionService";
 import {
   getAssignment,
@@ -142,7 +143,7 @@ export default function StudentUpload() {
       setStage("done");
     } catch (err) {
       setErrorMsg(
-        err.response?.data?.detail ?? "Submission failed. Please try again.",
+        getApiErrorMessage(err, "Submission failed. Please try again."),
       );
       setStage("error");
     }

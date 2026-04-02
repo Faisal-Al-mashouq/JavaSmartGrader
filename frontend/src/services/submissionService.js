@@ -16,7 +16,6 @@ export const submitAnswer = (questionId, assignmentId, file) => {
   form.append("question_id", String(questionId));
   form.append("assignment_id", String(assignmentId));
   form.append("file", file);
-  return api.post("/submissions/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  // Let the browser set multipart boundary; a bare "multipart/form-data" header breaks uploads.
+  return api.post("/submissions/", form);
 };
