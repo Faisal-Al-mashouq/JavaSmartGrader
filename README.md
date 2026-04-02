@@ -24,6 +24,7 @@ JavaSmartGrader/
 - Redis
 - PostgreSQL
 - Docker (required for Java sandbox execution)
+- Object storage: S3-compatible bucket (e.g. MinIO locally) for student submission images; see `backend/.env.example`
 
 ### 1) Backend
 
@@ -34,6 +35,8 @@ uv run task all
 ```
 
 API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+End-to-end API scripting example (auth, assignment, multipart submission): `backend/api/test_job.py` (`uv run python -m api.test_job` from `backend/` with services running).
 
 ### 2) Frontend
 
@@ -51,8 +54,10 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 - Core keys commonly needed:
   - `DATABASE_URL` / `ASYNC_DATABASE_URL`
   - `REDIS_ENDPOINT`
+  - `QUEUE_NAMESPACE` (default `jsg.v1`) and `AI_GRADING_QUEUE` (default `AIGradingJobQueue`)
   - `JWT_SECRET_KEY`
-  - provider keys (OpenAI, Anthropic, Gemini, etc.) when grading/OCR flows require them
+  - `S3_*` / `STORAGE_BACKEND` for uploads (API stores object keys on submissions; OCR reads images from the bucket)
+  - Provider keys (`API_AZURE`, `API_GEMINI`, OpenAI, etc.) when grading/OCR flows require them
 
 ## Documentation Index
 
@@ -61,6 +66,7 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 - Database + migrations: `backend/db/README.md`
 - Alembic usage: `backend/db/alembic/README.md`
 - Sandbox worker: `backend/sandbox/README.md`
+- AI grader worker: `backend/ai_grader/README.md`
 - OCR pipeline: `backend/ocr/README.md`
 - Frontend: `frontend/README.md`
 - LLM benchmark dataset: `dataset/LLM/Test/README.md`
@@ -69,7 +75,7 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 
 1. Create a branch from `main`.
 2. Run relevant checks before pushing:
-   - backend: `cd backend && uv run task lint`
+   - backend / formatting: `cd backend && uv run task lint` (formats from repo root per `pyproject.toml`)
    - frontend: `cd frontend && npm test`
 3. Open a pull request with a short test plan.
 

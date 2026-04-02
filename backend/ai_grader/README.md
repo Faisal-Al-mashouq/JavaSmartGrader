@@ -130,10 +130,16 @@ Notes:
 
 ## How to Run Locally
 
-From repo root (with `backend` on `PYTHONPATH` or from `backend`):
+From `backend/`:
 
 ```bash
-python -m ai_grader.main
+uv run task ai_grader
+```
+
+Or:
+
+```bash
+uv run python -m ai_grader.main
 ```
 
 On startup, `main` loads settings, opens a Redis client, constructs the LLM client, and runs `main_loop` until interrupted.

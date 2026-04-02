@@ -9,10 +9,10 @@ A two-stage pipeline that corrects OCR misreads in handwritten Java exam submiss
 ## Project Structure
 
 ```
-backend/OCR/
+backend/ocr/
 ├── main.py                        # Entry point — starts the async worker
-├── requirements.txt               # Python dependencies
-├── .env.template                  # API key template
+├── requirements.txt               # Optional legacy standalone deps
+├── .env.template                  # API key template (optional)
 └── ocr_corrector/
     ├── __init__.py                # Package docstring
     ├── ocr_worker.py              # Async Redis worker — job lifecycle
@@ -47,27 +47,31 @@ API layer pushes job JSON
 
 ## Setup
 
-```bash
-# From backend/OCR
-pip install -r requirements.txt
+Prefer running from **`backend/`** with `uv sync` so dependencies match the rest of the stack. A legacy `requirements.txt` under `backend/OCR/` may exist for standalone use.
 
-# Copy the env template and fill in your keys
-cp .env.template .env
-```
+The OCR worker loads **`backend/settings.py`**. Document Intelligence reads submission images from the configured **S3 bucket** using the `image_path` field on each job, which must be an **object key** (for example `submissions/42/page.png`), not a local filesystem path.
 
-The OCR component reads from the **shared** `backend/settings.py`. The required fields already exist — no new fields needed. Add these to your `backend/.env`:
+Add or confirm these keys in `backend/.env`:
 
 ```
 API_AZURE=your_azure_document_intelligence_key
 AZURE_OCR_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
 API_GEMINI=your_google_gemini_api_key
+
+# Same object storage as the API (see backend/.env.example)
+S3_BUCKET=submissions-local
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+S3_ENDPOINT_URL=http://localhost:9000
 ```
 
 ## Running
 
 ```bash
-# From backend/OCR
-python main.py
+# From backend/ (recommended)
+uv run task ocr
+
+# Or: python -m ocr.main
 ```
 
 The worker starts N concurrent coroutines (configured by `MAX_CONCURRENCY`) and blocks waiting for jobs.
@@ -104,9 +108,9 @@ The worker starts N concurrent coroutines (configured by `MAX_CONCURRENCY`) and 
 ## Testing
 
 ```bash
-# Run unit tests
-python -m pytest ocr_corrector/tests.py -v
+# From backend/
+uv run pytest ocr/ocr_corrector/tests.py -v
 
 # Push live test jobs to Redis
-python -m ocr_corrector.test_jobs
+uv run python -m ocr.ocr_corrector.test_jobs
 ```

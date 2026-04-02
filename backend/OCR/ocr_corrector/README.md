@@ -44,16 +44,16 @@ MAX_CONCURRENCY=5
 
 ## Running
 
-Start the worker (from `backend/OCR/`):
+Start the worker (from `backend/`):
 
 ```bash
-python main.py
+uv run task ocr
 ```
 
 Push test jobs to the queue:
 
 ```bash
-python -m ocr_corrector.test_jobs
+uv run python -m ocr.ocr_corrector.test_jobs
 ```
 
 ## Module Structure
@@ -77,13 +77,14 @@ Push a JSON string to the `jsg.v1:OCRJobQueue` Redis list:
 ```json
 {
     "job_id": "uuid",
-    "image_path": "/uploads/exam_001.jpg",
-    "submission_id": "uuid-or-null",
+    "image_path": "submissions/123/handwriting.png",
+    "submission_id": 123,
     "transcription_id": 42
 }
 ```
 
-- `transcription_id` is the FK to the existing transcription record — the API layer needs it to call `create_confidence_flag()`
+- `image_path` is an **S3 object key** in the configured bucket (same convention as `POST /submissions/` uploads).
+- `transcription_id` is the FK to the existing transcription record — downstream persistence uses it when writing `ConfidenceFlag` rows.
 
 ## Flag Detection
 
@@ -100,10 +101,10 @@ Each `OCRFlag` in the job result maps directly to the existing `ConfidenceFlag` 
 
 ## API Layer Integration
 
-When the API route consumes an OCR job result from Redis, persist any flags using the existing CRUD:
+When pipeline code consumes an OCR job result from Redis, persist any flags using the existing CRUD (as in `core/process/ocr.py`):
 
 ```python
-from api.crud.confidence_flags import create_confidence_flag
+from db.crud.confidence_flags import create_confidence_flag
 
 # After reading OCRJobResult from Redis:
 if result.result and result.result.flag_result:
