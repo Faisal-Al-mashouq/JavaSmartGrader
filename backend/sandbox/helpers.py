@@ -81,7 +81,6 @@ async def docker_build_images():
 def _extract_class_name(java_code: str) -> str:
     match = re.search(r"public\s+class\s+(\w+)", java_code)
     if not match:
-        logger.error("Could not find public class name in Java code")
         raise ValueError("Could not find public class name in Java code")
     class_name = match.group(1)
     logger.debug("Extracted class name: %s", class_name)

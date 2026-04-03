@@ -9,17 +9,17 @@ FROM base AS backend
 COPY . .
 RUN chmod +x /app/scripts/docker-db-init.sh
 ENTRYPOINT ["/app/scripts/docker-db-init.sh"]
-CMD ["uv", "run", "task", "prod"]
+CMD ["uv", "run", "task", "dev"]
 
 FROM base AS ocr
 COPY . .
-CMD ["uv", "run", "python", "-m", "ocr.main"]
+CMD ["uv", "run", "task", "ocr"]
 
 FROM base AS sandbox
 RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
 COPY . .
-CMD ["uv", "run", "python", "-m", "sandbox.sandbox_worker"]
+CMD ["uv", "run", "task", "sandbox"]
 
 FROM base AS ai_grader
 COPY . .
-CMD ["uv", "run", "python", "-m", "ai_grader.main"]
+CMD ["uv", "run", "task", "grader"]
