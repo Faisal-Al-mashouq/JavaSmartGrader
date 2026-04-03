@@ -1,0 +1,62 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=jsg_user
+      - POSTGRES_PASSWORD=jsg_secure_password
+      - POSTGRES_DB=jsg_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      target: backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://jsg_user:jsg_secure_password@postgres:5432/jsg_db
+      ASYNC_DATABASE_URL: postgresql+asyncpg://jsg_user:jsg_secure_password@postgres:5432/jsg_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - postgres
+
+  ocr:
+    build:
+      context: ./backend
+      target: ocr
+    env_file: ./backend/.env
+    depends_on:
+      - redis
+
+  sandbox:
+    build:
+      context: ./backend
+      target: sandbox
+    env_file: ./backend/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SANDBOX_HOST_TMP_PATH}:/app/sandbox/tmp
+    environment:
+      - SANDBOX_HOST_TMP_PATH=${SANDBOX_HOST_TMP_PATH}
+    depends_on:
+        - redis
+
+  ai_grader:
+    build:
+      context: ./backend
+      target: ai_grader
+    env_file: ./backend/.env
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:

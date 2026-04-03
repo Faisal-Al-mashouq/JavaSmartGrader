@@ -163,6 +163,7 @@ dependencies = [
     { name = "greenlet" },
     { name = "httpx" },
     { name = "opencv-python" },
+    { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pytest" },
@@ -179,7 +180,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "psycopg2-binary" },
     { name = "ruff" },
 ]
 
@@ -197,6 +197,7 @@ requires-dist = [
     { name = "greenlet", specifier = ">=3.3.2" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "opencv-python", specifier = ">=4.13.0.92" },
+    { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "pytest", specifier = ">=9.0.2" },
@@ -213,7 +214,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=26.1.0" },
-    { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "ruff", specifier = ">=0.15.1" },
 ]
 

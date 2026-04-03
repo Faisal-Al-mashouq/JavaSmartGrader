@@ -1,6 +1,7 @@
 import logging
 
 from .helpers import (
+    SANDBOX_HOST_TMP_PATH,
     SANDBOX_TMP_DIR,
     _create_workspace,
     _extract_class_name,
@@ -35,7 +36,7 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
             "run",
             "--rm",
             "-v",
-            f"{workspace}:/workspace",
+            f"{SANDBOX_HOST_TMP_PATH / workspace.name}:/workspace",
             "--memory=256m",
             "--network=none",
             "--pids-limit=50",

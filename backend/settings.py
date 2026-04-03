@@ -9,7 +9,7 @@ ENV_FILE = Path(__file__).resolve().parent / ".env"
 
 class Settings(BaseSettings):
     log_level: str = "INFO"
-    app_env: Literal["local", "dev", "prod", "all"] = "local"
+    app_env: Literal["local", "dev", "prod"] = "local"
 
     redis_endpoint: str = "redis://redis:6379"
     queue_namespace: str = "jsg.v1"
@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     api_key: str = ""
     model: str = ""
 
+    sandbox_host_tmp_path: str = ""
+
     model_config = {
         "env_file": ENV_FILE,
         "env_file_encoding": "utf-8",
@@ -65,7 +67,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if settings.app_env == "dev" or settings.app_env == "prod" or settings.app_env == "all":
+if settings.app_env == "dev" or settings.app_env == "prod":
     s3_client = boto3.client(
         "s3",
         endpoint_url=settings.s3_endpoint_url,

@@ -16,26 +16,11 @@ from .grading import (
     GradeBase,
     TranscriptionBase,
 )
-from .jobs import (
-    FinalResult,
-    GraderPayload,
-    GraderResult,
-    Job,
-    JobRequest,
-    JobRequestPayload,
-    JobResultPayload,
-    JobStatus,
-    JobType,
-    OCRPayload,
-    OCRResult,
-    SandboxPayload,
-    SandboxResult,
-    TestCase,
-)
 from .questions import (
     QuestionBase,
     TestcaseBase,
 )
+from .shared import JobStatus, TestCase
 from .submissions import (
     SubmissionBase,
 )
@@ -75,3 +60,30 @@ __all__ = [
     "JobRequestPayload",
     "JobResultPayload",
 ]
+
+_JOB_ATTRS = {
+    "Job",
+    "JobRequest",
+    "JobRequestPayload",
+    "JobResultPayload",
+    "JobType",
+    "OCRPayload",
+    "OCRResult",
+    "SandboxPayload",
+    "SandboxResult",
+    "GraderPayload",
+    "GraderResult",
+    "FinalResult",
+}
+
+
+def __getattr__(name: str):
+    if name in _JOB_ATTRS:
+        from . import jobs as _jobs
+
+        return getattr(_jobs, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(list(globals().keys()) + list(_JOB_ATTRS))

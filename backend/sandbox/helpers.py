@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -10,6 +11,7 @@ from pathlib import Path
 SANDBOX_DIR = Path(__file__).parent
 SANDBOX_DOCKER_DIR = SANDBOX_DIR / "docker"
 SANDBOX_TMP_DIR = SANDBOX_DIR / "tmp"
+SANDBOX_HOST_TMP_PATH = Path(os.getenv("SANDBOX_HOST_TMP_PATH", str(SANDBOX_TMP_DIR)))
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +138,7 @@ async def _run_execution_container(
             "run",
             "--rm",
             "-v",
-            f"{workspace}:/workspace",
+            f"{SANDBOX_HOST_TMP_PATH / workspace.name}:/workspace",
             "--memory=256m",
             "--network=none",
             "--pids-limit=50",
