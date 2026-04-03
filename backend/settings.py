@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_env: Literal["local", "dev", "prod"] = "local"
     log_level: str = "INFO"
     fastapi_port: int = 8000
-    jwt_secret_key: str = "your-super-secret-jwt-key"
+    jwt_secret_key: str = ""
 
     database_url: str = "postgresql://postgres:postgres@localhost:5432/postgres"
     async_database_url: str = (
@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     main_max_concurrency: int = 5
 
     azure_ocr_endpoint: str = "https://gpfirsttrydoc.cognitiveservices.azure.com/"
-    api_azure: str = "API_AZURE"
-    api_google_vision: str = "API_GOOGLE_VISION"
+    api_azure: str = ""
+    api_gemini: str = ""
     ocr_queue: str = "OCRJobQueue"
     ocr_max_concurrency: int = 5
 
@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     sandbox_max_concurrency: int = 5
 
     ai_grading_queue: str = "AIGradingJobQueue"
-    api_key: str = "API_KEY"
-    model: str = "MODEL"
+    openai_api_key: str = ""
+    openai_model: str = ""
     ai_grading_max_concurrency: int = 5
 
     storage_backend: str = "s3"
@@ -52,23 +52,6 @@ class Settings(BaseSettings):
     s3_secret_key: str = ""
     s3_bucket: str = "java-smart-grader-bucket"
     s3_region: str = "us-east-1"
-
-    api_gemini: str = "API_GEMINI"
-    api_azure: str = "API_AZURE"
-    api_google_vision: str = "API_GOOGLE_VISION"
-    api_openai: str = "API_OPENAI"
-    api_groq: str = "API_GROQ"
-    api_claude: str = "API_CLAUDE"
-    api_deepseek: str = "API_DEEPSEEK"
-
-    anthropic_api_key: str = "ANTHROPIC_API_KEY"
-    openai_api_key: str = "OPENAI_API_KEY"
-    google_api_key: str = "GOOGLE_API_KEY"
-    groq_api_key: str = "GROQ_API_KEY"
-    mistral_api_key: str = "MISTRAL_API_KEY"
-    xai_api_key: str = "XAI_API_KEY"
-    deepseek_api_key: str = "DEEPSEEK_API_KEY"
-    dashscope_api_key: str = "DASHSCOPE_API_KEY"
 
     sandbox_host_tmp_path: str = ""
 
