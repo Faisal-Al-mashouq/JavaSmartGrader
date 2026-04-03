@@ -67,11 +67,10 @@ S3_ENDPOINT_URL=http://localhost:9000
 
 ## Running
 
-```bash
-# From backend/ (recommended)
-uv run task ocr
+From `backend/`:
 
-# Or: python -m ocr.main
+```bash
+uv run python -m ocr.main
 ```
 
 The worker starts N concurrent coroutines (configured by `MAX_CONCURRENCY`) and blocks waiting for jobs.

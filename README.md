@@ -31,12 +31,14 @@ JavaSmartGrader/
 ```bash
 cd backend
 uv sync
-uv run task all
+uv run task dev
 ```
+
+(`task local` and `task prod` are also defined in `backend/pyproject.toml`; see `backend/README.md`.)
 
 API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-End-to-end API scripting example (auth, assignment, multipart submission): `backend/api/test_job.py` (`uv run python -m api.test_job` from `backend/` with services running).
+**Tests:** from `backend/`, run the full suite with `uv run pytest`. Unit tests live in per-package `test.py` files; HTTP end-to-end tests are in `tests/test_submission.py` (marked `e2e`; requires API, DB, and S3). Skip e2e with `uv run pytest -m "not e2e"`. Details: `backend/README.md`.
 
 ### 2) Frontend
 
@@ -75,7 +77,7 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 
 1. Create a branch from `main`.
 2. Run relevant checks before pushing:
-   - backend / formatting: `cd backend && uv run task lint` (formats from repo root per `pyproject.toml`)
+   - backend: `cd backend && uv run task lint` (formats from repo root per `pyproject.toml`); `uv run pytest -m "not e2e"` for fast tests
    - frontend: `cd frontend && npm test`
 3. Open a pull request with a short test plan.
 

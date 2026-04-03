@@ -31,17 +31,17 @@ uv sync
 From `backend/`:
 
 ```bash
-# FastAPI with APP_ENV=dev (MinIO-friendly S3 client: custom endpoint)
+# FastAPI with APP_ENV=dev (MinIO-friendly S3 client: custom endpoint), LOG_LEVEL=DEBUG
 uv run task dev
 
 # FastAPI with APP_ENV=local (typical AWS-style S3 client without custom endpoint)
 uv run task local
 
-# FastAPI with APP_ENV=all (starts API + job queue + sandbox + OCR + AI grader workers)
-uv run task all
+# FastAPI with APP_ENV=prod
+uv run task prod
 ```
 
-`APP_ENV` is one of `local`, `dev`, `prod`, or `all` (`backend/settings.py`). Sandbox, OCR, and AI grader workers are started as asyncio tasks during API lifespan today; `main.py` still carries TODOs for splitting workers out in production.
+`APP_ENV` is one of `local`, `dev`, or `prod` (`backend/settings.py`). Sandbox, OCR, and AI grader workers are started as asyncio tasks during API lifespan in supported environments; `main.py` still carries TODOs for splitting workers out in production.
 
 API base URL: [http://localhost:8000](http://localhost:8000)  
 Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -82,23 +82,40 @@ backend/
 ├── ocr/               # OCR correction pipeline and worker
 ├── ai_grader/         # LLM grader Redis worker
 ├── schemas/           # Shared Pydantic schemas
-└── pyproject.toml     # Dependencies and task commands
+├── tests/             # Cross-cutting tests (e.g. HTTP e2e submission flow)
+└── pyproject.toml     # Dependencies, pytest options, and task commands
 ```
 
-## Helpful Commands
+## Tests
+
+From `backend/`:
+
+```bash
+# All discovered tests (per-package test.py, tests/test_*.py, etc.)
+uv run pytest
+
+# Exclude live HTTP e2e (tests/test_submission.py)
+uv run pytest -m "not e2e"
+
+# Only e2e (API must be up; DB + S3 as for normal dev)
+uv run pytest -m e2e
+```
+
+Pytest is configured in `pyproject.toml`: `pythonpath` includes `.`, `test.py` is an explicit test file pattern (alongside `test_*.py`), and `--import-mode=importlib` avoids import clashes when many packages define `test.py`. Optional: `E2E_API_BASE` overrides the default `http://localhost:8000` for e2e tests.
+
+Other commands:
 
 ```bash
 # Lint + format (black + ruff from repository root)
 uv run task lint
+```
 
-# Run sandbox worker only
-uv run task sandbox
+Run workers standalone (when not using the API lifespan) if needed:
 
-# Run OCR worker only
-uv run task ocr
-
-# Run AI grader worker only
-uv run task ai_grader
+```bash
+uv run python -m sandbox.sandbox_worker
+uv run python -m ocr.main
+uv run python -m ai_grader.main
 ```
 
 ## Component Docs

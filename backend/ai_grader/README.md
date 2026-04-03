@@ -25,10 +25,10 @@ The AI grader unit tests focus on core behavior across modules, with external se
 - **Orchestration**: single-repair flow, success and failure branches, completion payloads, log formatting, and `main_loop` / `run_worker` wiring.
 - **Queue adapter**: extraction of `submission_id`/`job_id` from multiple payload formats.
 
-Run tests locally:
+Run tests locally (from `backend/`):
 
 ```bash
-pytest backend/ai_grader/self_test.py
+uv run pytest ai_grader/test.py
 ```
 
 ## Worker Flow
@@ -133,12 +133,6 @@ Notes:
 From `backend/`:
 
 ```bash
-uv run task ai_grader
-```
-
-Or:
-
-```bash
 uv run python -m ai_grader.main
 ```
 
@@ -152,8 +146,10 @@ python -m ai_grader.main --once
 
 ## Tests
 
+From `backend/`:
+
 ```bash
-pytest backend/ai_grader/self_test.py
+uv run pytest ai_grader/test.py
 ```
 
 ## Integration Notes

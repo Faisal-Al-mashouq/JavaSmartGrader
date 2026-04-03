@@ -47,7 +47,7 @@ MAX_CONCURRENCY=5
 Start the worker (from `backend/`):
 
 ```bash
-uv run task ocr
+uv run python -m ocr.main
 ```
 
 Push test jobs to the queue:

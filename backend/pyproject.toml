@@ -37,15 +37,17 @@ dev = [
     "ruff>=0.15.1",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+python_files = ["test_*.py", "test.py"]
+addopts = ["--import-mode=importlib"]
+markers = [
+    "e2e: exercises a live HTTP API (start backend and dependencies first)",
+]
+
 [tool.taskipy.tasks]
 lint = "cd .. && black . && ruff check --fix ."
 base = "uvicorn main:app --reload --log-level error"
-dev = "APP_ENV=dev LOG_LEVEL=DEBUG uv run task base"
-local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
-all_debug = "clear && APP_ENV=all LOG_LEVEL=DEBUG uv run task base"
-all = "APP_ENV=all LOG_LEVEL=INFO uv run task base"
-sandbox = "uv run -m sandbox.sandbox_worker"
-ocr = "uv run -m ocr.main"
-ai_grader = "uv run -m ai_grader.main"
-win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
-win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
+local = "env APP_ENV=local env LOG_LEVEL=INFO uv run task base"
+dev = "env APP_ENV=dev env LOG_LEVEL=DEBUG uv run task base"
+prod = "env APP_ENV=prod env LOG_LEVEL=INFO uv run task base"

@@ -50,22 +50,10 @@ docker build -f backend/sandbox/docker/Dockerfile.executer -t executer-image bac
 
 ## Running
 
-Start the worker (recommended, from `backend/`):
+Start the worker (from `backend/`):
 
 ```bash
-uv run task sandbox
-```
-
-Or directly:
-
-```bash
-python -m sandbox.sandbox_worker
-```
-
-Push test jobs to the queue (from `backend/`):
-
-```bash
-python -m sandbox.test_jobs
+uv run python -m sandbox.sandbox_worker
 ```
 Run docker containers via commands per {CLASS_NAME} (for testing):
 
@@ -86,7 +74,6 @@ The worker supports graceful shutdown via `Ctrl+C`.
 | `jobs.py` | Compile, execute, and test case evaluation logic |
 | `helpers.py` | Workspace management, Docker container commands |
 | `schemas.py` | Pydantic models for jobs, requests, and results |
-| `test_jobs.py` | Pushes sample jobs to Redis for testing |
 
 ## Job Payload Format
 
