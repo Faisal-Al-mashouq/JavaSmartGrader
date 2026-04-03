@@ -11,7 +11,7 @@ db/
 ├── alembic/      # Migration versions
 ├── alembic.ini   # Alembic config
 ├── session.py    # Async engine/session factory
-└── settings.py   # DB settings loader
+└── settings.py   # Re-exports shared `backend/settings.py` (`settings`)
 ```
 
 ## Core Entities
@@ -21,7 +21,7 @@ db/
 - `Assignment`
 - `Question` (composite key with assignment scope)
 - `Testcase`
-- `Submission`
+- `Submission` (handwritten image stored as an S3 object key in `image_url` after API upload)
 - `CompileResult`
 - `Transcription`
 - `ConfidenceFlag`

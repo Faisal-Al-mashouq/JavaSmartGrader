@@ -29,6 +29,7 @@ Development server: [http://localhost:3000](http://localhost:3000)
 - API client is configured in `src/services/api.js`
 - Default backend base URL: `http://localhost:8000`
 - Make sure backend is running (`cd backend && uv run task local`)
+- Student submission uploads use **multipart/form-data** (`question_id`, `assignment_id`, `file`) to `POST /submissions/`; see `src/services/submissionService.js` and dashboard upload pages.
 
 ## Tech Stack
 

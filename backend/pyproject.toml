@@ -9,6 +9,8 @@ dependencies = [
     "asyncpg>=0.31.0",
     "azure-ai-formrecognizer>=3.3.3",
     "bcrypt>=5.0.0",
+    "boto3>=1.42.81",
+    "botocore[crt]>=1.42.81",
     "docker>=7.1.0",
     "fastapi>=0.133.1",
     "google-genai>=1.63.0",
@@ -36,7 +38,7 @@ dev = [
 ]
 
 [tool.taskipy.tasks]
-lint = "black . && ruff check --fix ."
+lint = "cd .. && black . && ruff check --fix ."
 base = "uvicorn main:app --reload --log-level error"
 dev = "APP_ENV=dev LOG_LEVEL=DEBUG uv run task base"
 local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
@@ -47,7 +49,3 @@ ocr = "uv run -m ocr.main"
 ai_grader = "uv run -m ai_grader.main"
 win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
 win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
-
-[tool.black]
-target-version = ["py312"]
-line-length = 88

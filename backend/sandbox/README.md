@@ -1,6 +1,6 @@
 # Sandbox Worker
 
-Async service that compiles and executes Java code submissions in isolated Docker containers, with test case evaluation. Jobs are consumed from a Redis queue.
+Async service that compiles and executes Java code submissions in isolated Docker containers, with test case evaluation. Jobs are consumed from a Redis queue using the same **namespace** pattern as OCR and the AI grader (`QUEUE_NAMESPACE` in `backend/settings.py`).
 
 ## Architecture
 

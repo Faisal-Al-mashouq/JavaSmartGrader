@@ -72,6 +72,19 @@ async def update_submission_state(
     return await get_submission_by_id(session, submission_id)
 
 
+async def set_submission_image_url(
+    session: AsyncSession, submission_id: int, image_url: str
+) -> Submission | None:
+    logger.debug("Setting submission %d image url to %s", submission_id, image_url)
+    await session.execute(
+        update(Submission)
+        .where(Submission.id == submission_id)
+        .values(image_url=image_url)
+    )
+    await session.commit()
+    return await get_submission_by_id(session, submission_id)
+
+
 async def update_submission(
     session: AsyncSession, submission_id: int, **fields
 ) -> Submission | None:

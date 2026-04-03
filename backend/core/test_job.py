@@ -12,7 +12,7 @@ job = JobRequest(
     question_id=1,
     assignment_id=1,
     student_id=1,
-    image_url="https://drive.google.com/drive/u/1/folders/11QxXcx-24xeJY3dl_-Z0mY7CuSX4TshW",
+    image_url="page_105.png",
     java_code="""
     public class Main {
     public static void main(String[] args) {

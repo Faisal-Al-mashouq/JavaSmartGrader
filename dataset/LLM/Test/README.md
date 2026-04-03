@@ -2,6 +2,8 @@
 
 Benchmarks 17 LLM providers on their ability to accurately grade OCR'd handwritten Java student code using [promptfoo](https://promptfoo.dev/).
 
+For the **production** grading path (Redis queue, OpenAI-compatible endpoint, persistence in the main app), see `backend/ai_grader/README.md` and `backend/core/process/grader.py`.
+
 ## Overview
 
 The system prompt instructs each LLM to act as a Java programming instructor. Given a question and an OCR'd student submission, the LLM must:

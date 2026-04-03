@@ -18,11 +18,12 @@ Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs
 |------|----------------|
 | `auth.py` | JWT creation/verification and role guards |
 | `dependencies.py` | Shared dependencies (DB session, auth helpers) |
+| `s3.py` | Upload submissions to S3-compatible storage; helpers for keys and public-style URLs |
 | `routes/users.py` | Registration, login, user profile endpoints |
 | `routes/courses.py` | Course CRUD and enrollment flows |
 | `routes/assignments.py` | Assignment CRUD |
 | `routes/questions.py` | Question + testcase endpoints under assignments |
-| `routes/submissions.py` | Submission creation and retrieval |
+| `routes/submissions.py` | Submission creation (multipart: `question_id`, `assignment_id`, `file`) and retrieval |
 | `routes/grading.py` | Compile/OCR/AI feedback + final grade endpoints |
 | `routes/confidence_flags.py` | OCR confidence flag endpoints |
 | `routes/generate_report.py` | Assignment report endpoints |
@@ -53,4 +54,5 @@ Authorization: Bearer <token>
 ## Notes
 
 - The OpenAPI spec in `/docs` is the source of truth for request/response schemas.
-- Lifespan startup in `backend/main.py` also starts the queue orchestrator (`core/job_queue.py`), so submission flows can trigger downstream workers.
+- `POST /submissions/` expects **multipart/form-data**: form fields `question_id` and `assignment_id` (ints as strings) plus a required file part `file`. The API uploads to the configured bucket and persists the **object key** (e.g. `submissions/{submission_id}/{filename}`) in `Submission.image_url`.
+- Lifespan startup in `backend/main.py` starts the queue orchestrator (`core/job_queue.py`) and, for supported environments, sandbox, OCR, and AI grader worker tasks so submission flows can reach downstream workers.

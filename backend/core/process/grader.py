@@ -22,9 +22,9 @@ from ..config import JobQueue, logger
 
 _queue_prefix = f"{settings.queue_namespace}:"
 AI_GRADER_QUEUE = (
-    settings.ready_grading_queue
-    if settings.ready_grading_queue.startswith(_queue_prefix)
-    else f"{_queue_prefix}{settings.ready_grading_queue}"
+    settings.ai_grading_queue
+    if settings.ai_grading_queue.startswith(_queue_prefix)
+    else f"{_queue_prefix}{settings.ai_grading_queue}"
 )
 
 

@@ -3,8 +3,11 @@ Run: uv run python -m api.test_job
 """
 
 import asyncio
+from io import BytesIO
 
 from httpx import AsyncClient
+
+from api.s3 import get_file
 
 BASE = "http://localhost:8000"
 STUDENT = {
@@ -18,6 +21,7 @@ INSTRUCTOR = {
     "email": "inst@test.com",
 }
 RUBRIC = {"criteria": {"Correctness": {"weight": 100, "description": "Correct"}}}
+IMAGE_KEY = "submissions/30/page_105.png"
 
 
 async def main() -> None:
@@ -67,8 +71,8 @@ async def main() -> None:
             "/assignments/",
             params={
                 "course_id": course_id,
-                "title": "Test Assignment",
-                "description": "E2E",
+                "title": "Assignment 1",
+                "description": "Assignment 1 Description",
             },
             json=RUBRIC,
             headers=inst_headers,
@@ -78,7 +82,11 @@ async def main() -> None:
 
         question = await client.post(
             f"/assignments/{assignment_id}/questions/",
-            params={"question_text": "Print Hello World"},
+            params={
+                "question_text": """Make a simple vending machine program that takes in a number
+                of snacks and checks if there's enough stock. If there's not enough stock, print
+                an error message. The snack count is 10."""
+            },
             headers=inst_headers,
         )
         question.raise_for_status()
@@ -97,21 +105,16 @@ async def main() -> None:
         if enroll.status_code not in (200, 201, 409):
             enroll.raise_for_status()
 
+        file_obj = BytesIO(get_file(IMAGE_KEY))
+
         resp = await client.post(
             "/submissions/",
-            params={
-                "question_id": question_id,
-                "assignment_id": assignment_id,
-                "image_url": "https://drive.google.com/drive/u/1/folders/11QxXcx-24xeJY3dl_-Z0mY7CuSX4TshW",
-                "java_code": """
-                public class Main {
-                public static void main(String[] args) {
-                System.out.println("Hello, World!");
-                }
-                }
-                """,
+            data={
+                "question_id": str(question_id),
+                "assignment_id": str(assignment_id),
             },
             headers={"Authorization": f"Bearer {student_token}"},
+            files={"file": ("submission.png", file_obj, "image/png")},
         )
         resp.raise_for_status()
         print("Submission created:", resp.json()["id"])
