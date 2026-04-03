@@ -2,6 +2,8 @@
 
 Async PostgreSQL data layer built with SQLAlchemy 2.x and Alembic.
 
+For pytest usage (including DB-backed HTTP e2e), see the **Tests** section in `backend/README.md`.
+
 ## Layout
 
 ```text

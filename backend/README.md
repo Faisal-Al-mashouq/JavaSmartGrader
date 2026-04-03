@@ -19,6 +19,8 @@ Python 3.12 FastAPI backend for JavaSmartGrader, including:
 - Docker
 - S3-compatible storage (configure `S3_*` in `.env`; use `S3_ENDPOINT_URL` for MinIO in dev)
 
+Optional: from the repository root, `docker compose up` builds `backend/Dockerfile` targets and starts Redis, Postgres, the API, and worker services (see `docker-compose.yml`).
+
 ## Install
 
 ```bash
@@ -48,11 +50,7 @@ Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Settings
 
-Create `backend/.env` (loaded by `pydantic-settings`):
-
-```env
-env.example
-```
+Copy `backend/.env.example` to `backend/.env` and fill in secrets and endpoints. With `APP_ENV=local`, the app also loads `backend/.env.local` when present (see `settings.py`).
 
 See `settings.py` and `.env.example` for the full list of configurable values.
 
@@ -104,10 +102,12 @@ uv run python -m ocr.main
 uv run python -m ai_grader.main
 ```
 
+Equivalent `taskipy` shortcuts (set `APP_ENV` and `LOG_LEVEL` for you): `uv run task sandbox`, `uv run task ocr`, `uv run task grader` (see `[tool.taskipy.tasks]` in `pyproject.toml`).
+
 ## Component Docs
 
 - API: `api/README.md`
 - Database: `db/README.md`
 - Sandbox worker: `sandbox/README.md`
 - AI grader worker: `ai_grader/README.md`
-- OCR pipeline: `ocr/README.md`
+- OCR pipeline: `ocr/README.md` (worker internals: `ocr/ocr_corrector/README.md`)

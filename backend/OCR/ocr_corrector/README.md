@@ -5,7 +5,7 @@ Async service that extracts and corrects handwritten Java code from exam images 
 ## Architecture
 
 ```
-Redis Queue (`jsg.v1:OCRJobQueue`)
+Redis Queue (`{QUEUE_NAMESPACE}:{OCR_QUEUE}` — defaults to `jsg.v1:OCRJobQueue`)
         │
         ▼
   OCR Worker (async, N concurrent coroutines)
@@ -15,7 +15,7 @@ Redis Queue (`jsg.v1:OCRJobQueue`)
         └── 3. Flag Detect   →  Uncertain words → ConfidenceFlag records
         │
         ▼
-  Result pushed to `jsg.v1:OCRJobQueue:completed:{job_id}` (TTL 1h)
+  Result pushed to `{QUEUE_NAMESPACE}:{OCR_QUEUE}:completed:{job_id}` (TTL 1h)
   API layer persists flags via create_confidence_flag()
 ```
 
@@ -34,11 +34,12 @@ Add these to your shared `backend/.env`:
 API_AZURE=your_azure_document_intelligence_key
 AZURE_OCR_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
 API_GEMINI=your_google_gemini_api_key
-# GEMINI_MODEL=gemini-3.1-flash-preview  (optional override)
+# GEMINI_MODEL=gemini-3.1-flash-lite-preview  (optional override)
+OCR_QUEUE=OCRJobQueue
 OCR_MAX_CONCURRENCY=5
 
 # Shared with sandbox:
-REDIS_ENDPOINT=redis://localhost:6379/0
+REDIS_ENDPOINT=redis://localhost:6379
 QUEUE_NAMESPACE=jsg.v1
 ```
 
@@ -72,7 +73,7 @@ uv run python -m ocr.ocr_corrector.test_jobs
 
 ## Job Payload Format
 
-Push a JSON string to the `jsg.v1:OCRJobQueue` Redis list:
+Push a JSON string to the `{QUEUE_NAMESPACE}:{OCR_QUEUE}` Redis list (default `jsg.v1:OCRJobQueue`):
 
 ```json
 {
@@ -125,7 +126,7 @@ No new DB models or migrations needed — flags flow directly into the existing 
 
 | Aspect | Sandbox | OCR Corrector |
 |--------|---------|---------------|
-| Queue | `jsg.v1:SandboxJobQueue` | `jsg.v1:OCRJobQueue` |
+| Queue | `{QUEUE_NAMESPACE}:{SANDBOX_QUEUE}` | `{QUEUE_NAMESPACE}:{OCR_QUEUE}` |
 | Worker | `sandbox_worker.py` | `ocr_worker.py` |
 | Steps | Compile → Execute → Test | OCR → LLM Correct → Flag |
 | Schemas | Pydantic (`SandboxJob`) | Pydantic (`OCRJob`) |

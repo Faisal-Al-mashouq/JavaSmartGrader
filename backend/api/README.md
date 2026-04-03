@@ -7,7 +7,9 @@ FastAPI route layer for JavaSmartGrader.
 From `backend/`:
 
 ```bash
-uv run task local
+uv run task dev    # APP_ENV=dev — common for local MinIO / custom S3 endpoint
+# or
+uv run task local  # APP_ENV=local — typical AWS S3 without custom endpoint
 ```
 
 Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).

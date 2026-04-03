@@ -73,7 +73,7 @@ From `backend/`:
 uv run python -m ocr.main
 ```
 
-The worker starts N concurrent coroutines (configured by `MAX_CONCURRENCY`) and blocks waiting for jobs.
+The worker starts N concurrent coroutines (configured by `OCR_MAX_CONCURRENCY`) and blocks waiting for jobs.
 
 ## Environment Variables
 
@@ -82,10 +82,11 @@ The worker starts N concurrent coroutines (configured by `MAX_CONCURRENCY`) and 
 | `API_AZURE` | Yes | — | Azure Document Intelligence key |
 | `AZURE_OCR_ENDPOINT` | Yes | — | Azure endpoint URL |
 | `API_GEMINI` | Yes | — | Google Gemini API key |
-| `GEMINI_MODEL` | No | `gemini-3.1-flash-preview` | Gemini model to use |
-| `REDIS_ENDPOINT` | No | `redis://localhost:6379/0` | Redis connection URL |
+| `GEMINI_MODEL` | No | `gemini-3.1-flash-lite-preview` | Gemini model to use |
+| `REDIS_ENDPOINT` | No | `redis://localhost:6379` | Redis connection URL |
 | `QUEUE_NAMESPACE` | No | `jsg.v1` | Redis key prefix |
-| `MAX_CONCURRENCY` | No | `5` | Number of parallel worker coroutines |
+| `OCR_QUEUE` | No | `OCRJobQueue` | Base OCR queue name (effective queue: `{QUEUE_NAMESPACE}:{OCR_QUEUE}`) |
+| `OCR_MAX_CONCURRENCY` | No | `5` | Number of parallel worker coroutines |
 | `LOG_LEVEL` | No | `INFO` | Logging verbosity |
 
 ## How It Works

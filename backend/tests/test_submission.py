@@ -20,7 +20,12 @@ import pytest
 from api.s3 import get_file
 from db.models import SubmissionState
 
-RUBRIC = {"criteria": {"Correctness": {"weight": 100, "description": "Correct"}}}
+RUBRIC = {
+    "criteria": {
+        "Correctness": {"weight": 100, "description": "Correct"},
+        "Code Quality": {"weight": 100, "description": "Code Quality"},
+    }
+}
 QUESTION_TEXT = """Make a simple vending machine program that takes in a number
 of snacks and checks if there's enough stock. If there's not enough stock, print
 an error message. The snack count is 10."""

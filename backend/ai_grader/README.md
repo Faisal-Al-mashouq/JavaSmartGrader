@@ -118,6 +118,7 @@ Example failure:
 | `REDIS_URL` | No | `redis://redis:6379` | Fallback Redis URL when `REDIS_ENDPOINT` is unset |
 | `QUEUE_NAMESPACE` | No | `jsg.v1` | Prefix for queue names when the base name is not already prefixed |
 | `AI_GRADING_QUEUE` | No | `AIGradingJobQueue` | Base AI grading queue name |
+| `AI_GRADING_MAX_CONCURRENCY` | No | `5` | Parallel worker loops (`MAX_CONCURRENCY` also accepted) |
 | `QUEUE_POLL_TIMEOUT_S` | No | `0` | `BRPOPLPUSH` timeout (seconds) |
 | `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Used only if worker code references status helpers |
 | `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Same as above |
@@ -141,7 +142,7 @@ On startup, `main` loads settings, opens a Redis client, constructs the LLM clie
 Single-job mode:
 
 ```bash
-python -m ai_grader.main --once
+uv run python -m ai_grader.main --once
 ```
 
 ## Tests

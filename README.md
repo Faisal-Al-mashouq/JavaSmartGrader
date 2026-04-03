@@ -7,11 +7,10 @@ It combines a FastAPI backend, async Redis workers, Docker-based Java sandboxing
 
 ```text
 JavaSmartGrader/
-├── backend/       # FastAPI API, DB layer, queue orchestration, sandbox + OCR workers
-├── frontend/      # React app
-├── dataset/       # LLM evaluation datasets and promptfoo configs
-├── experiments/   # Experiment notes and outputs
-└── model/         # Model artifacts
+├── backend/          # FastAPI API, DB layer, queue orchestration, workers
+├── frontend/         # React app
+├── docker-compose.yml
+└── README.md         # This file — component docs live under backend/*/README.md
 ```
 
 ## Quick Start
@@ -23,7 +22,7 @@ JavaSmartGrader/
 - Node.js 18+
 - Redis
 - PostgreSQL
-- Docker (required for Java sandbox execution)
+- Docker (required for Java sandbox execution; optional Compose stack for Redis/Postgres/workers — see `docker-compose.yml` at the repo root)
 - Object storage: S3-compatible bucket (e.g. MinIO locally) for student submission images; see `backend/.env.example`
 
 ### 1) Backend
@@ -52,14 +51,15 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 
 ## Environment Notes
 
-- Backend settings are loaded from `backend/.env` via `pydantic-settings`.
+- Backend settings are loaded from `backend/.env` (or `backend/.env.local` when `APP_ENV=local`) via `pydantic-settings`; start from `backend/.env.example`.
 - Core keys commonly needed:
   - `DATABASE_URL` / `ASYNC_DATABASE_URL`
-  - `REDIS_ENDPOINT`
-  - `QUEUE_NAMESPACE` (default `jsg.v1`) and `AI_GRADING_QUEUE` (default `AIGradingJobQueue`)
+  - `REDIS_ENDPOINT`, `QUEUE_NAMESPACE` (default `jsg.v1`)
+  - Job queues: `MAIN_QUEUE`, `OCR_QUEUE`, `SANDBOX_QUEUE`, `AI_GRADING_QUEUE` (defaults match `backend/settings.py`)
+  - Per-pipeline concurrency: `MAIN_MAX_CONCURRENCY`, `OCR_MAX_CONCURRENCY`, `SANDBOX_MAX_CONCURRENCY`, `AI_GRADING_MAX_CONCURRENCY`
   - `JWT_SECRET_KEY`
   - `S3_*` / `STORAGE_BACKEND` for uploads (API stores object keys on submissions; OCR reads images from the bucket)
-  - Provider keys (`API_AZURE`, `API_GEMINI`, OpenAI, etc.) when grading/OCR flows require them
+  - Provider keys (`API_AZURE`, `API_GEMINI`, `API_KEY` / `MODEL` for the AI grader, etc.) when grading/OCR flows require them
 
 ## Documentation Index
 
@@ -69,9 +69,8 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
 - Alembic usage: `backend/db/alembic/README.md`
 - Sandbox worker: `backend/sandbox/README.md`
 - AI grader worker: `backend/ai_grader/README.md`
-- OCR pipeline: `backend/ocr/README.md`
+- OCR pipeline: `backend/ocr/README.md` (worker details: `backend/ocr/ocr_corrector/README.md`)
 - Frontend: `frontend/README.md`
-- LLM benchmark dataset: `dataset/LLM/Test/README.md`
 
 ## Contributing
 

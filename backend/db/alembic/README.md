@@ -1,6 +1,6 @@
 # Alembic Migrations
 
-This directory stores migration revisions for the backend PostgreSQL schema.
+This directory stores migration revisions for the backend PostgreSQL schema. Run Alembic from `backend/` so `alembic.ini` and imports resolve correctly (see commands below).
 
 ## Where revisions live
 
