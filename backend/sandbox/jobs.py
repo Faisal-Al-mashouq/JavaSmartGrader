@@ -1,6 +1,7 @@
 import logging
 
 from .helpers import (
+    SANDBOX_HOST_TMP_PATH,
     SANDBOX_TMP_DIR,
     _create_workspace,
     _extract_class_name,
@@ -23,7 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 async def compile_job(job: SandboxJob) -> SandboxJob | None:
-    class_name = _extract_class_name(job.request.java_code)
+    try:
+        class_name = _extract_class_name(job.request.java_code)
+    except ValueError as e:
+        job.result = SandboxResult(
+            compilation_result=CompilationJobResult(success=False, errors=[str(e)]),
+            execution_result=None,
+            test_cases_results=None,
+        )
+        return job
     workspace = _create_workspace(job.job_id)
 
     src_file = workspace / "src" / f"{class_name}.java"
@@ -35,7 +44,7 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
             "run",
             "--rm",
             "-v",
-            f"{workspace}:/workspace",
+            f"{SANDBOX_HOST_TMP_PATH / workspace.name}:/workspace",
             "--memory=256m",
             "--network=none",
             "--pids-limit=50",
@@ -53,7 +62,7 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
             execution_result=None,
             test_cases_results=None,
         )
-        return None
+        return job
 
     job.result = SandboxResult(
         compilation_result=CompilationJobResult(success=True, errors=None),
@@ -65,7 +74,13 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
 
 
 async def execute_job(job: SandboxJob) -> SandboxJob | None:
-    class_name = _extract_class_name(job.request.java_code)
+    try:
+        class_name = _extract_class_name(job.request.java_code)
+    except ValueError as e:
+        job.result.execution_result = ExecutionJobResult(
+            success=False, errors=[str(e)], outputs=[]
+        )
+        return job
     workspace = SANDBOX_TMP_DIR / str(job.job_id)
     input_file = workspace / "input" / "input.txt"
     test_cases = job.request.test_cases if job.request.test_cases else None
@@ -106,7 +121,7 @@ async def execute_job(job: SandboxJob) -> SandboxJob | None:
         job.result.execution_result = ExecutionJobResult(
             success=False, errors=errors, outputs=outputs
         )
-        return None
+        return job
 
     job.result.execution_result = ExecutionJobResult(
         success=True, errors=None, outputs=outputs

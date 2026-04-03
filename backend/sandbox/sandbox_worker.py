@@ -22,16 +22,16 @@ from .schemas import (
 
 setup_logging()
 logger = logging.getLogger(__name__)
-SANDBOX_QUEUE = f"{settings.queue_namespace}:SandboxJobQueue"
+SANDBOX_QUEUE = f"{settings.queue_namespace}:{settings.sandbox_queue}"
 
 
 class Sandbox:
     def __init__(
         self,
         redis_url: str = settings.redis_endpoint,
-        max_concurrency: int = settings.max_concurrency,
+        sandbox_max_concurrency: int = settings.sandbox_max_concurrency,
     ):
-        self.max_concurrency = max_concurrency
+        self.sandbox_max_concurrency = sandbox_max_concurrency
         self.redis_client = Redis.from_url(url=redis_url, decode_responses=True)
 
 
@@ -45,7 +45,7 @@ async def start():
         raise
     logger.info("Sandbox Worker started")
     await asyncio.gather(
-        *(main_loop(client, pid) for pid in range(client.max_concurrency))
+        *(main_loop(client, pid) for pid in range(client.sandbox_max_concurrency))
     )
 
 

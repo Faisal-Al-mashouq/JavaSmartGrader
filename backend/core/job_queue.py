@@ -15,7 +15,7 @@ from .process import (
 )
 
 logger = logging.getLogger(__name__)
-MAIN_QUEUE = f"{settings.queue_namespace}:MainJobQueue"
+MAIN_QUEUE = f"{settings.queue_namespace}:{settings.main_queue}"
 
 
 async def start():
@@ -27,7 +27,7 @@ async def start():
         raise
     logger.info("Job Queue Started Successfully")
     await asyncio.gather(
-        *(main_loop(client, pid) for pid in range(client.max_concurrency))
+        *(main_loop(client, pid) for pid in range(settings.main_max_concurrency))
     )
 
 

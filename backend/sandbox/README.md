@@ -5,7 +5,7 @@ Async service that compiles and executes Java code submissions in isolated Docke
 ## Architecture
 
 ```
-Redis Queue (`jsg.v1:SandboxJobQueue`)
+Redis Queue (`{QUEUE_NAMESPACE}:{SANDBOX_QUEUE}` — defaults to `jsg.v1:SandboxJobQueue`)
         │
         ▼
   Sandbox Worker (async, N concurrent coroutines)
@@ -15,7 +15,7 @@ Redis Queue (`jsg.v1:SandboxJobQueue`)
         └── 3. Evaluate  →  Compare actual vs expected output
         │
         ▼
-  Result pushed to `jsg.v1:SandboxJobQueue:completed:{job_id}`
+  Result pushed to `{QUEUE_NAMESPACE}:{SANDBOX_QUEUE}:completed:{job_id}`
 ```
 
 Each Docker container runs with:
@@ -32,12 +32,13 @@ Each Docker container runs with:
 
 ## Setup
 
-1. Create a `.env` file in `backend/sandbox/` (or `backend/`):
+1. Prefer a single `backend/.env` (see `backend/.env.example`). Minimum for the worker:
 
 ```
 REDIS_ENDPOINT="redis://<user>:<password>@localhost:6379"
 QUEUE_NAMESPACE="jsg.v1"
-MAX_CONCURRENCY=10
+SANDBOX_QUEUE="SandboxJobQueue"
+SANDBOX_MAX_CONCURRENCY=10
 ```
 
 2. Docker images are built automatically on worker startup. To build manually:
@@ -50,22 +51,10 @@ docker build -f backend/sandbox/docker/Dockerfile.executer -t executer-image bac
 
 ## Running
 
-Start the worker (recommended, from `backend/`):
+Start the worker (from `backend/`):
 
 ```bash
-uv run task sandbox
-```
-
-Or directly:
-
-```bash
-python -m sandbox.sandbox_worker
-```
-
-Push test jobs to the queue (from `backend/`):
-
-```bash
-python -m sandbox.test_jobs
+uv run python -m sandbox.sandbox_worker
 ```
 Run docker containers via commands per {CLASS_NAME} (for testing):
 
@@ -86,11 +75,10 @@ The worker supports graceful shutdown via `Ctrl+C`.
 | `jobs.py` | Compile, execute, and test case evaluation logic |
 | `helpers.py` | Workspace management, Docker container commands |
 | `schemas.py` | Pydantic models for jobs, requests, and results |
-| `test_jobs.py` | Pushes sample jobs to Redis for testing |
 
 ## Job Payload Format
 
-Push a JSON string to the `jsg.v1:SandboxJobQueue` Redis list:
+Push a JSON string to the `{QUEUE_NAMESPACE}:{SANDBOX_QUEUE}` Redis list (default `jsg.v1:SandboxJobQueue`):
 
 ```json
 {

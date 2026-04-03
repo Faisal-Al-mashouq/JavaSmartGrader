@@ -53,9 +53,9 @@ class AIGraderWorker:
         self,
         *,
         redis_url: str,
-        max_concurrency: int,
+        ai_grading_max_concurrency: int,
     ):
-        self.max_concurrency = max_concurrency
+        self.ai_grading_max_concurrency = ai_grading_max_concurrency
         self.redis_client = Redis.from_url(url=redis_url, decode_responses=True)
 
 
@@ -386,7 +386,7 @@ async def main_loop(
 async def run_worker(*, settings: Settings, once: bool = False) -> None:
     client = AIGraderWorker(
         redis_url=settings.redis_url,
-        max_concurrency=settings.max_concurrency,
+        ai_grading_max_concurrency=settings.ai_grading_max_concurrency,
     )
     llm_client = LLMClient(settings)
 
@@ -415,7 +415,7 @@ async def run_worker(*, settings: Settings, once: bool = False) -> None:
                     llm_client=llm_client,
                     process_id=pid,
                 )
-                for pid in range(client.max_concurrency)
+                for pid in range(client.ai_grading_max_concurrency)
             )
         )
     finally:
