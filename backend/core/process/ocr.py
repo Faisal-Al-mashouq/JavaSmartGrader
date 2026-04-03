@@ -17,7 +17,7 @@ from settings import settings
 
 from ..config import JobQueue, logger
 
-OCR_QUEUE = f"{settings.queue_namespace}:OCRJobQueue"
+OCR_QUEUE = f"{settings.queue_namespace}:{settings.ocr_queue}"
 
 
 async def process_ocr_job(client: JobQueue, job: Job) -> Job | None:

@@ -10,8 +10,8 @@ class JobQueue:
     def __init__(
         self,
         redis_url: str = settings.redis_endpoint,
-        max_concurrency: int = settings.max_concurrency,
+        ai_grading_max_concurrency: int = settings.ai_grading_max_concurrency,
     ):
         self.redis_url: str = redis_url
-        self.max_concurrency: int = max_concurrency
+        self.ai_grading_max_concurrency: int = ai_grading_max_concurrency
         self.redis_client = Redis.from_url(self.redis_url, decode_responses=True)

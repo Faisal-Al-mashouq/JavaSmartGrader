@@ -17,7 +17,7 @@ from settings import settings
 
 from ..config import JobQueue, logger
 
-SANDBOX_QUEUE = f"{settings.queue_namespace}:SandboxJobQueue"
+SANDBOX_QUEUE = f"{settings.queue_namespace}:{settings.sandbox_queue}"
 
 
 async def process_sandbox_job(client: JobQueue, job: Job) -> Job | None:

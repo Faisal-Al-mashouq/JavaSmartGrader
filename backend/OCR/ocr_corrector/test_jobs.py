@@ -13,7 +13,7 @@ import redis
 from settings import settings
 
 logger = logging.getLogger(__name__)
-OCR_QUEUE = f"{settings.queue_namespace}:OCRJobQueue"
+OCR_QUEUE = f"{settings.queue_namespace}:{settings.ocr_queue}"
 
 if __name__ == "__main__":
     logging.basicConfig(level="INFO")

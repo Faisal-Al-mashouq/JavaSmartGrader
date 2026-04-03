@@ -120,8 +120,8 @@ def _make_settings(**overrides: object) -> Settings:
         redis_url="redis://localhost:6379",
         queue_namespace="jsg.v1",
         ai_grading_queue="AIGradingJobQueue",
-        queue_poll_timeout_s=1,
-        max_concurrency=1,
+        queue_poll_timeout_s=0,
+        ai_grading_max_concurrency=5,
         temperature=0.0,
         pending_review_status="graded",
         failure_status_candidates=("failed",),
@@ -319,7 +319,7 @@ def test_main_loop_once_no_job() -> None:
         async def lpush(self, queue_name: str, payload: str) -> None:
             return None
 
-    client = SimpleNamespace(redis_client=_FakeRedis(), max_concurrency=1)
+    client = SimpleNamespace(redis_client=_FakeRedis(), ai_grading_max_concurrency=1)
     settings = _make_settings(queue_poll_timeout_s=0)
     llm_client = _DummyLLMClient(outputs=[])
 
@@ -353,7 +353,7 @@ def test_main_loop_removes_invalid_payload_from_processing() -> None:
         async def lpush(self, queue_name: str, payload: str) -> None:
             return None
 
-    client = SimpleNamespace(redis_client=_FakeRedis(), max_concurrency=1)
+    client = SimpleNamespace(redis_client=_FakeRedis(), ai_grading_max_concurrency=1)
     settings = _make_settings(queue_poll_timeout_s=0)
     llm_client = _DummyLLMClient(outputs=[])
 
@@ -418,7 +418,7 @@ def test_main_loop_processes_one_job_and_publishes_completion(
 
     monkeypatch.setattr(grader_main, "process_job", _fake_process_job)
 
-    client = SimpleNamespace(redis_client=_FakeRedis(), max_concurrency=1)
+    client = SimpleNamespace(redis_client=_FakeRedis(), ai_grading_max_concurrency=1)
     settings = _make_settings(queue_poll_timeout_s=0)
     llm_client = _DummyLLMClient(outputs=[])
 
@@ -459,9 +459,9 @@ def test_run_worker_once_uses_main_loop(monkeypatch: pytest.MonkeyPatch) -> None
             return None
 
     class _FakeWorker:
-        def __init__(self, *, redis_url: str, max_concurrency: int):
+        def __init__(self, *, redis_url: str, ai_grading_max_concurrency: int):
             self.redis_client = _FakeRedis()
-            self.max_concurrency = max_concurrency
+            self.ai_grading_max_concurrency = ai_grading_max_concurrency
 
     async def _fake_main_loop(
         client,

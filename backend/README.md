@@ -51,21 +51,7 @@ Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 Create `backend/.env` (loaded by `pydantic-settings`):
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
-ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
-REDIS_ENDPOINT=redis://localhost:6379
-QUEUE_NAMESPACE=jsg.v1
-AI_GRADING_QUEUE=AIGradingJobQueue
-JWT_SECRET_KEY=change-me
-MAX_CONCURRENCY=10
-
-# Submission storage (see .env.example for full list)
-STORAGE_BACKEND=s3
-S3_ENDPOINT_URL=http://localhost:9000
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
-S3_BUCKET=submissions-local
-S3_REGION=us-east-1
+env.example
 ```
 
 See `settings.py` and `.env.example` for the full list of configurable values.

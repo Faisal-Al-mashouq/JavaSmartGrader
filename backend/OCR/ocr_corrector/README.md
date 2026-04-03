@@ -35,11 +35,11 @@ API_AZURE=your_azure_document_intelligence_key
 AZURE_OCR_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
 API_GEMINI=your_google_gemini_api_key
 # GEMINI_MODEL=gemini-3.1-flash-preview  (optional override)
+OCR_MAX_CONCURRENCY=5
 
 # Shared with sandbox:
 REDIS_ENDPOINT=redis://localhost:6379/0
 QUEUE_NAMESPACE=jsg.v1
-MAX_CONCURRENCY=5
 ```
 
 ## Running

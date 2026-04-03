@@ -1,11 +1,14 @@
 FROM python:3.12-slim AS base
 WORKDIR /app
+ENV UV_NO_DEV=1
 RUN pip install uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 FROM base AS backend
 COPY . .
+RUN chmod +x /app/scripts/docker-db-init.sh
+ENTRYPOINT ["/app/scripts/docker-db-init.sh"]
 CMD ["uv", "run", "task", "prod"]
 
 FROM base AS ocr

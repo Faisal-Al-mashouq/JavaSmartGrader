@@ -14,20 +14,25 @@ services:
       - POSTGRES_DB=jsg_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jsg_user -d jsg_db"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
 
   backend:
     build:
       context: ./backend
       target: backend
     env_file: ./backend/.env
-    environment:
-      DATABASE_URL: postgresql://jsg_user:jsg_secure_password@postgres:5432/jsg_db
-      ASYNC_DATABASE_URL: postgresql+asyncpg://jsg_user:jsg_secure_password@postgres:5432/jsg_db
     ports:
       - "8000:8000"
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
 
   ocr:
     build:
