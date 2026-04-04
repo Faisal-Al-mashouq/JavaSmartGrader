@@ -16,11 +16,7 @@ select = [
 "backend/api/routes/*.py" = ["B008"]  # Allow Depends() in function signatures (FastAPI pattern)
 "backend/api/auth.py" = ["B008"]
 "backend/api/test_new.py" = ["B008"]  # Test routes use Depends() inline
-<<<<<<< HEAD
-"backend/OCR/**" = ["N999"]  # Uppercase module name is intentional
-=======
-"backend/OCR/__init__.py" = ["N999"]  # Uppercase module name is intentional
 "backend/api/test.py" = ["B008"]
->>>>>>> 045fed1244ecbc542b47119daa979688546ed124
+"backend/OCR/**" = ["N999"]  # Uppercase module name is intentional
 "backend/OCR/ocr_corrector/prompts.py" = ["E501"]
 "backend/OCR/ocr_corrector/SETTINGS_GUIDE.py" = ["ALL"]
