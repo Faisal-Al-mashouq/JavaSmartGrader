@@ -48,7 +48,7 @@ markers = [
 [tool.taskipy.tasks]
 lint = "cd .. && black . && ruff check --fix ."
 base = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level error"
-local = "env APP_ENV=local env LOG_LEVEL=INFO uv run task base"
+local = "env APP_ENV=local env LOG_LEVEL=DEBUG uv run task base"
 dev = "env APP_ENV=dev env LOG_LEVEL=DEBUG uv run task base"
 ocr = "env APP_ENV=dev LOG_LEVEL=DEBUG uv run python -m ocr.main"
 sandbox = "env APP_ENV=dev LOG_LEVEL=DEBUG uv run python -m sandbox.sandbox_worker"

@@ -25,7 +25,7 @@ def _sample_job_request() -> JobRequest:
         question_id=2,
         assignment_id=3,
         student_id=4,
-        image_url="page.png",
+        image_url="submissions/1/page.png",
         java_code="public class Main {}",
         test_cases=[SchemaTestCase(input=" ", expected_output="Hello")],
         rubric_json={"criteria": {"Correctness": {"weight": 100}}},
