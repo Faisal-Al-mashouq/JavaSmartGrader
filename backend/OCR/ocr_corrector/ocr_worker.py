@@ -32,16 +32,16 @@ from .schemas import (
 
 setup_logging()
 logger = logging.getLogger(__name__)
-OCR_QUEUE = f"{settings.queue_namespace}:OCRJobQueue"
+OCR_QUEUE = f"{settings.queue_namespace}:{settings.ocr_queue}"
 
 
 class OCRWorkerClient:
     def __init__(
         self,
         redis_url: str = settings.redis_endpoint,
-        max_concurrency: int = settings.max_concurrency,
+        ocr_max_concurrency: int = settings.ocr_max_concurrency,
     ):
-        self.max_concurrency = max_concurrency
+        self.ocr_max_concurrency = ocr_max_concurrency
         self.redis_client = Redis.from_url(
             url=redis_url,
             decode_responses=True,
@@ -58,7 +58,7 @@ async def start():
     logger.info("OCR Worker started")
     try:
         await asyncio.gather(
-            *(main_loop(client, pid) for pid in range(client.max_concurrency))
+            *(main_loop(client, pid) for pid in range(client.ocr_max_concurrency))
         )
     finally:
         await client.redis_client.aclose()

@@ -17,7 +17,27 @@ from settings import settings
 
 from ..config import JobQueue, logger
 
-OCR_QUEUE = f"{settings.queue_namespace}:OCRJobQueue"
+OCR_QUEUE = f"{settings.queue_namespace}:{settings.ocr_queue}"
+
+
+def ocr_corrected_text(job: Job) -> str | None:
+    """Best available source text after OCR: LLM-corrected, else raw OCR."""
+    ocr_wrapped = next(
+        (
+            p.job_result
+            for p in job.job_result_payload
+            if p.job_result and getattr(p.job_result, "type", None) == JobType.OCR
+        ),
+        None,
+    )
+    if not ocr_wrapped:
+        return None
+    ocr_job_result: OCRJobResult = ocr_wrapped.result
+    if ocr_job_result.result and ocr_job_result.result.llm_result:
+        return ocr_job_result.result.llm_result.corrected_code
+    if ocr_job_result.result and ocr_job_result.result.ocr_result:
+        return ocr_job_result.result.ocr_result.raw_text
+    return None
 
 
 async def process_ocr_job(client: JobQueue, job: Job) -> Job | None:
@@ -90,13 +110,7 @@ async def save_to_db(job: Job) -> bool:
                 return False
 
             ocr_job_result: OCRJobResult = ocr_payload.result
-
-            # Pick the best available text: LLM-corrected > raw OCR
-            corrected_text = None
-            if ocr_job_result.result and ocr_job_result.result.llm_result:
-                corrected_text = ocr_job_result.result.llm_result.corrected_code
-            elif ocr_job_result.result and ocr_job_result.result.ocr_result:
-                corrected_text = ocr_job_result.result.ocr_result.raw_text
+            corrected_text = ocr_corrected_text(job)
 
             transcription = await create_transcription(
                 session=session,

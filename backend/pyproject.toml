@@ -20,6 +20,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "pytest>=9.0.2",
+    "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
@@ -33,19 +34,26 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.1.0",
-    "psycopg2-binary>=2.9.11",
     "ruff>=0.15.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+python_files = ["test_*.py", "test.py"]
+addopts = ["--import-mode=importlib"]
+markers = [
+    "e2e: exercises a live HTTP API (start backend and dependencies first)",
 ]
 
 [tool.taskipy.tasks]
 lint = "cd .. && black . && ruff check --fix ."
-base = "uvicorn main:app --reload --log-level error"
-dev = "APP_ENV=dev LOG_LEVEL=DEBUG uv run task base"
-local = "APP_ENV=local LOG_LEVEL=INFO uv run task base"
-all_debug = "clear && APP_ENV=all LOG_LEVEL=DEBUG uv run task base"
-all = "APP_ENV=all LOG_LEVEL=INFO uv run task base"
-sandbox = "uv run -m sandbox.sandbox_worker"
-ocr = "uv run -m ocr.main"
-ai_grader = "uv run -m ai_grader.main"
-win_all_debug = "clear && env APP_ENV=all env LOG_LEVEL=DEBUG uv run task base"
-win_all = "env APP_ENV=all env LOG_LEVEL=INFO uv run task base"
+base = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level error"
+local = "env APP_ENV=local env LOG_LEVEL=INFO uv run task base"
+dev = "env APP_ENV=dev env LOG_LEVEL=DEBUG uv run task base"
+ocr = "env APP_ENV=dev LOG_LEVEL=DEBUG uv run python -m ocr.main"
+sandbox = "env APP_ENV=dev LOG_LEVEL=DEBUG uv run python -m sandbox.sandbox_worker"
+grader = "env APP_ENV=dev LOG_LEVEL=DEBUG uv run python -m ai_grader.main"
+ocr_prod = "env APP_ENV=prod LOG_LEVEL=DEBUG uv run python -m ocr.main"
+sandbox_prod = "env APP_ENV=prod LOG_LEVEL=DEBUG uv run python -m sandbox.sandbox_worker"
+grader_prod = "env APP_ENV=prod LOG_LEVEL=DEBUG uv run python -m ai_grader.main"
+prod = "env APP_ENV=prod env LOG_LEVEL=INFO uv run task base"

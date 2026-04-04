@@ -68,13 +68,7 @@ async def submit_answer(
         )
         image_url = await save_file(file, submission.id)
         await set_submission_image_url(session, submission.id, image_url)
-        java_code = """
-        public class Main {
-        public static void main(String[] args) {
-        System.out.println("Hello, World!");
-        }
-        }
-        """  # TODO: Implement Editable Java Code Editor
+        java_code = ""  # TODO: Implement Editable Java Code Editor
         await start_job_process(
             submission_id=submission.id,
             question_id=question_id,
