@@ -154,7 +154,14 @@ async def remove_course(
             course_id,
         )
         raise HTTPException(status_code=403, detail="Forbidden")
-    await delete_course(session, course_id)
+    try:
+        await delete_course(session, course_id)
+    except IntegrityError:
+        logger.warning("Cannot delete course %d: has dependent records", course_id)
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete course: it still has dependent records",
+        ) from None
     logger.info("Course %d deleted successfully", course_id)
     return {"message": "Course deleted successfully"}
 

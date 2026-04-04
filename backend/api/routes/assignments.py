@@ -169,6 +169,15 @@ async def remove_assignment(
 ):
     logger.info("Instructor %d deleting assignment %d", current_user.id, assignment_id)
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
-    await delete_assignment(session, assignment_id)
+    try:
+        await delete_assignment(session, assignment_id)
+    except IntegrityError:
+        logger.warning(
+            "Cannot delete assignment %d: has dependent records", assignment_id
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete assignment: it still has dependent records",
+        ) from None
     logger.info("Assignment %d deleted successfully", assignment_id)
     return {"message": "Assignment deleted successfully"}

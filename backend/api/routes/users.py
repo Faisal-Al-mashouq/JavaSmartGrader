@@ -111,7 +111,16 @@ async def delete_account(
     current_user=Depends(get_current_user),
 ):
     logger.info("User %s requesting account deletion", current_user.username)
-    result = await delete_user(session=session, username=current_user.username)
+    try:
+        result = await delete_user(session=session, username=current_user.username)
+    except IntegrityError:
+        logger.warning(
+            "Cannot delete user %s: has dependent records", current_user.username
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete account: you still have courses or submissions. Remove them first.",
+        ) from None
     if result:
         logger.info("Account deleted successfully: %s", current_user.username)
         return {"message": "User deleted successfully"}
