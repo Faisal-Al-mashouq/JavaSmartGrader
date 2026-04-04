@@ -7,7 +7,9 @@ FastAPI route layer for JavaSmartGrader.
 From `backend/`:
 
 ```bash
-uv run task local
+uv run task dev    # APP_ENV=dev — common for local MinIO / custom S3 endpoint
+# or
+uv run task local  # APP_ENV=local — typical AWS S3 without custom endpoint
 ```
 
 Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
@@ -56,3 +58,8 @@ Authorization: Bearer <token>
 - The OpenAPI spec in `/docs` is the source of truth for request/response schemas.
 - `POST /submissions/` expects **multipart/form-data**: form fields `question_id` and `assignment_id` (ints as strings) plus a required file part `file`. The API uploads to the configured bucket and persists the **object key** (e.g. `submissions/{submission_id}/{filename}`) in `Submission.image_url`.
 - Lifespan startup in `backend/main.py` starts the queue orchestrator (`core/job_queue.py`) and, for supported environments, sandbox, OCR, and AI grader worker tasks so submission flows can reach downstream workers.
+
+## Tests
+
+- Route and auth unit tests: `api/test.py` (run from `backend/` with `uv run pytest api/test.py`, or use the full suite: `uv run pytest`).
+- Full HTTP flow (register → course → assignment → question → enroll → submit): `tests/test_submission.py`, marked `e2e` (requires running API, DB, and S3; see `backend/README.md`).

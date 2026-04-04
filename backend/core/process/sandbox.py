@@ -16,18 +16,20 @@ from schemas import (
 from settings import settings
 
 from ..config import JobQueue, logger
+from .ocr import ocr_corrected_text
 
-SANDBOX_QUEUE = f"{settings.queue_namespace}:SandboxJobQueue"
+SANDBOX_QUEUE = f"{settings.queue_namespace}:{settings.sandbox_queue}"
 
 
 async def process_sandbox_job(client: JobQueue, job: Job) -> Job | None:
     try:
         logger.debug(f"Processing Sandbox Job: {job.job_id}")
         job.status = JobStatus.RUNNING
+        corrected_text = ocr_corrected_text(job) or ""
         sandbox_payload = SandboxPayload(
             type=JobType.SANDBOX,
             job_id=job.job_id,
-            java_code=job.initial_request.java_code,
+            java_code=corrected_text,
             test_cases=job.initial_request.test_cases,
         )
         job.job_request_payload.append(

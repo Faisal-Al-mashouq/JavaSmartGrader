@@ -28,7 +28,7 @@ Development server: [http://localhost:3000](http://localhost:3000)
 
 - API client is configured in `src/services/api.js`
 - Default backend base URL: `http://localhost:8000`
-- Make sure backend is running (`cd backend && uv run task local`)
+- Start the API from `backend/` (see `backend/README.md`): `uv run task dev` (MinIO-friendly S3) or `uv run task local` (typical AWS-style S3 client)
 - Student submission uploads use **multipart/form-data** (`question_id`, `assignment_id`, `file`) to `POST /submissions/`; see `src/services/submissionService.js` and dashboard upload pages.
 
 ## Tech Stack

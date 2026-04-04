@@ -3,11 +3,15 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
-from settings import settings
 from sqlalchemy import engine_from_config, pool
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from models import Base
+backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+backend_db = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, backend_root)
+sys.path.insert(1, backend_db)
+
+from db.models import Base  # noqa: E402
+from settings import settings  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

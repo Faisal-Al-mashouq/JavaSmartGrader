@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
 from pydantic import AliasChoices, Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from rich.logging import RichHandler
+
+_backend_dir = Path(__file__).resolve().parents[1]
+_ai_grader_env_file = _backend_dir / (
+    ".env.local" if os.getenv("APP_ENV", "").strip().lower() == "local" else ".env"
+)
 
 
 class Settings(BaseSettings):
@@ -21,7 +27,7 @@ class Settings(BaseSettings):
     redis_url: Redis connection URL
     ai_grading_queue: Redis list name for worker pops.
     queue_poll_timeout_s: BRPOPLPUSH blocking timeout in seconds
-    max_concurrency: Number of parallel worker loops for queue consumption
+    ai_grading_max_concurrency: Number of parallel worker loops for queue consumption
     temperature: LLM sampling temperature
     pending_review_status: Status applied after successful grading.
     failure_status_candidates: Ordered list of status strings for failures
@@ -30,7 +36,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ai_grader_env_file,
         env_file_encoding="utf-8",
         extra="ignore",
         frozen=True,
@@ -81,9 +87,9 @@ class Settings(BaseSettings):
         validation_alias="QUEUE_POLL_TIMEOUT_S",
         ge=0,
     )
-    max_concurrency: int = Field(
-        default=1,
-        validation_alias="MAX_CONCURRENCY",
+    ai_grading_max_concurrency: int = Field(
+        default=5,
+        validation_alias=AliasChoices("AI_GRADING_MAX_CONCURRENCY", "MAX_CONCURRENCY"),
         ge=1,
     )
     temperature: float = Field(

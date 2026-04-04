@@ -25,10 +25,10 @@ The AI grader unit tests focus on core behavior across modules, with external se
 - **Orchestration**: single-repair flow, success and failure branches, completion payloads, log formatting, and `main_loop` / `run_worker` wiring.
 - **Queue adapter**: extraction of `submission_id`/`job_id` from multiple payload formats.
 
-Run tests locally:
+Run tests locally (from `backend/`):
 
 ```bash
-pytest backend/ai_grader/self_test.py
+uv run pytest ai_grader/test.py
 ```
 
 ## Worker Flow
@@ -118,6 +118,7 @@ Example failure:
 | `REDIS_URL` | No | `redis://redis:6379` | Fallback Redis URL when `REDIS_ENDPOINT` is unset |
 | `QUEUE_NAMESPACE` | No | `jsg.v1` | Prefix for queue names when the base name is not already prefixed |
 | `AI_GRADING_QUEUE` | No | `AIGradingJobQueue` | Base AI grading queue name |
+| `AI_GRADING_MAX_CONCURRENCY` | No | `5` | Parallel worker loops (`MAX_CONCURRENCY` also accepted) |
 | `QUEUE_POLL_TIMEOUT_S` | No | `0` | `BRPOPLPUSH` timeout (seconds) |
 | `PENDING_REVIEW_STATUS` | No | `Pending_Review` | Used only if worker code references status helpers |
 | `FAILURE_STATUS_CANDIDATES` | No | `Grading_Failed,failed` | Same as above |
@@ -133,12 +134,6 @@ Notes:
 From `backend/`:
 
 ```bash
-uv run task ai_grader
-```
-
-Or:
-
-```bash
 uv run python -m ai_grader.main
 ```
 
@@ -147,13 +142,15 @@ On startup, `main` loads settings, opens a Redis client, constructs the LLM clie
 Single-job mode:
 
 ```bash
-python -m ai_grader.main --once
+uv run python -m ai_grader.main --once
 ```
 
 ## Tests
 
+From `backend/`:
+
 ```bash
-pytest backend/ai_grader/self_test.py
+uv run pytest ai_grader/test.py
 ```
 
 ## Integration Notes

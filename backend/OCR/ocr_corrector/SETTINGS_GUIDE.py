@@ -16,7 +16,7 @@ No new fields need to be added — the required fields already exist:
 The following settings are shared with the sandbox component:
     - redis_endpoint      → REDIS_ENDPOINT
     - queue_namespace     → QUEUE_NAMESPACE
-    - max_concurrency     → MAX_CONCURRENCY
+    - ocr_max_concurrency → OCR_MAX_CONCURRENCY
     - log_level           → LOG_LEVEL
 
 In your backend/.env file, ensure these are set:

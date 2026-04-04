@@ -17,5 +17,6 @@ select = [
 "backend/api/auth.py" = ["B008"]
 "backend/api/test_new.py" = ["B008"]  # Test routes use Depends() inline
 "backend/OCR/__init__.py" = ["N999"]  # Uppercase module name is intentional
+"backend/api/test.py" = ["B008"]
 "backend/OCR/ocr_corrector/prompts.py" = ["E501"]
 "backend/OCR/ocr_corrector/SETTINGS_GUIDE.py" = ["ALL"]
