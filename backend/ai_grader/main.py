@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
 from redis.asyncio import Redis
 from settings import settings
 
@@ -43,7 +43,10 @@ class AIGraderJobRequest(BaseModel):
 
     job_id: str
     submission_id: int
-    transcribed_text: str = ""
+    transcribed_text: str = Field(
+        default="",
+        validation_alias=AliasChoices("transcribed_text", "corrected_code"),
+    )
     sandbox_result: dict[str, Any] | None = None
     rubric_json: dict[str, Any] = Field(default_factory=dict)
 

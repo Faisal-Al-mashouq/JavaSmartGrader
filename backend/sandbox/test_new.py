@@ -75,6 +75,7 @@ def test_cleanup_workspace_noop_if_missing(tmp_path, monkeypatch):
         ("/* comment */ public class InComment {}", "InComment"),
         ("public class A{}", "A"),
         ("import java.util.*;\npublic class WithImport { }", "WithImport"),
+        ("Public class OcrCaps { }", "OcrCaps"),
     ],
 )
 def test_extract_class_name_edge_cases(code: str, expected: str) -> None:
@@ -316,7 +317,7 @@ def test_compile_job_failure(tmp_path, monkeypatch):
         result=None,
     )
     result = _run(compile_job(job))
-    assert result is None
+    assert result is job
     assert job.result.compilation_result.success is False
     assert "';' expected" in job.result.compilation_result.errors[0]
 
@@ -427,6 +428,6 @@ def test_execute_job_runtime_error(tmp_path, monkeypatch):
         ),
     )
     result = _run(execute_job(job))
-    assert result is None
+    assert result is job
     assert job.result.execution_result.success is False
     assert "Exception in thread" in job.result.execution_result.errors[0]

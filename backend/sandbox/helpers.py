@@ -78,8 +78,15 @@ async def docker_build_images():
     logger.info("All sandbox Docker images built successfully")
 
 
+def _normalize_ocr_java_keywords(java_code: str) -> str:
+    """Line-leading ``Public`` from OCR is invalid Java; normalize to ``public``."""
+    if not java_code:
+        return java_code
+    return re.sub(r"(?m)^(\s*)Public(\s+)", r"\1public\2", java_code)
+
+
 def _extract_class_name(java_code: str) -> str:
-    match = re.search(r"public\s+class\s+(\w+)", java_code)
+    match = re.search(r"(?i)public\s+class\s+(\w+)", java_code)
     if not match:
         raise ValueError("Could not find public class name in Java code")
     class_name = match.group(1)

@@ -5,6 +5,7 @@ from .helpers import (
     SANDBOX_TMP_DIR,
     _create_workspace,
     _extract_class_name,
+    _normalize_ocr_java_keywords,
     _run_execution_container,
     run_container,
 )
@@ -25,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 async def compile_job(job: SandboxJob) -> SandboxJob | None:
     try:
-        class_name = _extract_class_name(job.request.java_code)
+        code = _normalize_ocr_java_keywords(job.request.java_code)
+        class_name = _extract_class_name(code)
     except ValueError as e:
         job.result = SandboxResult(
             compilation_result=CompilationJobResult(success=False, errors=[str(e)]),
@@ -36,7 +38,7 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
     workspace = _create_workspace(job.job_id)
 
     src_file = workspace / "src" / f"{class_name}.java"
-    src_file.write_text(job.request.java_code)
+    src_file.write_text(code)
 
     returncode, stdout, stderr = await run_container(
         [
@@ -75,7 +77,8 @@ async def compile_job(job: SandboxJob) -> SandboxJob | None:
 
 async def execute_job(job: SandboxJob) -> SandboxJob | None:
     try:
-        class_name = _extract_class_name(job.request.java_code)
+        code = _normalize_ocr_java_keywords(job.request.java_code)
+        class_name = _extract_class_name(code)
     except ValueError as e:
         job.result.execution_result = ExecutionJobResult(
             success=False, errors=[str(e)], outputs=[]
