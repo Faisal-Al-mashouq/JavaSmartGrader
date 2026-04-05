@@ -73,14 +73,14 @@ export default function InstructorAssignmentDetail() {
 
             <div className="grid sm:grid-cols-2 gap-4">
               <Link
-                to={`/instructor/courses/${cid}/assignments/${aid}/questions`}
+                to={`/instructor/courses/${cid}/assignments/${aid}/rubric`}
                 className="block rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors group text-left"
               >
                 <h2 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                  Questions
+                  Grading Rubric
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Prompts, test cases, and expected output for autograding.
+                  Configure criteria weights for Correctness, Efficiency, Edge Cases, and Code Quality.
                 </p>
               </Link>
               <Link
