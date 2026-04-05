@@ -7,23 +7,23 @@ import { getAssignmentSubmissions } from "../../../services/submissionService";
 
 /* ── status styling ───────────────────────────────────────────── */
 const STATUS_CLS = {
-  submitted:  "bg-blue-500/15 text-blue-300 border border-blue-500/25",
-  processing: "bg-blue-500/15 text-blue-300 border border-blue-500/25",
-  graded:     "bg-indigo-500/15 text-indigo-300 border border-indigo-500/25",
-  failed:     "bg-red-500/15 text-red-300 border border-red-500/25",
+  submitted:  "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
+  processing: "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
+  graded:     "bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/25",
+  failed:     "bg-red-50 text-red-600 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25",
 };
 const STATUS_DOT = {
-  submitted:  "bg-blue-400",
-  processing: "bg-blue-400 animate-pulse",
-  graded:     "bg-indigo-400",
-  failed:     "bg-red-400",
+  submitted:  "bg-blue-500",
+  processing: "bg-blue-500 animate-pulse",
+  graded:     "bg-indigo-500",
+  failed:     "bg-red-500",
 };
 const STATE_LABEL = { submitted: "Processing", processing: "Processing", graded: "AI Graded", failed: "Failed" };
 
 function StatusBadge({ state }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLS[state] ?? "bg-slate-700 text-slate-400"}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[state] ?? "bg-slate-500"}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLS[state] ?? "bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-700 dark:text-slate-400"}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[state] ?? "bg-slate-400"}`} />
       {STATE_LABEL[state] ?? state}
     </span>
   );
@@ -40,16 +40,15 @@ const CARD_ACCENTS = [
 function StatCard({ title, value, subtitle, icon, accentIdx, trend, trendUp }) {
   const accent = CARD_ACCENTS[accentIdx % CARD_ACCENTS.length];
   return (
-    <div className="relative bg-slate-900/70 backdrop-blur-sm rounded-2xl p-6 border border-white/[0.08] hover:border-white/[0.15] shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden">
-      {/* gradient glow top-right */}
-      <div className={`absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br ${accent} opacity-[0.12] blur-2xl group-hover:opacity-[0.2] transition-opacity duration-300`} />
+    <div className="relative bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.15] shadow-sm hover:shadow-md dark:shadow-lg dark:hover:shadow-xl transition-all duration-300 group overflow-hidden">
+      <div className={`absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br ${accent} opacity-[0.08] dark:opacity-[0.12] blur-2xl group-hover:opacity-[0.14] dark:group-hover:opacity-[0.2] transition-opacity duration-300`} />
 
       <div className="relative flex items-start justify-between mb-5">
         <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${accent} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
           {icon}
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${trendUp ? "text-emerald-400 bg-emerald-500/15" : "text-red-400 bg-red-500/15"}`}>
+          <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${trendUp ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/15" : "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/15"}`}>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d={trendUp ? "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" : "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"} />
@@ -63,7 +62,7 @@ function StatCard({ title, value, subtitle, icon, accentIdx, trend, trendUp }) {
       <p className={`relative text-3xl font-extrabold tracking-tight bg-gradient-to-r ${accent} bg-clip-text text-transparent mb-1`}>
         {value}
       </p>
-      <p className="relative text-xs text-slate-600">{subtitle}</p>
+      <p className="relative text-xs text-slate-400 dark:text-slate-600">{subtitle}</p>
     </div>
   );
 }
@@ -75,10 +74,10 @@ export default function InstructorHome() {
     ? user.username.charAt(0).toUpperCase() + user.username.slice(1)
     : "Instructor";
 
-  const [courses, setCourses]     = useState([]);
-  const [allSubs, setAllSubs]     = useState([]);
+  const [courses, setCourses]       = useState([]);
+  const [allSubs, setAllSubs]       = useState([]);
   const [recentSubs, setRecentSubs] = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,8 +117,8 @@ export default function InstructorHome() {
     return () => { cancelled = true; };
   }, []);
 
-  const pending   = allSubs.filter((s) => s.state === "submitted" || s.state === "processing").length;
-  const aiGraded  = allSubs.filter((s) => s.state === "graded").length;
+  const pending  = allSubs.filter((s) => s.state === "submitted" || s.state === "processing").length;
+  const aiGraded = allSubs.filter((s) => s.state === "graded").length;
 
   return (
     <div className="space-y-8">
@@ -127,9 +126,9 @@ export default function InstructorHome() {
       {/* ── Welcome ── */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <p className="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-1">Dashboard</p>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Welcome back, <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">{displayName}</span>
+          <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Dashboard</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Welcome back, <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">{displayName}</span>
           </h1>
           <p className="text-slate-500 mt-1 text-sm">Manage and grade your students' exam submissions</p>
         </div>
@@ -159,11 +158,11 @@ export default function InstructorHome() {
       </div>
 
       {/* ── Recent Submissions ── */}
-      <div className="bg-slate-900/70 backdrop-blur-sm rounded-2xl border border-white/[0.08] shadow-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.07] flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/[0.07] flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">Recent Submissions</h2>
-            <p className="text-xs text-slate-600 mt-0.5">Latest activity across all courses</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Recent Submissions</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">Latest activity across all courses</p>
           </div>
           <InstructorNavButton to="/instructor/submissions">View all</InstructorNavButton>
         </div>
@@ -171,35 +170,35 @@ export default function InstructorHome() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/[0.06]">
+              <tr className="border-b border-slate-100 dark:border-white/[0.06]">
                 {["Student ID","Assignment","Course","Submitted","Status","Action"].map((h, i) => (
                   <th key={h}
-                    className={`text-[11px] font-bold text-slate-600 uppercase tracking-widest py-3
+                    className={`text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest py-3
                       ${i === 5 ? "text-right px-6" : i === 0 ? "text-left px-6" : "text-left px-4"}`}>
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody className="divide-y divide-slate-50 dark:divide-white/[0.04]">
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-14 text-slate-600 text-sm">Loading…</td></tr>
+                <tr><td colSpan={6} className="text-center py-14 text-slate-400 text-sm">Loading…</td></tr>
               ) : recentSubs.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-14 text-slate-600 text-sm">No submissions yet.</td></tr>
+                <tr><td colSpan={6} className="text-center py-14 text-slate-400 text-sm">No submissions yet.</td></tr>
               ) : (
                 recentSubs.map((s) => (
-                  <tr key={s.id} className="hover:bg-white/[0.03] transition-colors group">
+                  <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-slate-200 font-mono">Student #{s.student_id}</p>
-                      <p className="text-xs text-slate-600">Sub #{s.id}</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 font-mono">Student #{s.student_id}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-600">Sub #{s.id}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="text-sm text-slate-300 font-medium max-w-[180px] truncate">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium max-w-[180px] truncate">
                         {s.assignment?.title ?? `#${s.assignment_id}`}
                       </p>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-xs font-bold text-indigo-400 bg-indigo-500/15 border border-indigo-500/20 px-2.5 py-1 rounded-lg">
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 dark:text-indigo-400 dark:bg-indigo-500/15 dark:border-indigo-500/20 px-2.5 py-1 rounded-lg">
                         {s.course?.name ?? `Course #${s.assignment?.course_id}`}
                       </span>
                     </td>
@@ -225,7 +224,7 @@ export default function InstructorHome() {
       {/* ── Course Overview ── */}
       {courses.length > 0 && (
         <div>
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Your Courses</h2>
+          <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Your Courses</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {courses.map((c, idx) => {
               const courseSubs    = allSubs.filter((s) => s.course?.id === c.id);
@@ -234,35 +233,33 @@ export default function InstructorHome() {
               const accent        = CARD_ACCENTS[idx % CARD_ACCENTS.length];
               return (
                 <Link key={c.id} to={`/instructor/courses/${c.id}`}
-                  className="group block relative bg-slate-900/70 backdrop-blur-sm rounded-2xl border border-white/[0.08] hover:border-white/[0.18] shadow-lg p-5 transition-all duration-300 overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  {/* gradient glow */}
-                  <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${accent} opacity-[0.1] blur-2xl group-hover:opacity-[0.18] transition-opacity duration-300`} />
+                  className="group block relative bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.18] shadow-sm hover:shadow-md dark:shadow-lg p-5 transition-all duration-300 overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${accent} opacity-[0.08] dark:opacity-[0.1] blur-2xl group-hover:opacity-[0.14] dark:group-hover:opacity-[0.18] transition-opacity duration-300`} />
 
                   <div className="relative flex items-start justify-between mb-3">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg bg-gradient-to-r ${accent} bg-clip-text text-transparent border border-white/[0.1]`}>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg bg-gradient-to-r ${accent} bg-clip-text text-transparent border border-slate-200 dark:border-white/[0.1]`}>
                       #{c.id}
                     </span>
                     {processingCnt > 0 && (
-                      <span className="text-xs font-semibold bg-amber-500/15 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-600 dark:bg-amber-500/15 dark:border-amber-500/20 dark:text-amber-400 px-2 py-0.5 rounded-full">
                         {processingCnt} processing
                       </span>
                     )}
                   </div>
-                  <p className="relative text-sm font-bold text-white mb-4 group-hover:text-indigo-300 transition-colors">
+                  <p className="relative text-sm font-bold text-slate-800 dark:text-white mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                     {c.name}
                   </p>
                   <div className="relative space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-600">Total Submissions</span>
-                      <span className="font-bold text-slate-300">{courseSubs.length}</span>
+                      <span className="text-slate-400 dark:text-slate-600">Total Submissions</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{courseSubs.length}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-600">AI Graded</span>
-                      <span className="font-bold text-slate-300">{gradedCnt}</span>
+                      <span className="text-slate-400 dark:text-slate-600">AI Graded</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{gradedCnt}</span>
                     </div>
-                    {/* mini progress bar */}
                     {courseSubs.length > 0 && (
-                      <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden mt-1">
+                      <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-white/5 overflow-hidden mt-1">
                         <div className={`h-full rounded-full bg-gradient-to-r ${accent} transition-all duration-500`}
                           style={{ width: `${Math.round((gradedCnt / courseSubs.length) * 100)}%` }} />
                       </div>
