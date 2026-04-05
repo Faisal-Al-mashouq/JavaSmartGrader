@@ -19,6 +19,7 @@ from settings import settings
 from sqlalchemy import select
 
 from ..config import JobQueue, logger
+from .ocr import resolve_java_code_for_job
 
 _queue_prefix = f"{settings.queue_namespace}:"
 AI_GRADER_QUEUE = (
@@ -233,11 +234,12 @@ async def process_grader_job(client: JobQueue, job: Job) -> Job | None:
             )
             return None
 
+        transcribed = await resolve_java_code_for_job(job)
         grader_payload = GraderPayload(
             type=JobType.GRADER,
             job_id=job.job_id,
             submission_id=submission_id,
-            transcribed_text=job.initial_request.java_code,
+            transcribed_text=transcribed,
             sandbox_result=sandbox_payload.result,
             rubric_json=job.initial_request.rubric_json,
         )

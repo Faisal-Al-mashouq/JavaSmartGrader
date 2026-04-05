@@ -1,9 +1,13 @@
+import re
+from collections.abc import Iterator
 from datetime import datetime
 
 from db.crud.confidence_flags import create_confidence_flag
-from db.crud.grading import create_transcription
+from db.crud.grading import create_transcription, get_transcription_by_submission_id
+from db.crud.submissions import get_submission_by_id
 from db.session import async_session
 from ocr.ocr_corrector.schemas import OCRJobRequest, OCRJobResult
+from pydantic import ValidationError
 from schemas import (
     Job,
     JobRequestPayload,
@@ -20,24 +24,83 @@ from ..config import JobQueue, logger
 OCR_QUEUE = f"{settings.queue_namespace}:{settings.ocr_queue}"
 
 
-def ocr_corrected_text(job: Job) -> str | None:
-    """Best available source text after OCR: LLM-corrected, else raw OCR."""
-    ocr_wrapped = next(
-        (
-            p.job_result
-            for p in job.job_result_payload
-            if p.job_result and getattr(p.job_result, "type", None) == JobType.OCR
-        ),
-        None,
-    )
-    if not ocr_wrapped:
+def _normalize_line_leading_public(java_code: str) -> str:
+    """Match sandbox: OCR often emits ``Public`` at line start; invalid Java."""
+    if not java_code:
+        return java_code
+    return re.sub(r"(?m)^(\s*)Public(\s+)", r"\1public\2", java_code)
+
+
+def iter_ocr_job_results(job: Job) -> Iterator[OCRJobResult]:
+    """Yield OCR worker results from the job, tolerating union / dict shapes."""
+    for p in job.job_result_payload:
+        jr = p.job_result
+        if jr is None:
+            continue
+        if isinstance(jr, OCRResult):
+            yield jr.result
+            continue
+        if isinstance(jr, OCRJobResult):
+            yield jr
+            continue
+        if isinstance(jr, dict):
+            t = jr.get("type")
+            if t not in (JobType.OCR, "OCR"):
+                continue
+            inner = jr.get("result")
+            if isinstance(inner, dict):
+                try:
+                    yield OCRJobResult.model_validate(inner)
+                except ValidationError:
+                    continue
+            elif isinstance(inner, OCRJobResult):
+                yield inner
+
+
+def _pipeline_best_text(ocr_job_result: OCRJobResult) -> str | None:
+    """Prefer non-empty LLM corrected_code, else Azure raw_text."""
+    pipeline = ocr_job_result.result
+    if not pipeline:
         return None
-    ocr_job_result: OCRJobResult = ocr_wrapped.result
-    if ocr_job_result.result and ocr_job_result.result.llm_result:
-        return ocr_job_result.result.llm_result.corrected_code
-    if ocr_job_result.result and ocr_job_result.result.ocr_result:
-        return ocr_job_result.result.ocr_result.raw_text
+    llm = pipeline.llm_result
+    if llm and llm.corrected_code and str(llm.corrected_code).strip():
+        return str(llm.corrected_code).strip()
+    ocr_ex = pipeline.ocr_result
+    if ocr_ex and ocr_ex.raw_text and str(ocr_ex.raw_text).strip():
+        return str(ocr_ex.raw_text).strip()
+    if ocr_ex and ocr_ex.lines:
+        plain = "\n".join(line.plain_text() for line in ocr_ex.lines)
+        if plain.strip():
+            return plain.strip()
     return None
+
+
+def ocr_corrected_text(job: Job) -> str | None:
+    """Best available source text after OCR: non-empty LLM-corrected, else raw OCR."""
+    for ojr in iter_ocr_job_results(job):
+        text = _pipeline_best_text(ojr)
+        if text:
+            return text
+    return None
+
+
+async def resolve_java_code_for_job(job: Job) -> str:
+    """
+    Code string for sandbox / grader: in-memory OCR, then typed java_code, then DB transcription.
+    """
+    t = ocr_corrected_text(job)
+    if t:
+        return _normalize_line_leading_public(t)
+    initial = (job.initial_request.java_code or "").strip()
+    if initial:
+        return _normalize_line_leading_public(initial)
+    async with async_session() as session:
+        row = await get_transcription_by_submission_id(
+            session, job.initial_request.submission_id
+        )
+        if row and row.transcribed_text and str(row.transcribed_text).strip():
+            return _normalize_line_leading_public(str(row.transcribed_text).strip())
+    return ""
 
 
 async def process_ocr_job(client: JobQueue, job: Job) -> Job | None:
@@ -46,6 +109,7 @@ async def process_ocr_job(client: JobQueue, job: Job) -> Job | None:
         job.status = JobStatus.RUNNING
 
         ocr_payload = OCRPayload(
+            type=JobType.OCR,
             job_id=job.job_id,
             image_url=job.initial_request.image_url,
         )
@@ -96,21 +160,22 @@ async def save_to_db(job: Job) -> bool:
         async with async_session() as session:
             logger.debug("Saving OCR Job %s to database", job.job_id)
 
-            ocr_payload = next(
-                (
-                    p.job_result
-                    for p in job.job_result_payload
-                    if p.job_result
-                    and getattr(p.job_result, "type", None) == JobType.OCR
-                ),
-                None,
-            )
-            if not ocr_payload:
+            ocr_job_result = next(iter_ocr_job_results(job), None)
+            if not ocr_job_result:
                 logger.error("OCR result payload not found for job %s", job.job_id)
                 return False
-
-            ocr_job_result: OCRJobResult = ocr_payload.result
             corrected_text = ocr_corrected_text(job)
+
+            sub_row = await get_submission_by_id(
+                session, job.initial_request.submission_id
+            )
+            if not sub_row:
+                logger.error(
+                    "Submission %d not found for OCR save; skipping transcription "
+                    "(stale MAIN_QUEUE job or wrong DB). Flush Redis queue if needed.",
+                    job.initial_request.submission_id,
+                )
+                return False
 
             transcription = await create_transcription(
                 session=session,

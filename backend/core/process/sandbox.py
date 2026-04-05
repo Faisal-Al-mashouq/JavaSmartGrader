@@ -16,7 +16,7 @@ from schemas import (
 from settings import settings
 
 from ..config import JobQueue, logger
-from .ocr import ocr_corrected_text
+from .ocr import resolve_java_code_for_job
 
 SANDBOX_QUEUE = f"{settings.queue_namespace}:{settings.sandbox_queue}"
 
@@ -25,7 +25,7 @@ async def process_sandbox_job(client: JobQueue, job: Job) -> Job | None:
     try:
         logger.debug(f"Processing Sandbox Job: {job.job_id}")
         job.status = JobStatus.RUNNING
-        corrected_text = ocr_corrected_text(job) or ""
+        corrected_text = await resolve_java_code_for_job(job)
         sandbox_payload = SandboxPayload(
             type=JobType.SANDBOX,
             job_id=job.job_id,

@@ -168,7 +168,14 @@ async def remove_question(
         assignment_id,
     )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
-    deleted = await delete_question(session, question_id, assignment_id)
+    try:
+        deleted = await delete_question(session, question_id, assignment_id)
+    except IntegrityError:
+        logger.warning("Cannot delete question %d: has dependent records", question_id)
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete question: it still has dependent records",
+        ) from None
     if not deleted:
         logger.warning(
             "Question %d not found in assignment %d for deletion",
@@ -254,6 +261,13 @@ async def remove_testcase(
         assignment_id,
     )
     await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
-    await delete_testcase(session, testcase_id)
+    try:
+        await delete_testcase(session, testcase_id)
+    except IntegrityError:
+        logger.warning("Cannot delete testcase %d: has dependent records", testcase_id)
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete testcase: it still has dependent records",
+        ) from None
     logger.info("Testcase %d deleted successfully", testcase_id)
     return {"message": "Testcase deleted successfully"}

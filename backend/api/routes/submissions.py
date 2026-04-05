@@ -11,7 +11,15 @@ from db.crud.submissions import (
     update_submission_state,
 )
 from db.models import SubmissionState, UserRole
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from schemas import SubmissionBase, TestCase
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +38,7 @@ router = APIRouter()
 
 @router.post("/", response_model=SubmissionBase)
 async def submit_answer(
+    background_tasks: BackgroundTasks,
     question_id: int = Form(),
     assignment_id: int = Form(),
     file: UploadFile = File(...),
@@ -69,7 +78,10 @@ async def submit_answer(
         image_url = await save_file(file, submission.id)
         await set_submission_image_url(session, submission.id, image_url)
         java_code = ""  # TODO: Implement Editable Java Code Editor
-        await start_job_process(
+        # Enqueue after response so the request DB session is fully closed and the
+        # submission row is visible to the job worker (avoids FK violations on transcriptions).
+        background_tasks.add_task(
+            start_job_process,
             submission_id=submission.id,
             question_id=question_id,
             assignment_id=assignment_id,
