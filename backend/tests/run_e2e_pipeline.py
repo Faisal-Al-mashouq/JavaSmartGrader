@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -56,7 +57,9 @@ RUBRIC = {
         "Code Quality": {"weight": 100, "description": "Code Quality"},
     }
 }
-QUESTION_TEXT = "write a two java statements that calls the  "
+QUESTION_TEXT = """Make a simple vending machine program that takes in a number
+of snacks and checks if there's enough stock. If there's not enough stock, print
+an error message. The snack count is 10."""
 
 S3_IMAGE_KEY = "submissions/1/page.png"
 COMPLETED_QUEUE = "jsg.v1:MainJobQueue:completed"
@@ -307,19 +310,19 @@ def _print_ocr_results(ocr_result: dict | None, llm_result: dict | None) -> None
 
     raw_text = ocr_result.get("raw_text")
     if raw_text:
-        print("\n  Raw OCR Text:")
+        print(f"\n  Raw OCR Text:")
         for line in raw_text.split("\n"):
             print(f"    | {line}")
 
     annotated = ocr_result.get("annotated_text")
     if annotated:
-        print("\n  Annotated Text (word[confidence%]):")
+        print(f"\n  Annotated Text (word[confidence%]):")
         for line in annotated.split("\n"):
             print(f"    | {line}")
 
     lines = ocr_result.get("lines", [])
     if lines:
-        print("\n  Word-Level Confidence:")
+        print(f"\n  Word-Level Confidence:")
         print(f"    {'Word':<20} {'Confidence':>10}")
         print(f"    {'-'*20} {'-'*10}")
         for line_data in lines:
@@ -342,11 +345,11 @@ def _print_ocr_results(ocr_result: dict | None, llm_result: dict | None) -> None
 
     corrected = llm_result.get("corrected_code")
     if corrected:
-        print("\n  Corrected Code:")
+        print(f"\n  Corrected Code:")
         for line in corrected.split("\n"):
             print(f"    | {line}")
     else:
-        print("\n  Corrected Code: (none — LLM correction failed or returned empty)")
+        print(f"\n  Corrected Code: (none — LLM correction failed or returned empty)")
 
     uncertain = llm_result.get("uncertain_words")
     if uncertain:
@@ -358,26 +361,26 @@ def _print_ocr_results(ocr_result: dict | None, llm_result: dict | None) -> None
             )
 
     if llm_result.get("errors"):
-        print("\n  Errors:")
+        print(f"\n  Errors:")
         for err in llm_result["errors"]:
             print(f"    - {err}")
 
     # -- Comparison --
     if raw_text and corrected:
         print(_sub_header("OCR vs LLM Comparison"))
-        print("  Raw OCR Text:")
+        print(f"  Raw OCR Text:")
         for line in raw_text.split("\n"):
             print(f"    | {line}")
-        print("\n  LLM Corrected Code:")
+        print(f"\n  LLM Corrected Code:")
         for line in corrected.split("\n"):
             print(f"    | {line}")
     elif raw_text and not corrected:
         print(_sub_header("OCR vs LLM Comparison"))
-        print("  Raw OCR Text:")
+        print(f"  Raw OCR Text:")
         for line in raw_text.split("\n"):
             print(f"    | {line}")
-        print("\n  LLM Corrected Code: UNAVAILABLE (correction failed)")
-        print("  --> Pipeline used raw OCR text as fallback")
+        print(f"\n  LLM Corrected Code: UNAVAILABLE (correction failed)")
+        print(f"  --> Pipeline used raw OCR text as fallback")
 
 
 def _print_sandbox_results(sandbox_data: dict | None) -> None:
@@ -390,18 +393,18 @@ def _print_sandbox_results(sandbox_data: dict | None) -> None:
     comp = sandbox_data.get("compilation_result", {})
     print(f"  Compiled OK: {comp.get('success')}")
     if comp.get("errors"):
-        print("  Compile Errors:")
+        print(f"  Compile Errors:")
         for err in comp["errors"]:
             print(f"    - {err}")
 
     exe = sandbox_data.get("execution_result", {})
     print(f"  Execution OK: {exe.get('success', 'N/A')}")
     if exe.get("errors"):
-        print("  Runtime Errors:")
+        print(f"  Runtime Errors:")
         for err in exe["errors"]:
             print(f"    - {err}")
     if exe.get("outputs"):
-        print("  Outputs:")
+        print(f"  Outputs:")
         for i, out in enumerate(exe["outputs"], 1):
             print(f"    Case {i}: returncode={out.get('returncode')}")
             if out.get("stdout"):
@@ -417,7 +420,7 @@ def _print_sandbox_results(sandbox_data: dict | None) -> None:
     tc_results = sandbox_data.get("test_cases_results", {})
     results = tc_results.get("results")
     if results:
-        print("\n  Test Case Results:")
+        print(f"\n  Test Case Results:")
         for i, tc in enumerate(results, 1):
             status = "PASS" if tc.get("passed") else "FAIL"
             print(
@@ -440,7 +443,7 @@ def _print_grader_results(grader_data: dict | None) -> None:
 
     breakdown = rubric.get("rubric_breakdown", [])
     if breakdown:
-        print("\n  Rubric Breakdown:")
+        print(f"\n  Rubric Breakdown:")
         print(f"    {'Criterion':<20} {'Score':>10} {'Rationale'}")
         print(f"    {'-'*20} {'-'*10} {'-'*40}")
         for item in breakdown:
@@ -457,7 +460,7 @@ def _print_grader_results(grader_data: dict | None) -> None:
         print(f"\n  Feedback Summary: {feedback.get('summary')}")
         issues = feedback.get("issues", [])
         if issues:
-            print("  Issues:")
+            print(f"  Issues:")
             for issue in issues:
                 sev = issue.get("severity", "?")
                 desc = issue.get("description", "?")
@@ -466,18 +469,18 @@ def _print_grader_results(grader_data: dict | None) -> None:
                 print(f"    - [{sev}]{loc_str} {desc}")
         suggestions = feedback.get("suggestions", [])
         if suggestions:
-            print("  Suggestions:")
+            print(f"  Suggestions:")
             for s in suggestions:
                 print(f"    - {s}")
         next_steps = feedback.get("next_steps", [])
         if next_steps:
-            print("  Next Steps:")
+            print(f"  Next Steps:")
             for ns in next_steps:
                 print(f"    - {ns}")
 
     err_class = rubric.get("error_classification", {})
     if err_class:
-        print("\n  Error Classification:")
+        print(f"\n  Error Classification:")
         print(
             f"    OCR/Handwriting suspected: {err_class.get('handwriting_ocr_suspected')}"
         )
@@ -532,7 +535,7 @@ def run_pipeline(
 
         print("  Starting API server and workers...")
         worker_procs = _start_workers(backend_dir)
-        print("  Waiting up to 30s for API to become ready...")
+        print(f"  Waiting up to 30s for API to become ready...")
         if not _wait_for_api(api_base, timeout=30):
             print(f"  ERROR: API did not start in time at {api_base}")
             _kill_workers(worker_procs)
@@ -691,7 +694,9 @@ def run_pipeline(
             r = client.get(f"/grading/{submission_id}/transcription", headers=stu_h)
             if r.status_code == 200:
                 transcription = r.json()
-                print("  Transcribed Text (best available — raw OCR or LLM corrected):")
+                print(
+                    f"  Transcribed Text (best available — raw OCR or LLM corrected):"
+                )
                 text = transcription.get("transcribed_text") or "(empty)"
                 for line in text.split("\n"):
                     print(f"    | {line}")
@@ -730,9 +735,9 @@ def run_pipeline(
         if ai_check.status_code == 200:
             fb = ai_check.json()
             print(f"  Suggested Grade:     {fb.get('suggested_grade')}")
-            print("  AI Grader Evaluated: YES")
+            print(f"  AI Grader Evaluated: YES")
         else:
-            print("  AI Grader Evaluated: NO")
+            print(f"  AI Grader Evaluated: NO")
 
         if job_result:
             ocr_result, llm_result = _extract_ocr_data(job_result)
@@ -741,17 +746,10 @@ def run_pipeline(
             print(f"  OCR Extraction:      {'OK' if ocr_ok else 'FAILED'}")
             print(f"  LLM Correction:      {'OK' if llm_ok else 'FAILED'}")
 
-        result_str = "PASS" if passed else "FAIL"
-        print(f"  Pipeline Result:     {result_str}")
+        print(f"  Pipeline Result:     {'PASS' if passed else 'FAIL'}")
 
-    # ---- Cleanup: stop workers we started ----
-    if worker_procs:
-        print(_sub_header("Cleanup: stopping workers"))
-        _kill_workers(worker_procs)
-        print("  Workers stopped.")
-
-    if not passed:
-        sys.exit(1)
+        if not passed:
+            sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -780,12 +778,6 @@ def main():
         default=DEFAULT_TIMEOUT,
         help=f"Max seconds to wait for pipeline (default: {DEFAULT_TIMEOUT})",
     )
-    parser.add_argument(
-        "--no-restart-workers",
-        action="store_true",
-        default=False,
-        help="Skip killing and restarting workers (use if workers are already running)",
-    )
     args = parser.parse_args()
 
     image = Path(args.image_path)
@@ -793,13 +785,7 @@ def main():
         print(f"ERROR: Image not found: {image}")
         sys.exit(1)
 
-    run_pipeline(
-        str(image),
-        args.api_base,
-        args.redis_url,
-        args.timeout,
-        restart_workers=not args.no_restart_workers,
-    )
+    run_pipeline(str(image), args.api_base, args.redis_url, args.timeout)
 
 
 if __name__ == "__main__":

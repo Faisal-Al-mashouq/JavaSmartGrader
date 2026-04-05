@@ -20,3 +20,4 @@ select = [
 "backend/OCR/**" = ["N999"]  # Uppercase module name is intentional
 "backend/OCR/ocr_corrector/prompts.py" = ["E501"]
 "backend/OCR/ocr_corrector/SETTINGS_GUIDE.py" = ["ALL"]
+"backend/tests/run_e2e_pipeline.py"=["ALL"]
