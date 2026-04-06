@@ -40,7 +40,7 @@ export default function InstructorAssignmentQuestions() {
       qs.map(async (q) => {
         const r = await getQuestionTestcases(aid, q.id);
         return [q.id, r.data];
-      }),
+      })
     );
     setTestcasesByQ(Object.fromEntries(tcEntries));
   }, [cid, aid]);
@@ -53,19 +53,13 @@ export default function InstructorAssignmentQuestions() {
         await loadAll();
       } catch (e) {
         if (!cancelled) {
-          const msg =
-            e?.response?.data?.detail ??
-            e?.message ??
-            "Could not load questions.";
-          setError(msg);
+          setError(e?.response?.data?.detail ?? e?.message ?? "Could not load questions.");
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [cid, aid, loadAll]);
 
   const handleAddQuestion = async (e) => {
@@ -124,97 +118,94 @@ export default function InstructorAssignmentQuestions() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 lg:items-start max-w-6xl">
-      <div className="flex-1 min-w-0 space-y-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Questions
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            {assignment?.title ? `For “${assignment.title}”. ` : ""}
-            Each item can include several test cases (input and expected
-            output).
-          </p>
-        </div>
+      <div className="flex-1 min-w-0 space-y-6">
 
-        <div className="flex flex-wrap gap-2 items-center">
-          <InstructorNavButton
-            to={`/instructor/courses/${cid}/assignments/${aid}`}
-            variant="primary"
-          >
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Questions</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {assignment?.title ?? "Assignment"}
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+              Each question can include test cases with expected input and output.
+            </p>
+          </div>
+          <InstructorNavButton to={`/instructor/courses/${cid}/assignments/${aid}`} variant="primary">
             ← Assignment
           </InstructorNavButton>
         </div>
 
         {error && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">{error}</p>
+          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-4 py-3">{error}</p>
         )}
 
         {loading ? (
           <p className="text-slate-500 text-sm">Loading…</p>
         ) : questions.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
-            No questions yet. Use{" "}
-            <strong className="font-medium text-slate-600 dark:text-slate-300">
-              + Add question
-            </strong>{" "}
-            on the right.
-          </p>
+          <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl py-16 flex flex-col items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">No questions yet</p>
+            <p className="text-xs text-slate-400">Use <strong className="text-slate-500 dark:text-slate-300">+ Add question</strong> on the right.</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {questions.map((q, idx) => (
               <div
                 key={q.id}
-                className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+                className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl overflow-hidden"
               >
-                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                      Question {idx + 1}
-                    </span>
-                    <p className="text-sm text-slate-800 dark:text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      <span className="text-xs font-extrabold text-white">{idx + 1}</span>
+                    </div>
+                    <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                       {q.question_text}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteQuestion(q.id)}
-                    className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline shrink-0"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Delete question"
                   >
-                    Delete
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
 
-                <div className="px-5 py-4 space-y-3 bg-slate-50/80 dark:bg-slate-900/40">
-                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                <div className="px-6 py-4 space-y-3 bg-slate-50 dark:bg-white/[0.02]">
+                  <p className="text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">
                     Test cases
                   </p>
                   {(testcasesByQ[q.id] ?? []).length === 0 ? (
-                    <p className="text-xs text-slate-500">No test cases yet.</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">No test cases yet.</p>
                   ) : (
                     <ul className="space-y-2">
                       {(testcasesByQ[q.id] ?? []).map((tc) => (
                         <li
                           key={tc.id}
-                          className="text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2"
+                          className="text-xs font-mono bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2"
                         >
                           <div className="space-y-1 min-w-0">
                             <p>
                               <span className="text-slate-400">in:</span>{" "}
-                              <span className="text-slate-700 dark:text-slate-300 break-all">
-                                {tc.input}
-                              </span>
+                              <span className="text-slate-700 dark:text-slate-300 break-all">{tc.input}</span>
                             </p>
                             <p>
                               <span className="text-slate-400">out:</span>{" "}
-                              <span className="text-slate-700 dark:text-slate-300 break-all">
-                                {tc.expected_output}
-                              </span>
+                              <span className="text-slate-700 dark:text-slate-300 break-all">{tc.expected_output}</span>
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteTc(q.id, tc.id)}
-                            className="text-[11px] font-semibold text-red-600 shrink-0"
+                            className="text-[11px] font-semibold text-red-500 dark:text-red-400 hover:underline shrink-0"
                           >
                             Remove
                           </button>
@@ -225,32 +216,24 @@ export default function InstructorAssignmentQuestions() {
 
                   <div className="grid sm:grid-cols-2 gap-2 pt-1">
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
+                      className="rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Input"
                       value={tcDraft[q.id]?.in ?? ""}
                       onChange={(e) =>
                         setTcDraft((prev) => ({
                           ...prev,
-                          [q.id]: {
-                            ...prev[q.id],
-                            in: e.target.value,
-                            out: prev[q.id]?.out ?? "",
-                          },
+                          [q.id]: { ...prev[q.id], in: e.target.value, out: prev[q.id]?.out ?? "" },
                         }))
                       }
                     />
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
+                      className="rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Expected output"
                       value={tcDraft[q.id]?.out ?? ""}
                       onChange={(e) =>
                         setTcDraft((prev) => ({
                           ...prev,
-                          [q.id]: {
-                            ...prev[q.id],
-                            out: e.target.value,
-                            in: prev[q.id]?.in ?? "",
-                          },
+                          [q.id]: { ...prev[q.id], out: e.target.value, in: prev[q.id]?.in ?? "" },
                         }))
                       }
                     />
@@ -272,11 +255,8 @@ export default function InstructorAssignmentQuestions() {
       <aside className="lg:w-52 shrink-0 flex flex-col gap-3 lg:sticky lg:top-24">
         <button
           type="button"
-          onClick={() => {
-            setShowAdd((v) => !v);
-            setError("");
-          }}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
+          onClick={() => { setShowAdd((v) => !v); setError(""); }}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/[0.1] text-slate-700 dark:text-slate-200 bg-white dark:bg-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-colors"
         >
           {showAdd ? "Close" : "+ Add question"}
         </button>
@@ -284,11 +264,11 @@ export default function InstructorAssignmentQuestions() {
         {showAdd && (
           <form
             onSubmit={handleAddQuestion}
-            className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 space-y-2 shadow-sm"
+            className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-xl border border-slate-200 dark:border-white/[0.08] p-3 space-y-2 shadow-sm dark:shadow-xl"
           >
             <textarea
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs text-slate-900 dark:text-white min-h-[72px] resize-y"
-              placeholder="Question"
+              className="w-full rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 min-h-[72px] resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Question text…"
               value={newPrompt}
               onChange={(e) => setNewPrompt(e.target.value)}
               required
@@ -296,13 +276,19 @@ export default function InstructorAssignmentQuestions() {
             <button
               type="submit"
               disabled={savingQ}
-              className="w-full text-xs font-semibold py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-60"
+              className="w-full text-xs font-bold py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white disabled:opacity-60 transition-all"
             >
-              {savingQ ? "…" : "Save"}
+              {savingQ ? "Saving…" : "Save question"}
             </button>
           </form>
         )}
 
+        <InstructorNavButton
+          to={`/instructor/courses/${cid}/assignments/${aid}/rubric`}
+          className="lg:w-full"
+        >
+          Grading Rubric
+        </InstructorNavButton>
         <InstructorNavButton
           to={`/instructor/courses/${cid}/assignments/${aid}/submissions`}
           className="lg:w-full"

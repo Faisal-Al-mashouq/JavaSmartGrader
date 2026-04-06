@@ -28,6 +28,7 @@ import InstructorAssignmentQuestions from "./pages/dashboard/instructor/Instruct
 import InstructorAssignmentSubmissions from "./pages/dashboard/instructor/InstructorAssignmentSubmissions";
 import InstructorSubmissions from "./pages/dashboard/instructor/InstructorSubmissions";
 import InstructorGrading from "./pages/dashboard/instructor/InstructorGrading";
+import InstructorAssignmentRubric from "./pages/dashboard/instructor/InstructorAssignmentRubric";
 
 function App() {
   return (
@@ -90,6 +91,10 @@ function App() {
                 <Route
                   path="courses/:courseId/assignments/:assignmentId/questions"
                   element={<InstructorAssignmentQuestions />}
+                />
+                <Route
+                  path="courses/:courseId/assignments/:assignmentId/rubric"
+                  element={<InstructorAssignmentRubric />}
                 />
                 <Route
                   path="courses/:courseId/assignments/:assignmentId/submissions"

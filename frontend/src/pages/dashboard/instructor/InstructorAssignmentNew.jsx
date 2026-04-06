@@ -36,7 +36,7 @@ export default function InstructorAssignmentNew() {
         dueIso,
         undefined,
       );
-      navigate(`/instructor/courses/${id}/assignments/${data.id}/questions`, {
+      navigate(`/instructor/courses/${id}/assignments/${data.id}/rubric`, {
         replace: true,
       });
     } catch (err) {
@@ -57,7 +57,7 @@ export default function InstructorAssignmentNew() {
           New assignment
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-          You can add questions and tests after you save.
+          You will set the grading rubric after saving.
         </p>
       </div>
 
@@ -117,7 +117,7 @@ export default function InstructorAssignmentNew() {
               disabled={saving}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-xl"
             >
-              {saving ? "Saving…" : "Create and go to questions"}
+              {saving ? "Saving…" : "Create and set rubric"}
             </button>
             <InstructorNavButton to={`/instructor/courses/${id}/assignments`}>
               Cancel
