@@ -91,9 +91,7 @@ async def process_job(client: JobQueue, job: Job) -> Job:
         logger.debug(f"Processing Job: {job.job_id}")
         job.status = JobStatus.STARTED
 
-        skip_ocr = (
-            not job.initial_request.image_url and job.initial_request.java_code
-        )
+        skip_ocr = not job.initial_request.image_url and job.initial_request.java_code
 
         if skip_ocr:
             logger.info(f"Job {job.job_id} skipping OCR (java_code provided, no image)")

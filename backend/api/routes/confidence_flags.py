@@ -153,7 +153,9 @@ async def resolve_confidence_flag(
     session: AsyncSession = Depends(get_db),
     _current_user=Depends(require_role(UserRole.instructor)),
 ):
-    logger.info("Resolving confidence flag %d with suggestion %r", flag_id, body.suggestion)
+    logger.info(
+        "Resolving confidence flag %d with suggestion %r", flag_id, body.suggestion
+    )
 
     flag = await get_confidence_flag_by_id(session, flag_id)
     if not flag:
