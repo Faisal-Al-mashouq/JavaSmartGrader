@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import AIFeedback, CompileResult, Grade, Transcription
@@ -69,6 +69,50 @@ async def get_transcription_by_submission_id(
         select(Transcription).where(Transcription.submission_id == submission_id)
     )
     return result.scalar_one_or_none()
+
+
+async def get_transcription_by_id(
+    session: AsyncSession, transcription_id: int
+) -> Transcription | None:
+    logger.debug("Fetching transcription %d", transcription_id)
+    result = await session.execute(
+        select(Transcription).where(Transcription.id == transcription_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_transcription_text(
+    session: AsyncSession, transcription_id: int, new_text: str
+) -> Transcription | None:
+    logger.info("Updating transcription text for transcription %d", transcription_id)
+    result = await session.execute(
+        select(Transcription).where(Transcription.id == transcription_id)
+    )
+    transcription = result.scalar_one_or_none()
+    if transcription is None:
+        logger.warning("Transcription %d not found for update", transcription_id)
+        return None
+    transcription.transcribed_text = new_text
+    await session.commit()
+    await session.refresh(transcription)
+    logger.info("Transcription %d text updated", transcription_id)
+    return transcription
+
+
+async def delete_compile_result_by_submission_id(
+    session: AsyncSession, submission_id: int
+) -> bool:
+    logger.info("Deleting compile result for submission %d", submission_id)
+    result = await session.execute(
+        delete(CompileResult).where(CompileResult.submission_id == submission_id)
+    )
+    await session.commit()
+    deleted = result.rowcount > 0
+    if deleted:
+        logger.info("Compile result deleted for submission %d", submission_id)
+    else:
+        logger.debug("No compile result found for submission %d", submission_id)
+    return deleted
 
 
 async def create_ai_feedback(

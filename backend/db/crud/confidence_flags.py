@@ -40,6 +40,16 @@ async def create_confidence_flag(
     return flag
 
 
+async def get_confidence_flag_by_id(
+    session: AsyncSession, flag_id: int
+) -> ConfidenceFlag | None:
+    logger.debug("Fetching confidence flag %d", flag_id)
+    result = await session.execute(
+        select(ConfidenceFlag).where(ConfidenceFlag.id == flag_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_confidence_flags_by_transcription_id(
     session: AsyncSession, transcription_id: int
 ) -> list[ConfidenceFlag]:
@@ -50,6 +60,36 @@ async def get_confidence_flags_by_transcription_id(
         )
     )
     return result.scalars().all()
+
+
+async def update_confidence_flag(
+    session: AsyncSession,
+    flag_id: int,
+    text_segment: str | None = None,
+    confidence_score: Decimal | None = None,
+    coordinates: str | None = None,
+    suggestions: str | None = None,
+) -> ConfidenceFlag | None:
+    logger.info("Updating confidence flag %d", flag_id)
+    result = await session.execute(
+        select(ConfidenceFlag).where(ConfidenceFlag.id == flag_id)
+    )
+    flag = result.scalar_one_or_none()
+    if flag is None:
+        logger.warning("Confidence flag %d not found for update", flag_id)
+        return None
+    if text_segment is not None:
+        flag.text_segment = text_segment
+    if confidence_score is not None:
+        flag.confidence_score = confidence_score
+    if coordinates is not None:
+        flag.coordinates = coordinates
+    if suggestions is not None:
+        flag.suggestions = suggestions
+    await session.commit()
+    await session.refresh(flag)
+    logger.info("Confidence flag %d updated", flag_id)
+    return flag
 
 
 async def delete_confidence_flag(session: AsyncSession, flag_id: int) -> bool:
