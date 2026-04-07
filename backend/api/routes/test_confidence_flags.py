@@ -16,10 +16,9 @@ from db.models import SubmissionState, UserRole
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.auth import create_access_token, get_current_user, require_role
+from api.auth import create_access_token
 from api.dependencies import get_db
 from api.routes.confidence_flags import apply_suggestion_to_text, router
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -87,8 +86,10 @@ class TestApplySuggestionToText:
         assert result == "int x = 10;"
 
     def test_multiline_replace_second_line(self):
-        text = "line zero\nSystem.out.printIn(\"Hello\");\nline two"
-        result = apply_suggestion_to_text(text, "line:1:word:0", "System.out.println(\"Hello\");")
+        text = 'line zero\nSystem.out.printIn("Hello");\nline two'
+        result = apply_suggestion_to_text(
+            text, "line:1:word:0", 'System.out.println("Hello");'
+        )
         lines = result.split("\n")
         assert lines[0] == "line zero"
         assert "println" in lines[1]
@@ -217,7 +218,11 @@ class TestResolveEndpoint:
         # Verify transcription was updated with corrected text
         mock_update_text.assert_called_once()
         call_args = mock_update_text.call_args
-        corrected = call_args[0][2] if len(call_args[0]) > 2 else call_args[1].get("new_text", call_args[0][-1])
+        corrected = (
+            call_args[0][2]
+            if len(call_args[0]) > 2
+            else call_args[1].get("new_text", call_args[0][-1])
+        )
         assert "main" in corrected
         assert "mian" not in corrected
 
