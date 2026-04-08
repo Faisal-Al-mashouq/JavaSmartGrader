@@ -71,7 +71,7 @@ def _format_instructor_guidance(rubric_result_json: dict[str, Any]) -> str:
     if total_score is not None and max_score is not None:
         lines.append(f"Score: {total_score}/{max_score}")
 
-    if isinstance(confidence, (int, float)):
+    if isinstance(confidence, int | float):
         lines.append(f"Confidence: {confidence}")
 
     if isinstance(rubric_breakdown, list) and rubric_breakdown:
