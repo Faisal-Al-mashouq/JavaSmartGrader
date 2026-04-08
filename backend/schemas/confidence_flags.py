@@ -12,3 +12,7 @@ class ConfidenceFlagBase(BaseModel):
     suggestions: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ResolveFlagRequest(BaseModel):
+    suggestion: str

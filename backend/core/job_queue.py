@@ -91,12 +91,17 @@ async def process_job(client: JobQueue, job: Job) -> Job:
         logger.debug(f"Processing Job: {job.job_id}")
         job.status = JobStatus.STARTED
 
-        logger.debug(f"Job {job.job_id} OCR Started")
-        ocr_result = await process_ocr_job(client, job)
-        if not ocr_result:
-            logger.error(f"Failed to process OCR for Job: {job.job_id}")
-            return await set_result(job, JobStatus.FAILED)
-        logger.debug(f"Job {job.job_id} OCR Completed")
+        skip_ocr = not job.initial_request.image_url and job.initial_request.java_code
+
+        if skip_ocr:
+            logger.info(f"Job {job.job_id} skipping OCR (java_code provided, no image)")
+        else:
+            logger.debug(f"Job {job.job_id} OCR Started")
+            ocr_result = await process_ocr_job(client, job)
+            if not ocr_result:
+                logger.error(f"Failed to process OCR for Job: {job.job_id}")
+                return await set_result(job, JobStatus.FAILED)
+            logger.debug(f"Job {job.job_id} OCR Completed")
 
         logger.debug(f"Job {job.job_id} Sandbox Started")
         sandbox_result = await process_sandbox_job(client, job)

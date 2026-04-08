@@ -3,6 +3,7 @@ from .assignments import (
 )
 from .confidence_flags import (
     ConfidenceFlagBase,
+    ResolveFlagRequest,
 )
 from .courses import (
     CourseBase,
@@ -33,6 +34,7 @@ from .users import (
 __all__ = [
     "AssignmentBase",
     "ConfidenceFlagBase",
+    "ResolveFlagRequest",
     "CourseBase",
     "GenerateReportBase",
     "QuestionBase",
