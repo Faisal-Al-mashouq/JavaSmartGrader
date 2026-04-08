@@ -35,6 +35,37 @@ def _build_valid_payload(
         "max_score": max_score,
         "rubric_breakdown": [
             {
+                "id": "correctness",
+                "points_awarded": 8.5,
+                "max_points": 10,
+                "comments": "Mostly correct output behavior. compiled_ok: True",
+            }
+        ],
+        "feedback": (
+            "Solid attempt with minor gaps. " "Next step: Add tests for boundary cases."
+        ),
+        "error_classification": {
+            "handwriting_ocr_suspected": False,
+            "syntax_or_compile": False,
+            "runtime": False,
+            "logic": True,
+            "issues": ["Logic misses one branch."],
+        },
+        "confidence": 0.82,
+    }
+
+
+def _build_current_payload(
+    submission_id: int = 1,
+    total_score: float = 8.5,
+    max_score: float = 10.0,
+) -> dict[str, Any]:
+    return {
+        "submission_id": submission_id,
+        "total_score": total_score,
+        "max_score": max_score,
+        "rubric_breakdown": [
+            {
                 "criterion_id_or_name": "correctness",
                 "earned_points": 8.5,
                 "max_points": 10,
@@ -72,6 +103,20 @@ def _valid_json(
 ) -> str:
     return json.dumps(
         _build_valid_payload(
+            submission_id=submission_id,
+            total_score=total_score,
+            max_score=max_score,
+        )
+    )
+
+
+def _current_valid_json(
+    submission_id: int = 1,
+    total_score: float = 8.5,
+    max_score: float = 10.0,
+) -> str:
+    return json.dumps(
+        _build_current_payload(
             submission_id=submission_id,
             total_score=total_score,
             max_score=max_score,
@@ -150,6 +195,16 @@ def test_parser_accepts_valid_json() -> None:
     parsed = parse_and_validate_json(_valid_json(submission_id=101))
     validate_submission_id(parsed, 101)
     assert parsed["submission_id"] == 101
+    assert parsed["rubric_breakdown"][0]["criterion_id_or_name"] == "correctness"
+    assert parsed["feedback"]["summary"] == "Solid attempt with minor gaps."
+    assert parsed["feedback"]["next_steps"] == ["Add tests for boundary cases."]
+    assert parsed["error_classification"]["notes"] == "Logic misses one branch."
+
+
+def test_parser_accepts_current_runtime_json() -> None:
+    parsed = parse_and_validate_json(_current_valid_json(submission_id=102))
+    validate_submission_id(parsed, 102)
+    assert parsed["submission_id"] == 102
 
 
 def test_parser_rejects_invalid_json() -> None:
@@ -163,19 +218,23 @@ def test_validate_submission_id_mismatch() -> None:
         validate_submission_id(parsed, 9)
 
 
-def test_prompt_contains_core_sections() -> None:
+def test_prompt_uses_dataset_style_payload() -> None:
     schema = grading_schema()
     prompt = construct_prompt(
         submission_id=55,
         code="class Main { }",
-        logs="compiled_ok: true",
-        rubric={"criteria": [{"id": "correctness", "max_points": 10}]},
+        evaluation={"test_results": "compiled_ok: true"},
+        rubric={
+            "criteria": [{"id": "correctness", "max_points": 10}],
+            "instructor_focus": "Keep style deductions light.",
+        },
         schema=schema,
     )
-    assert "submission_id: 55" in prompt
-    assert "Student code (verbatim):" in prompt
-    assert "Sandbox compile/run logs (verbatim):" in prompt
-    assert "class Main { }" in prompt
+    payload = json.loads(prompt)
+    assert payload["submission_id"] == 55
+    assert payload["code"] == "class Main { }"
+    assert payload["evaluation"]["test_results"] == "compiled_ok: true"
+    assert payload["instructor_notes"] == "Keep style deductions light."
 
 
 def test_initialize_job_success() -> None:
@@ -207,6 +266,16 @@ def test_format_sandbox_logs() -> None:
     assert "testcase 1: input=6 7 expected=42 actual=42 passed=True" in logs
 
 
+def test_build_dataset_evaluation_contains_dataset_fields() -> None:
+    evaluation = grader_main._build_dataset_evaluation(
+        code="public static int square(int n) { return n * n; }",
+        sandbox_result=_sandbox_result(),
+    )
+    assert evaluation["test_stats"] == {"total": 1, "passed": 1, "failed": 0}
+    assert len(evaluation["edge_case_results"]) == 4
+    assert evaluation["performance"]["method"] == "heuristic_static_estimation"
+
+
 def test_parse_with_single_repair_uses_one_repair_call() -> None:
     llm_client = _DummyLLMClient(outputs=[_valid_json(submission_id=88)])
     parsed, raw_used = _run(
@@ -234,6 +303,9 @@ def test_process_submission_success() -> None:
     result = _run(grader_main.process_submission(job=job, llm_client=llm_client))
     assert result["status"] == "COMPLETED"
     assert result["parsed_feedback"]["submission_id"] == 11
+    assert result["parsed_feedback"]["feedback"]["summary"] == (
+        "Solid attempt with minor gaps."
+    )
 
 
 def test_process_submission_llm_error() -> None:

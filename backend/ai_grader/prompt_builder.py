@@ -26,51 +26,31 @@ def construct_prompt(
     *,
     submission_id: int,
     code: str,
-    logs: str,
+    evaluation: dict[str, Any],
     rubric: Any,
     schema: dict[str, Any],
 ) -> str:
     """
-    assembles the main grading prompt - we can change it later
-    Sections are:
-        role declaration
-        task description
-        hard requirements (no markdown, cite evidence, do not invent tests)
-        the required JSON schema
-        the submission_id
-        the rubric
-        the student code wrapped in BEGIN/END_CODE tags
-        sandbox logs wrapped in BEGIN/END_LOGS tags
-    it should prevent the model from confusing content with instructions
+    Builds the dataset-style user message used by the fine-tuning corpus.
+    The main prompt is intentionally just a JSON payload so runtime requests
+    match the structure the model saw during training.
     Returns: str
     """
-    rubric_text = _as_json_block(rubric)
-    schema_text = _as_json_block(schema)
+    del schema  # The dataset-style prompt relies on message structure, not prose.
 
-    return (
-        "Role: Expert Java Grader\n"
-        "Task: Assess the following code based on the logs and rubric.\n\n"
-        "Hard requirements:\n"
-        "- Return ONLY valid JSON matching schema; no markdown; no extra text.\n"
-        "- Include rubric criteria and point values in your grading decisions.\n"
-        "- Do not invent tests.\n"
-        "- Cite concrete evidence from the student code and sandbox logs.\n"
-        "- If uncertain, lower confidence and explain uncertainty in "
-        "error_classification.notes.\n\n"
-        "Required JSON schema:\n"
-        f"{schema_text}\n\n"
-        f"submission_id: {submission_id}\n\n"
-        "Rubric criteria and points (verbatim):\n"
-        f"{rubric_text}\n\n"
-        "Student code (verbatim):\n"
-        "<BEGIN_CODE>\n"
-        f"{code}\n"
-        "<END_CODE>\n\n"
-        "Sandbox compile/run logs (verbatim):\n"
-        "<BEGIN_LOGS>\n"
-        f"{logs}\n"
-        "<END_LOGS>\n"
-    )
+    payload: dict[str, Any] = {
+        "submission_id": submission_id,
+        "code": code,
+        "evaluation": evaluation,
+        "rubric": rubric,
+    }
+
+    if isinstance(rubric, dict):
+        instructor_focus = rubric.get("instructor_focus")
+        if isinstance(instructor_focus, str) and instructor_focus.strip():
+            payload["instructor_notes"] = instructor_focus.strip()
+
+    return json.dumps(payload, ensure_ascii=True)
 
 
 def construct_output_repair_prompt(
@@ -81,17 +61,16 @@ def construct_output_repair_prompt(
 ) -> str:
     """
     Builds a shorter follow-up prompt sent when the first LLM output
-    fails JSON/schema validation.
-    This repairs the model output, not prompt construction.
-    Includes submission_id, required schema, and previous invalid output so
-    the model can self-correct and return complete valid JSON.
+    fails JSON/schema validation. The repair prompt stays explicit about the
+    dataset-facing response contract so the model can self-correct cleanly.
     Returns: str
     """
     schema_text = _as_json_block(schema)
 
     return (
         "The previous response was invalid.\n"
-        "Return ONLY valid JSON matching schema; no markdown; no extra text.\n"
+        "Return ONLY valid JSON matching the required schema. "
+        "Do not add markdown.\n"
         "Do not omit required keys.\n"
         f"Use submission_id={submission_id}.\n\n"
         "Required JSON schema:\n"

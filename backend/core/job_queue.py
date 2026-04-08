@@ -8,7 +8,7 @@ from settings import settings
 
 from .config import JobQueue
 from .process import (
-    # process_final_result_job,
+    process_final_result_job,
     process_grader_job,
     process_ocr_job,
     process_sandbox_job,
@@ -112,12 +112,12 @@ async def process_job(client: JobQueue, job: Job) -> Job:
             return await set_result(job, JobStatus.FAILED)
         logger.debug(f"Job {job.job_id} Grader Completed")
 
-        # logger.debug(f"Job {job.job_id} Final Result Started")
-        # final_result = await process_final_result_job(client, job)
-        # if not final_result:
-        #     logger.error(f"Failed to process Final Result for Job: {job.job_id}")
-        #     return await set_result(job, JobStatus.FAILED)
-        # logger.debug(f"Job {job.job_id} Final Result Completed")
+        logger.debug(f"Job {job.job_id} Final Result Started")
+        final_result = await process_final_result_job(client, job)
+        if not final_result:
+            logger.error(f"Failed to process Final Result for Job: {job.job_id}")
+            return await set_result(job, JobStatus.FAILED)
+        logger.debug(f"Job {job.job_id} Final Result Completed")
 
         logger.info(f"Job {job.job_id} Completed Successfully")
         logger.debug(f"Job {job.job_id} Result: {job.job_result_payload}")
