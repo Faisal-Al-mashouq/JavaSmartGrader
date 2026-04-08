@@ -225,7 +225,9 @@ def _build_edge_case_results(
         or re.search(r"-\d", logs)
         or "negative" in lowered_logs
     )
-    zero_boundary = bool(re.search(r"(?<!\d)0(?!\d)", code) or re.search(r"(?<!\d)0(?!\d)", logs))
+    zero_boundary = bool(
+        re.search(r"(?<!\d)0(?!\d)", code) or re.search(r"(?<!\d)0(?!\d)", logs)
+    )
     empty_input = any(
         marker in code or marker in logs
         for marker in ('""', "[]", ".isEmpty(", "length() == 0", "length()==0")
@@ -278,12 +280,22 @@ def _build_dataset_evaluation(
 ) -> dict[str, Any]:
     result = _unwrap_sandbox_result(sandbox_result)
     logs = _format_sandbox_logs(sandbox_result)
-    test_cases = ((result.get("test_cases_results") or {}).get("results")) if result else []
+    test_cases = (
+        ((result.get("test_cases_results") or {}).get("results")) if result else []
+    )
     if not isinstance(test_cases, list):
         test_cases = []
 
-    passed = sum(1 for case in test_cases if isinstance(case, dict) and case.get("passed") is True)
-    failed = sum(1 for case in test_cases if isinstance(case, dict) and case.get("passed") is False)
+    passed = sum(
+        1
+        for case in test_cases
+        if isinstance(case, dict) and case.get("passed") is True
+    )
+    failed = sum(
+        1
+        for case in test_cases
+        if isinstance(case, dict) and case.get("passed") is False
+    )
     total = passed + failed
 
     return {

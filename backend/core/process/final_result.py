@@ -1,11 +1,10 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from db.crud.submissions import get_submission_by_id
 from db.models import AIFeedback, SubmissionState
 from db.session import async_session
-from datetime import datetime
-
 from schemas import FinalResult, GraderResult, Job, JobResultPayload, JobStatus, JobType
 from sqlalchemy import select
 
@@ -17,7 +16,8 @@ def _get_grader_result(job: Job) -> GraderResult | None:
         (
             payload.job_result
             for payload in job.job_result_payload
-            if payload.job_result and getattr(payload.job_result, "type", None) == JobType.GRADER
+            if payload.job_result
+            and getattr(payload.job_result, "type", None) == JobType.GRADER
         ),
         None,
     )

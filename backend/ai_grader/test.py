@@ -42,8 +42,7 @@ def _build_valid_payload(
             }
         ],
         "feedback": (
-            "Solid attempt with minor gaps. "
-            "Next step: Add tests for boundary cases."
+            "Solid attempt with minor gaps. " "Next step: Add tests for boundary cases."
         ),
         "error_classification": {
             "handwriting_ocr_suspected": False,
