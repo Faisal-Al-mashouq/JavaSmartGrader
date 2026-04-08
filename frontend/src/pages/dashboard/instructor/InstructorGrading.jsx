@@ -1,7 +1,97 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getMyCourses, getCourseAssignments } from "../../../services/courseService";
 import { getAssignmentSubmissions } from "../../../services/submissionService";
-import { getAIFeedback, getTranscription, addGrade, updateGrade } from "../../../services/gradingService";
+import { getAIFeedback, getTranscription, addGrade, updateGrade, getConfidenceFlags, resolveConfidenceFlag } from "../../../services/gradingService";
+
+/* ── Highlighted OCR code ───────────────────────────────────────────── */
+function HighlightedCode({ text, flags, onResolve }) {
+  const [openFlagId, setOpenFlagId] = useState(null);
+  const [resolving,  setResolving]  = useState(null);
+
+  // Build coordinate → flag lookup
+  const flagMap = {};
+  for (const f of flags) {
+    if (f.coordinates) flagMap[f.coordinates] = f;
+  }
+
+  const handleResolve = async (flagId, suggestion) => {
+    setResolving(flagId);
+    try {
+      await resolveConfidenceFlag(flagId, suggestion);
+      onResolve();
+    } finally {
+      setResolving(null);
+      setOpenFlagId(null);
+    }
+  };
+
+  const lines = text.split("\n");
+
+  return (
+    <pre className="bg-slate-900 dark:bg-black/50 text-emerald-400 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed font-mono border border-slate-700 dark:border-white/[0.08] whitespace-pre-wrap">
+      {lines.map((line, lineIdx) => {
+        const tokens = line.match(/\S+/g) || [];
+        const separators = line.split(/\S+/);
+        const parts = [];
+
+        for (let wi = 0; wi < tokens.length; wi++) {
+          if (separators[wi]) parts.push(separators[wi]);
+
+          const coord = `line:${lineIdx}:word:${wi}`;
+          const flag  = flagMap[coord];
+
+          if (flag) {
+            const isOpen      = openFlagId === flag.id;
+            const suggestions = flag.suggestions
+              ? flag.suggestions.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
+
+            parts.push(
+              <span key={`${lineIdx}-${wi}`} className="relative inline-block">
+                <span
+                  onClick={() => setOpenFlagId(isOpen ? null : flag.id)}
+                  className="text-red-400 bg-red-500/20 rounded px-0.5 cursor-pointer underline decoration-dotted decoration-red-400"
+                  title={`Low confidence (${Math.round(Number(flag.confidence_score) * 100)}%) — click to fix`}
+                >
+                  {tokens[wi]}
+                </span>
+                {isOpen && (
+                  <span className="absolute top-full left-0 z-50 mt-1 bg-slate-800 border border-white/[0.12] rounded-lg shadow-2xl py-1 min-w-[130px] block">
+                    <span className="block text-[10px] text-slate-500 px-3 py-1 border-b border-white/[0.06]">
+                      {Math.round(Number(flag.confidence_score) * 100)}% confidence
+                    </span>
+                    {suggestions.map((s, si) => (
+                      <button
+                        key={si}
+                        type="button"
+                        disabled={resolving === flag.id}
+                        onClick={() => handleResolve(flag.id, s)}
+                        className="w-full text-left text-xs px-3 py-1.5 text-slate-200 hover:bg-white/[0.08] font-mono transition-colors disabled:opacity-50"
+                      >
+                        {resolving === flag.id ? "Applying…" : s}
+                      </button>
+                    ))}
+                  </span>
+                )}
+              </span>
+            );
+          } else {
+            parts.push(tokens[wi]);
+          }
+        }
+
+        if (separators[tokens.length]) parts.push(separators[tokens.length]);
+
+        return (
+          <span key={lineIdx}>
+            {parts}
+            {lineIdx < lines.length - 1 ? "\n" : ""}
+          </span>
+        );
+      })}
+    </pre>
+  );
+}
 
 /* ── Score ring ─────────────────────────────────────────────────────── */
 function ScoreRing({ score, max }) {
@@ -19,7 +109,7 @@ function ScoreRing({ score, max }) {
 }
 
 /* ── AI Panel ───────────────────────────────────────────────────────── */
-function AIGradingPanel({ sub, onPublished }) {
+function AIGradingPanel({ sub, onPublished, onFlagResolved }) {
   const fb = sub.aiFeedback;
   const [overrideMode, setOverrideMode] = useState(false);
   const [manualScore,  setManualScore]  = useState("");
@@ -123,9 +213,17 @@ function AIGradingPanel({ sub, onPublished }) {
               </svg>
             </button>
             {showCode && sub.transcription?.transcribed_text && (
-              <pre className="bg-slate-900 dark:bg-black/50 text-emerald-400 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed font-mono border border-slate-700 dark:border-white/[0.08]">
-                {sub.transcription.transcribed_text}
-              </pre>
+              <HighlightedCode
+                text={sub.transcription.transcribed_text}
+                flags={sub.confidenceFlags ?? []}
+                onResolve={onFlagResolved}
+              />
+            )}
+            {showCode && (sub.confidenceFlags ?? []).length > 0 && (
+              <p className="text-[11px] text-red-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                {sub.confidenceFlags.length} low-confidence word{sub.confidenceFlags.length > 1 ? "s" : ""} flagged — click to fix
+              </p>
             )}
             {showCode && !sub.transcription?.transcribed_text && (
               <p className="text-xs text-slate-400 dark:text-slate-500 italic px-1">No OCR transcription available.</p>
@@ -220,60 +318,61 @@ export default function InstructorGrading() {
   const [loading,    setLoading]    = useState(true);
   const [published,  setPublished]  = useState({});
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const coursesRes  = await getMyCourses();
+      const courses     = coursesRes.data;
 
-    const load = async () => {
-      try {
-        const coursesRes  = await getMyCourses();
-        const courses     = coursesRes.data;
+      const assignmentsByCoursePairs = await Promise.all(
+        courses.map((c) =>
+          getCourseAssignments(c.id)
+            .then((r) => r.data.map((a) => ({ ...a, course: c })))
+            .catch(() => [])
+        )
+      );
+      const allAssignments = assignmentsByCoursePairs.flat();
 
-        const assignmentsByCoursePairs = await Promise.all(
-          courses.map((c) =>
-            getCourseAssignments(c.id)
-              .then((r) => r.data.map((a) => ({ ...a, course: c })))
-              .catch(() => [])
-          )
-        );
-        const allAssignments = assignmentsByCoursePairs.flat();
+      const subsByAssignmentPairs = await Promise.all(
+        allAssignments.map((a) =>
+          getAssignmentSubmissions(a.id)
+            .then((r) => r.data.map((s) => ({ ...s, assignment: a, course: a.course })))
+            .catch(() => [])
+        )
+      );
+      const allSubs = subsByAssignmentPairs.flat();
+      allSubs.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
-        const subsByAssignmentPairs = await Promise.all(
-          allAssignments.map((a) =>
-            getAssignmentSubmissions(a.id)
-              .then((r) => r.data.map((s) => ({ ...s, assignment: a, course: a.course })))
-              .catch(() => [])
-          )
-        );
-        const allSubs = subsByAssignmentPairs.flat();
-        allSubs.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+      const gradedSubs     = allSubs.filter((s) => s.state === "graded");
+      const processingList = allSubs.filter((s) => s.state === "submitted" || s.state === "processing");
 
-        const gradedSubs     = allSubs.filter((s) => s.state === "graded");
-        const processingList = allSubs.filter((s) => s.state === "submitted" || s.state === "processing");
+      const enriched = await Promise.all(
+        gradedSubs.map(async (s) => {
+          const [fbRes, tRes] = await Promise.all([
+            getAIFeedback(s.id).catch(() => null),
+            getTranscription(s.id).catch(() => null),
+          ]);
+          const transcription = tRes?.data ?? null;
+          let confidenceFlags = [];
+          if (transcription?.id) {
+            confidenceFlags = await getConfidenceFlags(transcription.id)
+              .then((r) => r.data)
+              .catch(() => []);
+          }
+          return { ...s, aiFeedback: fbRes?.data ?? null, transcription, confidenceFlags };
+        })
+      );
 
-        const enriched = await Promise.all(
-          gradedSubs.map(async (s) => {
-            const [fbRes, tRes] = await Promise.all([
-              getAIFeedback(s.id).catch(() => null),
-              getTranscription(s.id).catch(() => null),
-            ]);
-            return { ...s, aiFeedback: fbRes?.data ?? null, transcription: tRes?.data ?? null };
-          })
-        );
-
-        if (!cancelled) {
-          setAiGraded(enriched);
-          setProcessing(processingList);
-          setLoading(false);
-        }
-      } catch (e) {
-        console.error("InstructorGrading fetch error:", e);
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => { cancelled = true; };
+      setAiGraded(enriched);
+      setProcessing(processingList);
+    } catch (e) {
+      console.error("InstructorGrading fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const handlePublished = (submissionId, grade) => {
     setPublished((prev) => ({ ...prev, [submissionId]: grade }));
@@ -327,7 +426,7 @@ export default function InstructorGrading() {
             AI-Graded — Awaiting Your Review ({pendingReview.length})
           </h2>
           {pendingReview.map((sub) => (
-            <AIGradingPanel key={sub.id} sub={sub} onPublished={handlePublished} />
+            <AIGradingPanel key={sub.id} sub={sub} onPublished={handlePublished} onFlagResolved={load} />
           ))}
         </div>
       )}
