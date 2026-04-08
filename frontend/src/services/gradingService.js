@@ -34,6 +34,10 @@ export const updateGrade = (submissionId, grade) =>
     params: { grade },
   });
 
-/** POST /grading/{submissionId}/grade/publish */
-export const publishGrade = (submissionId) =>
-  api.post(`/grading/${submissionId}/grade/publish`);
+/** GET /confidence-flags/transcription/{transcriptionId} */
+export const getConfidenceFlags = (transcriptionId) =>
+  api.get(`/confidence-flags/transcription/${transcriptionId}`);
+
+/** POST /confidence-flags/{flagId}/resolve */
+export const resolveConfidenceFlag = (flagId, suggestion) =>
+  api.post(`/confidence-flags/${flagId}/resolve`, { suggestion });
