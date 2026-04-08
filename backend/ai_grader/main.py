@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
+import re
 from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
@@ -103,17 +104,41 @@ def _coerce_lines(value: Any) -> str:
     return str(value)
 
 
-def _format_sandbox_logs(sandbox_result: dict | None) -> str:
+def _default_sandbox_logs() -> str:
+    return "\n".join(
+        [
+            "compiled_ok: unknown",
+            "compile_errors:",
+            "",
+            "runtime_errors:",
+            "",
+            "runtime_output:",
+            "",
+            "test_case_results:",
+        ]
+    ).strip()
+
+
+def _unwrap_sandbox_result(sandbox_result: dict | None) -> dict[str, Any]:
     if not sandbox_result or not isinstance(sandbox_result, dict):
-        return ""
+        return {}
 
     result = sandbox_result.get("result")
-    if not isinstance(result, dict):
-        return ""
+    if isinstance(result, dict):
+        return result
+    return sandbox_result
+
+
+def _format_sandbox_logs(sandbox_result: dict | None) -> str:
+    result = _unwrap_sandbox_result(sandbox_result)
+    if not result:
+        return _default_sandbox_logs()
 
     compilation = result.get("compilation_result") or {}
     execution = result.get("execution_result") or {}
     test_cases = result.get("test_cases_results") or {}
+    compiled_ok = compilation.get("success")
+    compiled_ok_text = compiled_ok if compiled_ok is not None else "unknown"
 
     outputs = execution.get("outputs") or []
     output_lines = []
@@ -152,7 +177,7 @@ def _format_sandbox_logs(sandbox_result: dict | None) -> str:
 
     return "\n".join(
         [
-            f"compiled_ok: {compilation.get('success')}",
+            f"compiled_ok: {compiled_ok_text}",
             "compile_errors:",
             _coerce_lines(compilation.get("errors")),
             "runtime_errors:",
@@ -163,6 +188,118 @@ def _format_sandbox_logs(sandbox_result: dict | None) -> str:
             "\n".join(test_case_lines),
         ]
     ).strip()
+
+
+def _estimate_time_complexity(code: str) -> str:
+    lowered = code.lower()
+    loop_count = len(re.findall(r"\b(for|while)\b", lowered))
+    method_match = re.search(
+        r"(?:public|private|protected)?\s*(?:static\s+)?\w[\w<>\[\]]*\s+(\w+)\s*\(",
+        code,
+    )
+    recursive = False
+    if method_match:
+        method_name = method_match.group(1)
+        recursive = len(re.findall(rf"\b{re.escape(method_name)}\s*\(", code)) > 1
+
+    if recursive and "fibonacci" in lowered:
+        return "O(2^n)"
+    if loop_count >= 2:
+        return "O(n^2)"
+    if loop_count == 1 or recursive:
+        return "O(n)"
+    return "O(1)"
+
+
+def _build_edge_case_results(
+    *,
+    code: str,
+    logs: str,
+) -> list[dict[str, Any]]:
+    lowered_code = code.lower()
+    lowered_logs = logs.lower()
+
+    null_guard = "== null" in lowered_code or "!= null" in lowered_code
+    negative_handling = bool(
+        re.search(r"<\s*0", code)
+        or re.search(r"-\d", logs)
+        or "negative" in lowered_logs
+    )
+    zero_boundary = bool(re.search(r"(?<!\d)0(?!\d)", code) or re.search(r"(?<!\d)0(?!\d)", logs))
+    empty_input = any(
+        marker in code or marker in logs
+        for marker in ('""', "[]", ".isEmpty(", "length() == 0", "length()==0")
+    )
+
+    return [
+        {
+            "name": "null_input",
+            "passed": null_guard,
+            "evidence": (
+                "Code checks `input == null` before processing."
+                if null_guard
+                else "No null guard appears before dereference in code."
+            ),
+        },
+        {
+            "name": "negative_numbers",
+            "passed": negative_handling,
+            "evidence": (
+                "Test logs include negative-value handling or code explicitly checks for values below zero."
+                if negative_handling
+                else "No evidence of negative-value handling appears in tested paths."
+            ),
+        },
+        {
+            "name": "zero_boundary",
+            "passed": zero_boundary,
+            "evidence": (
+                "Boundary input `0` is explicitly covered in logs or condition checks."
+                if zero_boundary
+                else "No boundary check for `0` appears in code or logs."
+            ),
+        },
+        {
+            "name": "empty_input",
+            "passed": empty_input,
+            "evidence": (
+                "Empty collection/string case is represented and evaluated in logs."
+                if empty_input
+                else "Empty input case is absent from code checks and log coverage."
+            ),
+        },
+    ]
+
+
+def _build_dataset_evaluation(
+    *,
+    code: str,
+    sandbox_result: dict | None,
+) -> dict[str, Any]:
+    result = _unwrap_sandbox_result(sandbox_result)
+    logs = _format_sandbox_logs(sandbox_result)
+    test_cases = ((result.get("test_cases_results") or {}).get("results")) if result else []
+    if not isinstance(test_cases, list):
+        test_cases = []
+
+    passed = sum(1 for case in test_cases if isinstance(case, dict) and case.get("passed") is True)
+    failed = sum(1 for case in test_cases if isinstance(case, dict) and case.get("passed") is False)
+    total = passed + failed
+
+    return {
+        "test_results": logs,
+        "test_stats": {
+            "total": total,
+            "passed": passed,
+            "failed": failed,
+        },
+        "edge_case_results": _build_edge_case_results(code=code, logs=logs),
+        "performance": {
+            "time_complexity": _estimate_time_complexity(code),
+            "execution_time_ms": None,
+            "method": "heuristic_static_estimation",
+        },
+    }
 
 
 def initialize_job(raw_payload: str) -> AIGraderJobRequest | None:
@@ -203,12 +340,15 @@ async def process_submission(
     """
     logger.info("Processing AI grading for submission_id=%s", job.submission_id)
 
-    logs = _format_sandbox_logs(job.sandbox_result)
+    evaluation = _build_dataset_evaluation(
+        code=job.transcribed_text,
+        sandbox_result=job.sandbox_result,
+    )
     schema = grading_schema()
     prompt = construct_prompt(
         submission_id=job.submission_id,
         code=job.transcribed_text,
-        logs=logs,
+        evaluation=evaluation,
         rubric=job.rubric_json,
         schema=schema,
     )

@@ -58,106 +58,6 @@ def _normalize_grader_payload(raw_result: dict[str, Any]) -> dict[str, Any]:
     return {"rubric_result_json": stripped}
 
 
-def _extract_summary(rubric_result_json: dict[str, Any]) -> str | None:
-    feedback = rubric_result_json.get("feedback")
-    if not isinstance(feedback, dict):
-        return None
-    summary = feedback.get("summary")
-    if isinstance(summary, str):
-        stripped = summary.strip()
-        return stripped or None
-    return None
-
-
-def _coerce_final_grade(
-    value: Any,
-    *,
-    rubric_result_json: dict[str, Any],
-) -> float | None:
-    if value is not None:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
-
-    total_score = rubric_result_json.get("total_score")
-    if total_score is None:
-        return None
-    try:
-        return float(total_score)
-    except (TypeError, ValueError):
-        return None
-
-
-async def _save_success_to_db(
-    *,
-    submission_id: int,
-    raw_result: dict[str, Any],
-    grader_result: GraderResult,
-) -> bool:
-    rubric_result_json = grader_result.rubric_result_json
-    final_grade = _coerce_final_grade(
-        raw_result.get("final_grade"),
-        rubric_result_json=rubric_result_json,
-    )
-
-    student_feedback = raw_result.get("student_feedback")
-    if not isinstance(student_feedback, str) or not student_feedback.strip():
-        student_feedback = _extract_summary(rubric_result_json)
-    else:
-        student_feedback = student_feedback.strip()
-
-    instructor_guidance = raw_result.get("instructor_guidance")
-    if not isinstance(instructor_guidance, str) or not instructor_guidance.strip():
-        instructor_guidance = json.dumps(
-            rubric_result_json,
-            ensure_ascii=True,
-            indent=2,
-        )
-    else:
-        instructor_guidance = instructor_guidance.strip()
-
-    try:
-        async with async_session() as session:
-            submission = await get_submission_by_id(session, submission_id)
-            if not submission:
-                logger.error(
-                    "Submission %s not found - cannot save AI feedback.",
-                    submission_id,
-                )
-                return False
-
-            existing_result = await session.execute(
-                select(AIFeedback).where(AIFeedback.submission_id == submission_id)
-            )
-            existing_feedback = existing_result.scalar_one_or_none()
-
-            if existing_feedback is None:
-                session.add(
-                    AIFeedback(
-                        submission_id=submission_id,
-                        suggested_grade=final_grade,
-                        instructor_guidance=instructor_guidance,
-                        student_feedback=student_feedback,
-                    )
-                )
-            else:
-                existing_feedback.suggested_grade = final_grade
-                existing_feedback.instructor_guidance = instructor_guidance
-                existing_feedback.student_feedback = student_feedback
-
-            submission.state = SubmissionState.graded
-            await session.commit()
-            return True
-    except Exception as exc:
-        logger.error(
-            "Failed to persist successful AI grading for submission %s: %s",
-            submission_id,
-            exc,
-        )
-        return False
-
-
 async def _save_failure_to_db(
     *,
     submission_id: int,
@@ -303,18 +203,6 @@ async def process_grader_job(client: JobQueue, job: Job) -> Job | None:
                 finished_at=datetime.now(),
             )
         )
-
-        if not await _save_success_to_db(
-            submission_id=submission_id,
-            raw_result=raw_result,
-            grader_result=grader_result,
-        ):
-            await _save_failure_to_db(
-                submission_id=submission_id,
-                reason="Failed to persist successful AI grading output to DB.",
-                raw_output=raw_result.get("raw_output"),
-            )
-            return None
 
         job.status = JobStatus.PENDING
         logger.debug("AI Grader Job: %s completed", job.job_id)

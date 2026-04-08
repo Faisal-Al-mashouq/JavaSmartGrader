@@ -7,8 +7,8 @@ RUN uv sync --frozen --no-dev
 
 FROM base AS backend
 COPY . .
-RUN chmod +x /app/scripts/docker-db-init.sh
-ENTRYPOINT ["/app/scripts/docker-db-init.sh"]
+#RUN chmod +x /app/scripts/docker-db-init.sh
+#ENTRYPOINT ["/app/scripts/docker-db-init.sh"]
 CMD ["uv", "run", "task", "dev"]
 
 FROM base AS ocr

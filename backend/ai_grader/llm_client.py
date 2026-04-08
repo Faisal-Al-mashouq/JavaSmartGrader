@@ -128,8 +128,8 @@ class LLMClient:
                     "role": "system",
                     "content": (
                         "You are an expert Java grader. "
-                        "Return ONLY valid JSON matching the provided schema. "
-                        "No markdown, no extra text."
+                        "Return ONLY valid JSON matching the required schema. "
+                        "Do not add markdown."
                     ),
                 },
                 {

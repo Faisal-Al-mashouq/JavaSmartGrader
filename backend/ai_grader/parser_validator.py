@@ -5,7 +5,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from .schemas import GradingResponse
+from .schemas import (
+    DatasetGradingResponse,
+    GradingResponse,
+    normalize_dataset_grading_response,
+)
 
 """
 guards the system against malformed or hallucinated LLM output
@@ -27,7 +31,7 @@ Returns: dict
 
 
 def grading_schema() -> dict[str, Any]:
-    return GradingResponse.model_json_schema()
+    return DatasetGradingResponse.model_json_schema()
 
 
 def _extract_first_json_object(raw_text: str) -> str:
@@ -100,12 +104,24 @@ def parse_and_validate_json(raw_text: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise JSONValidationError("JSON must be an object")
 
+    current_error: ValidationError | None = None
+
     try:
         model = GradingResponse.model_validate(payload)
+        return model.model_dump(mode="python")
     except ValidationError as exc:
-        raise JSONValidationError(f"Schema validation failed: {exc}") from exc
+        current_error = exc
 
-    return model.model_dump(mode="python")
+    try:
+        dataset_model = DatasetGradingResponse.model_validate(payload)
+        normalized = normalize_dataset_grading_response(dataset_model)
+        return normalized.model_dump(mode="python")
+    except ValidationError as exc:
+        raise JSONValidationError(
+            "Schema validation failed. "
+            f"Current schema error: {current_error}. "
+            f"Dataset schema error: {exc}"
+        ) from exc
 
 
 def validate_submission_id(
