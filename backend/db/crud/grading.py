@@ -122,7 +122,6 @@ async def create_grade(
         submission_id=submission_id,
         instructor_id=instructor_id,
         final_grade=final_grade,
-        published_at=datetime.now(UTC) if final_grade is not None else None,
     )
     session.add(grade)
     await session.commit()
@@ -150,7 +149,18 @@ async def update_grade(
     await session.execute(
         update(Grade)
         .where(Grade.submission_id == submission_id)
-        .values(final_grade=new_final_grade, published_at=datetime.now(UTC))
+        .values(final_grade=new_final_grade)
+    )
+    await session.commit()
+    return await get_grade_by_submission_id(session, submission_id)
+
+
+async def publish_grade(session: AsyncSession, submission_id: int) -> Grade | None:
+    logger.info("Publishing grade for submission %d", submission_id)
+    await session.execute(
+        update(Grade)
+        .where(Grade.submission_id == submission_id)
+        .values(published_at=datetime.now(UTC))
     )
     await session.commit()
     return await get_grade_by_submission_id(session, submission_id)

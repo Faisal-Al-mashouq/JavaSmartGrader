@@ -41,6 +41,7 @@ export const createAssignment = (
   title,
   description,
   dueDateIso,
+  visibleAtIso,
   rubricJson,
 ) =>
   api.post("/assignments/", rubricJson ?? DEFAULT_ASSIGNMENT_RUBRIC, {
@@ -49,6 +50,7 @@ export const createAssignment = (
       title,
       ...(description ? { description } : {}),
       ...(dueDateIso ? { due_date: dueDateIso } : {}),
+      ...(visibleAtIso ? { visible_at: visibleAtIso } : {}),
     },
   });
 

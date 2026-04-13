@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from db.crud.courses import is_student_enrolled
 from db.crud.submissions import (
@@ -36,6 +37,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _is_visible_to_students(assignment) -> bool:
+    if assignment.visible_at is None:
+        return True
+    return assignment.visible_at <= datetime.now(UTC)
+
+
 @router.post("/", response_model=SubmissionBase)
 async def submit_answer(
     background_tasks: BackgroundTasks,
@@ -56,6 +63,8 @@ async def submit_answer(
             session, current_user.id, assignment.course_id
         ):
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not _is_visible_to_students(assignment):
+            raise HTTPException(status_code=403, detail="Assignment not yet visible")
         rubric_json = assignment.rubric_json
         if not rubric_json:
             raise HTTPException(status_code=404, detail="Rubric not found")

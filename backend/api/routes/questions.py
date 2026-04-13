@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from db.crud.assignments import get_assignment_by_id
 from db.crud.courses import get_course_by_id, is_student_enrolled
@@ -24,6 +25,12 @@ from ..dependencies import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _is_visible_to_students(assignment) -> bool:
+    if assignment.visible_at is None:
+        return True
+    return assignment.visible_at <= datetime.now(UTC)
 
 
 async def _verify_instructor_owns_assignment(
@@ -98,6 +105,8 @@ async def get_assignment_questions(
             session, current_user.id, assignment.course_id
         ):
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not _is_visible_to_students(assignment):
+            raise HTTPException(status_code=403, detail="Assignment not yet visible")
     return await get_questions_by_assignment_id(session, assignment_id)
 
 
@@ -117,6 +126,8 @@ async def get_question(
             session, current_user.id, assignment.course_id
         ):
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not _is_visible_to_students(assignment):
+            raise HTTPException(status_code=403, detail="Assignment not yet visible")
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
         logger.warning(
@@ -240,6 +251,8 @@ async def get_testcases(
             session, current_user.id, assignment.course_id
         ):
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not _is_visible_to_students(assignment):
+            raise HTTPException(status_code=403, detail="Assignment not yet visible")
     question = await get_question_by_id(session, question_id, assignment_id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
