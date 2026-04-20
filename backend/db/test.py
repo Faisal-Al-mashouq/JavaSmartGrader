@@ -33,6 +33,7 @@ def test_user_role_enum_values(role: UserRole, value: str) -> None:
     [
         (SubmissionState.submitted, "submitted"),
         (SubmissionState.processing, "processing"),
+        (SubmissionState.awaiting_student_approval, "awaiting_student_approval"),
         (SubmissionState.graded, "graded"),
         (SubmissionState.failed, "failed"),
     ],

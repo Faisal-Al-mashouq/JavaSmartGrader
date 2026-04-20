@@ -300,6 +300,18 @@ class TestApproveTranscription:
         )
         assert resp.status_code == 409
 
+    def test_empty_approved_text_rejected(self, monkeypatch):
+        # Empty text would make the re-enqueued job fall back to OCR with
+        # image_url=None, which would hang. Reject at the schema level.
+        _, client = self._setup(monkeypatch)
+
+        resp = client.post(
+            "/submissions/200/approve-transcription",
+            json={"approved_text": ""},
+            headers=_auth_header(),
+        )
+        assert resp.status_code == 422
+
     def test_instructor_cannot_approve(self, monkeypatch):
         # require_role(UserRole.student) should reject instructors
         import api.auth as auth_mod
