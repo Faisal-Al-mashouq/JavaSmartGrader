@@ -6,6 +6,7 @@ from db.crud.grading import (
     get_compile_result_by_submission_id,
     get_grade_by_submission_id,
     get_transcription_by_submission_id,
+    publish_grade,
     update_grade,
 )
 from db.crud.submissions import get_submission_by_id
@@ -91,6 +92,20 @@ async def get_ai_feedback(
     if not ai_feedback:
         logger.warning("AI feedback not found for submission %d", submission_id)
         raise HTTPException(status_code=404, detail="AI feedback not found")
+    if current_user.role == UserRole.student:
+        grade = await get_grade_by_submission_id(session, submission_id)
+        if not grade or grade.published_at is None:
+            raise HTTPException(
+                status_code=404,
+                detail="AI feedback is available after grade publication",
+            )
+        return {
+            "id": ai_feedback.id,
+            "submission_id": ai_feedback.submission_id,
+            "suggested_grade": None,
+            "instructor_guidance": None,
+            "student_feedback": ai_feedback.student_feedback,
+        }
     return ai_feedback
 
 
@@ -105,6 +120,10 @@ async def add_grade(
         "Instructor %d adding grade for submission %d", current_user.id, submission_id
     )
     await _verify_submission_access(session, submission_id, current_user)
+    existing_grade = await get_grade_by_submission_id(session, submission_id)
+    if existing_grade:
+        logger.warning("Duplicate grade entry for submission %d", submission_id)
+        raise HTTPException(status_code=409, detail="Duplicate grade entry")
     try:
         grade = await create_grade(
             session=session,
@@ -117,9 +136,6 @@ async def add_grade(
     except IntegrityError:
         logger.error("Failed to add grade for submission %d", submission_id)
         raise HTTPException(status_code=400, detail="Failed to add grade") from None
-    except Exception:
-        logger.error("Duplicate grade entry for submission %d", submission_id)
-        raise HTTPException(status_code=409, detail="Duplicate grade entry") from None
 
 
 @router.put("/{submission_id}/grade", response_model=GradeBase)
@@ -157,3 +173,56 @@ async def reassign_grade(
     except IntegrityError:
         logger.error("Failed to update grade for submission %d", submission_id)
         raise HTTPException(status_code=400, detail="Failed to update grade") from None
+
+
+@router.get("/{submission_id}/grade", response_model=GradeBase)
+async def get_grade(
+    submission_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    logger.debug("Fetching grade for submission %d", submission_id)
+    submission = await _verify_submission_access(session, submission_id, current_user)
+    grade = await get_grade_by_submission_id(session, submission_id)
+    if not grade:
+        logger.warning("Grade not found for submission %d", submission_id)
+        raise HTTPException(status_code=404, detail="Grade not found")
+    if current_user.role == UserRole.instructor:
+        if grade.instructor_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+    else:
+        if submission.student_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        if grade.published_at is None:
+            raise HTTPException(status_code=404, detail="Grade not published")
+    return grade
+
+
+@router.post("/{submission_id}/grade/publish", response_model=GradeBase)
+async def publish_submission_grade(
+    submission_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
+    logger.info(
+        "Instructor %d publishing grade for submission %d",
+        current_user.id,
+        submission_id,
+    )
+    existing_grade = await get_grade_by_submission_id(session, submission_id)
+    if not existing_grade:
+        logger.warning("Grade not found for submission %d", submission_id)
+        raise HTTPException(status_code=404, detail="Grade not found")
+    if existing_grade.instructor_id != current_user.id:
+        logger.warning(
+            "Instructor %d forbidden from publishing grade for submission %d",
+            current_user.id,
+            submission_id,
+        )
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if existing_grade.final_grade is None:
+        raise HTTPException(status_code=400, detail="Cannot publish an empty grade")
+
+    published_grade = await publish_grade(session=session, submission_id=submission_id)
+    logger.info("Grade published for submission %d", submission_id)
+    return published_grade

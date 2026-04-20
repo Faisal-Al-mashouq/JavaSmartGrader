@@ -16,6 +16,7 @@ async def create_assignment(
     title: str,
     description: str | None,
     due_date: datetime | None,
+    visible_at: datetime | None,
 ) -> Assignment:
     logger.info("Creating assignment '%s' for course %d", title, course_id)
     assignment = Assignment(
@@ -24,6 +25,7 @@ async def create_assignment(
         title=title,
         description=description,
         due_date=due_date,
+        visible_at=visible_at,
     )
     session.add(assignment)
     await session.commit()

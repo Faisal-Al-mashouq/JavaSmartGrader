@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from db.crud.assignments import (
     create_assignment,
@@ -21,6 +21,12 @@ from ..dependencies import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _is_visible_to_students(assignment) -> bool:
+    if assignment.visible_at is None:
+        return True
+    return assignment.visible_at <= datetime.now(UTC)
 
 
 async def _verify_instructor_owns_assignment(
@@ -48,6 +54,7 @@ async def create_new_assignment(
     title: str,
     description: str | None = None,
     due_date: datetime | None = None,
+    visible_at: datetime | None = None,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
@@ -76,6 +83,7 @@ async def create_new_assignment(
             title=title,
             description=description,
             due_date=due_date,
+            visible_at=visible_at,
         )
         logger.info(
             "Assignment created: '%s' (id=%d) in course %d",
@@ -104,7 +112,10 @@ async def get_course_assignments(
                 "Student %d not enrolled in course %d", current_user.id, course_id
             )
             raise HTTPException(status_code=403, detail="Forbidden")
-    return await get_assignments_by_course_id(session, course_id)
+    assignments = await get_assignments_by_course_id(session, course_id)
+    if current_user.role == UserRole.student:
+        assignments = [a for a in assignments if _is_visible_to_students(a)]
+    return assignments
 
 
 @router.get("/{assignment_id}", response_model=AssignmentBase)
@@ -128,6 +139,8 @@ async def get_assignment(
                 assignment_id,
             )
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not _is_visible_to_students(assignment):
+            raise HTTPException(status_code=403, detail="Assignment not yet visible")
     return assignment
 
 
@@ -137,6 +150,7 @@ async def update_assignment_details(
     title: str | None = None,
     description: str | None = None,
     due_date: datetime | None = None,
+    visible_at: datetime | None = None,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
@@ -149,6 +163,7 @@ async def update_assignment_details(
             "title": title,
             "description": description,
             "due_date": due_date,
+            "visible_at": visible_at,
         }.items()
         if v is not None
     }

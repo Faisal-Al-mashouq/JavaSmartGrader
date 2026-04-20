@@ -6,20 +6,27 @@ import {
   getCourseAssignments,
   getMyCourses,
 } from "../../../services/courseService";
-import { getAIFeedback } from "../../../services/gradingService";
+import { getAIFeedback, getGrade } from "../../../services/gradingService";
 
-const stateToStatus = (state) =>
-  ({
-    submitted: "Processing",
-    processing: "Processing",
-    graded: "AI Graded",
-    failed: "Failed",
-  })[state] ?? state;
+const stateToStatus = (state, grade) => {
+  if (state === "graded") {
+    return grade?.published_at ? "Published" : "In Review";
+  }
+  return (
+    {
+      submitted: "Processing",
+      processing: "Processing",
+      failed: "Failed",
+    }[state] ?? state
+  );
+};
 
 const STATUS_CLS = {
   Processing:
     "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
-  "AI Graded":
+  Published:
+    "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+  "In Review":
     "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
   Failed:
     "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
@@ -29,7 +36,8 @@ const STATUS_CLS = {
 
 const STATUS_DOT = {
   Processing: "bg-blue-500 animate-pulse",
-  "AI Graded": "bg-indigo-500",
+  Published: "bg-emerald-500",
+  "In Review": "bg-indigo-500",
   Failed: "bg-red-500",
   "Not submitted": "bg-slate-400",
 };
@@ -166,6 +174,7 @@ export default function StudentSubmissions() {
 
   const [aiFeedbackBySubmissionId, setAiFeedbackBySubmissionId] = useState({});
   const [loadingAI, setLoadingAI] = useState(false);
+  const [gradeBySubmissionId, setGradeBySubmissionId] = useState({});
 
   const [expandedQuestionId, setExpandedQuestionId] = useState(null);
 
@@ -176,6 +185,7 @@ export default function StudentSubmissions() {
     setQuestions([]);
     setSelectedAssignment(null);
     setAiFeedbackBySubmissionId({});
+    setGradeBySubmissionId({});
     setExpandedQuestionId(null);
   };
 
@@ -186,6 +196,7 @@ export default function StudentSubmissions() {
       assignments.find((a) => a.id === assignmentId) ?? null,
     );
     setAiFeedbackBySubmissionId({});
+    setGradeBySubmissionId({});
     setExpandedQuestionId(null);
   };
 
@@ -283,7 +294,7 @@ export default function StudentSubmissions() {
     };
   }, [selectedAssignmentId, assignments]);
 
-  // Fetch AI feedback for graded submissions on this assignment
+  // Fetch grades (published only for students) and then AI feedback for published grades.
   useEffect(() => {
     if (!selectedAssignmentId) return;
     const subsForAssignment = mySubmissions.filter(
@@ -295,13 +306,26 @@ export default function StudentSubmissions() {
     (async () => {
       setLoadingAI(true);
       try {
+        const gradeResults = await Promise.all(
+          graded.map((s) => getGrade(s.id).catch(() => null)),
+        );
+        if (cancelled) return;
+        const gradeMap = {};
+        gradeResults.forEach((g, i) => {
+          if (g) gradeMap[graded[i].id] = g.data;
+        });
+        setGradeBySubmissionId(gradeMap);
+
+        const publishedSubs = graded.filter(
+          (s) => gradeMap[s.id]?.published_at,
+        );
         const results = await Promise.all(
-          graded.map((s) => getAIFeedback(s.id).catch(() => null)),
+          publishedSubs.map((s) => getAIFeedback(s.id).catch(() => null)),
         );
         if (cancelled) return;
         const map = {};
         results.forEach((fb, i) => {
-          if (fb) map[graded[i].id] = fb.data;
+          if (fb) map[publishedSubs[i].id] = fb.data;
         });
         setAiFeedbackBySubmissionId(map);
       } catch (e) {
@@ -327,26 +351,13 @@ export default function StudentSubmissions() {
     return m;
   }, [mySubmissions, selectedAssignmentId]);
 
-  const aiAvg = useMemo(() => {
-    const subsForAssignment = selectedAssignmentId
-      ? mySubmissions.filter((s) => s.assignment_id === selectedAssignmentId)
-      : [];
-    const graded = subsForAssignment.filter((s) => s.state === "graded");
-    const vals = graded
-      .map((s) => aiFeedbackBySubmissionId[s.id]?.suggested_grade)
-      .filter((v) => v != null);
-    if (vals.length === 0) return null;
-    const avg = vals.reduce((sum, v) => sum + Number(v), 0) / vals.length;
-    return Math.round(avg);
-  }, [aiFeedbackBySubmissionId, mySubmissions, selectedAssignmentId]);
-
   const totalSubmittedForAssignment = useMemo(() => {
     if (!selectedAssignmentId) return 0;
     return mySubmissions.filter((s) => s.assignment_id === selectedAssignmentId)
       .length;
   }, [mySubmissions, selectedAssignmentId]);
 
-  const aiGradedForAssignment = useMemo(() => {
+  const inReviewForAssignment = useMemo(() => {
     if (!selectedAssignmentId) return 0;
     return mySubmissions.filter(
       (s) => s.assignment_id === selectedAssignmentId && s.state === "graded",
@@ -458,13 +469,8 @@ export default function StudentSubmissions() {
                     Submitted: {totalSubmittedForAssignment}
                   </span>
                   <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">
-                    AI Graded: {aiGradedForAssignment}
+                    In Review: {inReviewForAssignment}
                   </span>
-                  {aiAvg != null && (
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">
-                      Avg AI: {aiAvg}/100
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -499,16 +505,15 @@ export default function StudentSubmissions() {
               <ol className="space-y-4">
                 {questions.map((q, idx) => {
                   const sub = submissionsByQuestionId.get(q.id) ?? null;
+                  const grade = sub
+                    ? (gradeBySubmissionId[sub.id] ?? null)
+                    : null;
                   const status = sub
-                    ? stateToStatus(sub.state)
+                    ? stateToStatus(sub.state, grade)
                     : "Not submitted";
                   const aiFb = sub
                     ? (aiFeedbackBySubmissionId[sub.id] ?? null)
                     : null;
-                  const grade =
-                    aiFb?.suggested_grade != null
-                      ? Math.round(aiFb.suggested_grade)
-                      : null;
                   const expanded = expandedQuestionId === q.id;
                   const canExpand = Boolean(aiFb);
 
@@ -534,14 +539,14 @@ export default function StudentSubmissions() {
                                     Submitted {formatDT(sub.submitted_at)}
                                   </span>
                                 )}
-                                {grade != null && (
-                                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                    AI grade: {grade}/100
-                                  </span>
-                                )}
                                 {loadingAI && sub?.state === "graded" && (
                                   <span className="text-slate-500">
-                                    Loading AI…
+                                    Checking publication…
+                                  </span>
+                                )}
+                                {grade?.published_at && (
+                                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                    Grade: {grade.final_grade}/100
                                   </span>
                                 )}
                               </p>
@@ -562,20 +567,11 @@ export default function StudentSubmissions() {
                               </p>
                             </div>
                           )}
-                          {aiFb.instructor_guidance && (
-                            <div>
-                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
-                                Instructor Guidance (from AI)
-                              </p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                                {aiFb.instructor_guidance}
-                              </p>
-                            </div>
+                          {!grade?.published_at && (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                              Visible after instructor publishes your grade.
+                            </p>
                           )}
-                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                            Awaiting instructor review before grade is
-                            published.
-                          </p>
                         </div>
                       )}
 

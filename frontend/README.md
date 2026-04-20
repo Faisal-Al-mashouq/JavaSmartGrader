@@ -30,6 +30,8 @@ Development server: [http://localhost:3000](http://localhost:3000)
 - Default backend base URL: `http://localhost:8000`
 - Start the API from `backend/` (see `backend/README.md`): `uv run task dev` (MinIO-friendly S3) or `uv run task local` (typical AWS-style S3 client)
 - Student submission uploads use **multipart/form-data** (`question_id`, `assignment_id`, `file`) to `POST /submissions/`; see `src/services/submissionService.js` and dashboard upload pages.
+- Instructor assignment creation supports optional `visible_at` scheduling (`datetime-local` UI in `src/pages/dashboard/instructor/InstructorAssignmentNew.jsx`).
+- Instructor grading uses a two-step flow in `src/pages/dashboard/instructor/InstructorGrading.jsx`: choose/override grade -> publish grade (`/grading/{submissionId}/grade/publish`).
 
 ## Tech Stack
 

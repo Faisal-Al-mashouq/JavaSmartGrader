@@ -36,3 +36,12 @@ uv run alembic history
 - Keep each migration focused and reversible.
 - Review generated foreign keys/indexes carefully before committing.
 - Use descriptive migration messages (e.g. `add_cascades_for_submission_children`).
+
+## Latest Revisions
+
+- `d2540b3257a7_adding_visible_at_column.py`
+  - Adds nullable `assignments.visible_at` (`DateTime(timezone=True)`).
+- `b8c72e40243c_enforce_fk_ondelete_policies.py`
+  - Aligns DB-level foreign key `ON DELETE` behavior with model intent:
+    - `CASCADE` for structural relationships.
+    - `RESTRICT` for user-owned references where deletion should be blocked.

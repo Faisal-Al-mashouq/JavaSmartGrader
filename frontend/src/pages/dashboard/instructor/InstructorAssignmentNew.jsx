@@ -10,6 +10,7 @@ export default function InstructorAssignmentNew() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueLocal, setDueLocal] = useState("");
+  const [visibleLocal, setVisibleLocal] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -29,11 +30,17 @@ export default function InstructorAssignmentNew() {
         const d = new Date(dueLocal);
         if (!Number.isNaN(d.getTime())) dueIso = d.toISOString();
       }
+      let visibleIso = null;
+      if (visibleLocal) {
+        const v = new Date(visibleLocal);
+        if (!Number.isNaN(v.getTime())) visibleIso = v.toISOString();
+      }
       const { data } = await createAssignment(
         id,
         title.trim(),
         description.trim() || undefined,
         dueIso,
+        visibleIso,
         undefined,
       );
       navigate(`/instructor/courses/${id}/assignments/${data.id}/rubric`, {
@@ -109,6 +116,17 @@ export default function InstructorAssignmentNew() {
               className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
               value={dueLocal}
               onChange={(e) => setDueLocal(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              Visible at (optional)
+            </label>
+            <input
+              type="datetime-local"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+              value={visibleLocal}
+              onChange={(e) => setVisibleLocal(e.target.value)}
             />
           </div>
           <div className="flex flex-wrap gap-3 pt-2">

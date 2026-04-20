@@ -21,6 +21,7 @@ db/
 - `User` (student/instructor roles)
 - `Course` + `course_students` (enrollment)
 - `Assignment`
+  - includes optional `visible_at` release timestamp for student visibility
 - `Question` (composite key with assignment scope)
 - `Testcase`
 - `Submission` (handwritten image stored as an S3 object key in `image_url` after API upload)
@@ -47,3 +48,10 @@ uv run alembic downgrade -1
 ```
 
 More Alembic details: `db/alembic/README.md`.
+
+## Current Schema Notes
+
+- `assignments.visible_at` is nullable; when set in the future, student-facing API reads/submission creation are blocked until that time.
+- Foreign-key delete policy is explicit:
+  - `CASCADE` on structural parent-child relations (for example course -> assignment -> question -> testcase/submission).
+  - `RESTRICT` on user-owned references (for example `courses.instructor_id`, `submissions.student_id`, `grades.instructor_id`).

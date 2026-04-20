@@ -3,31 +3,40 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { getMySubmissions } from "../../../services/submissionService";
 import { getAssignment } from "../../../services/courseService";
-import { getAIFeedback } from "../../../services/gradingService";
+import { getGrade } from "../../../services/gradingService";
 
 /* ── backend state → display status ─────────────────────────────── */
-const stateToStatus = (state) =>
-  ({
-    submitted: "Processing",
-    processing: "Processing",
-    graded: "AI Graded",
-    failed: "Failed",
-  })[state] ?? state;
+const stateToStatus = (state, grade) => {
+  if (state === "graded") {
+    return grade?.published_at ? "Published" : "In Review";
+  }
+  return (
+    {
+      submitted: "Processing",
+      processing: "Processing",
+      failed: "Failed",
+    }[state] ?? state
+  );
+};
 
 /* ── visual helpers ─────────────────────────────────────────────── */
 const STATUS_LIGHT = {
-  "AI Graded": "bg-indigo-50 text-indigo-700 border border-indigo-200",
+  Published: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  "In Review": "bg-indigo-50 text-indigo-700 border border-indigo-200",
   Processing: "bg-blue-50 text-blue-700 border border-blue-200",
   Failed: "bg-red-50 text-red-700 border border-red-200",
 };
 const STATUS_DARK = {
-  "AI Graded":
+  Published:
+    "dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+  "In Review":
     "dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
   Processing: "dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
   Failed: "dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
 };
 const STATUS_DOT = {
-  "AI Graded": "bg-indigo-500",
+  Published: "bg-emerald-500",
+  "In Review": "bg-indigo-500",
   Processing: "bg-blue-500",
   Failed: "bg-red-500",
 };
@@ -119,23 +128,21 @@ export default function StudentHome() {
         uniqueAIds.forEach((id, i) => {
           if (asgResults[i]) asgMap[id] = asgResults[i].data;
         });
-
-        // 3. Fetch AI feedback for graded submissions (parallel)
-        const gradedSubs = subs.filter((s) => s.state === "graded");
-        const fbResults = await Promise.all(
-          gradedSubs.map((s) => getAIFeedback(s.id).catch(() => null)),
+        const gradeResults = await Promise.all(
+          subs.map((s) => getGrade(s.id).catch(() => null)),
         );
-        const fbMap = {};
-        gradedSubs.forEach((s, i) => {
-          if (fbResults[i]) fbMap[s.id] = fbResults[i].data;
+        const gradeMap = {};
+        subs.forEach((s, idx) => {
+          if (gradeResults[idx]) {
+            gradeMap[s.id] = gradeResults[idx].data;
+          }
         });
 
         if (cancelled) return;
 
         const built = subs.map((s) => {
           const asgn = asgMap[s.assignment_id];
-          const fb = fbMap[s.id];
-          const grade = fb?.suggested_grade ?? null;
+          const grade = gradeMap[s.id] ?? null;
           return {
             id: s.id,
             name: asgn?.title ?? `Assignment #${s.assignment_id}`,
@@ -147,8 +154,8 @@ export default function StudentHome() {
                   year: "numeric",
                 })
               : "—",
-            status: stateToStatus(s.state),
-            grade: grade !== null ? Math.round(grade) : null,
+            status: stateToStatus(s.state, grade),
+            grade: grade?.final_grade ?? null,
             maxGrade: 100,
           };
         });
@@ -167,7 +174,13 @@ export default function StudentHome() {
     };
   }, []);
 
-  const STATUSES = ["All Statuses", "Processing", "AI Graded", "Failed"];
+  const STATUSES = [
+    "All Statuses",
+    "Processing",
+    "In Review",
+    "Published",
+    "Failed",
+  ];
 
   const filtered = rows.filter(
     (r) => statusFilter === "All Statuses" || r.status === statusFilter,
@@ -194,7 +207,7 @@ export default function StudentHome() {
             Welcome back, {displayName}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Track your exam submissions and grades
+            Track your exam submissions and publication status
           </p>
         </div>
         <button

@@ -26,7 +26,7 @@ Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs
 | `routes/assignments.py` | Assignment CRUD |
 | `routes/questions.py` | Question + testcase endpoints under assignments |
 | `routes/submissions.py` | Submission creation (multipart: `question_id`, `assignment_id`, `file`) and retrieval |
-| `routes/grading.py` | Compile/OCR/AI feedback + final grade endpoints |
+| `routes/grading.py` | Compile/OCR/AI feedback + instructor grade + publish endpoints |
 | `routes/confidence_flags.py` | OCR confidence flag endpoints |
 | `routes/generate_report.py` | Assignment report endpoints |
 
@@ -40,6 +40,19 @@ Open interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs
 - `/grading`
 - `/confidence-flags`
 - `/reports`
+
+## Recent Behavior Notes
+
+- Assignment visibility scheduling: `POST /assignments/` and `PUT /assignments/{id}` accept optional `visible_at` (ISO datetime).
+- Student access control for not-yet-visible assignments:
+  - `GET /assignments/course/{course_id}` filters out future assignments.
+  - `GET /assignments/{assignment_id}` returns `403 Assignment not yet visible` when hidden.
+  - Assignment-scoped question/testcase reads also return `403 Assignment not yet visible` for students.
+  - `POST /submissions/` rejects hidden assignments with `403 Assignment not yet visible`.
+- Grading publication flow:
+  - Instructors create/update grades via `POST/PUT /grading/{submission_id}/grade`.
+  - Grades become student-visible only after `POST /grading/{submission_id}/grade/publish`.
+  - Students can fetch grade/AI feedback only after publication.
 
 ## Authentication
 

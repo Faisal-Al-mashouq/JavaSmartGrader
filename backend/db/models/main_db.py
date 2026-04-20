@@ -116,6 +116,9 @@ class Assignment(Base):
     due_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    visible_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     rubric_json: Mapped[dict] = mapped_column(JSON, nullable=False)
 
     course: Mapped["Course"] = relationship(

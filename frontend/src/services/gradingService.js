@@ -12,6 +12,10 @@ export const getTranscription = (submissionId) =>
 export const getCompileResult = (submissionId) =>
   api.get(`/grading/${submissionId}/compile_result`);
 
+/** GET /grading/{submissionId}/grade */
+export const getGrade = (submissionId) =>
+  api.get(`/grading/${submissionId}/grade`);
+
 /**
  * POST /grading/{submissionId}/grade
  * Creates a new grade entry for the submission.
@@ -29,3 +33,7 @@ export const updateGrade = (submissionId, grade) =>
   api.put(`/grading/${submissionId}/grade`, null, {
     params: { grade },
   });
+
+/** POST /grading/{submissionId}/grade/publish */
+export const publishGrade = (submissionId) =>
+  api.post(`/grading/${submissionId}/grade/publish`);
