@@ -23,6 +23,8 @@ from .questions import (
 )
 from .shared import JobStatus, TestCase
 from .submissions import (
+    ApproveTranscriptionRequest,
+    PendingReviewResponse,
     SubmissionBase,
 )
 from .users import (
@@ -43,6 +45,8 @@ __all__ = [
     "RegisterRequest",
     "UserBase",
     "SubmissionBase",
+    "ApproveTranscriptionRequest",
+    "PendingReviewResponse",
     "TranscriptionBase",
     "CompileResultBase",
     "AIFeedbackBase",

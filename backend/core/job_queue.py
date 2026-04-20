@@ -101,7 +101,11 @@ async def process_job(client: JobQueue, job: Job) -> Job:
             if not ocr_result:
                 logger.error(f"Failed to process OCR for Job: {job.job_id}")
                 return await set_result(job, JobStatus.FAILED)
-            logger.debug(f"Job {job.job_id} OCR Completed")
+            logger.info(
+                f"Job {job.job_id} paused for student approval after OCR; "
+                f"sandbox+grader will resume when student approves transcription"
+            )
+            return await set_result(job, JobStatus.COMPLETED)
 
         logger.debug(f"Job {job.job_id} Sandbox Started")
         sandbox_result = await process_sandbox_job(client, job)

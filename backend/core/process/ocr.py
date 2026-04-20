@@ -4,7 +4,8 @@ from datetime import datetime
 
 from db.crud.confidence_flags import create_confidence_flag
 from db.crud.grading import create_transcription, get_transcription_by_submission_id
-from db.crud.submissions import get_submission_by_id
+from db.crud.submissions import get_submission_by_id, update_submission_state
+from db.models import SubmissionState
 from db.session import async_session
 from ocr.ocr_corrector.schemas import OCRJobRequest, OCRJobResult
 from pydantic import ValidationError
@@ -197,11 +198,19 @@ async def save_to_db(job: Job) -> bool:
                     suggestions=flag.suggestions,
                 )
 
+            await update_submission_state(
+                session,
+                job.initial_request.submission_id,
+                SubmissionState.awaiting_student_approval,
+            )
+
             logger.info(
-                "OCR Job %s: transcription saved (id=%d), %d flag(s) persisted",
+                "OCR Job %s: transcription saved (id=%d), %d flag(s) persisted, "
+                "submission %d awaiting student approval",
                 job.job_id,
                 transcription.id,
                 len(flags),
+                job.initial_request.submission_id,
             )
             return True
     except Exception as e:

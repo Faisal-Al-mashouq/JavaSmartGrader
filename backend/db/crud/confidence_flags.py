@@ -104,3 +104,21 @@ async def delete_confidence_flag(session: AsyncSession, flag_id: int) -> bool:
     else:
         logger.warning("Confidence flag %d not found for deletion", flag_id)
     return deleted
+
+
+async def delete_confidence_flags_by_transcription_id(
+    session: AsyncSession, transcription_id: int
+) -> int:
+    logger.info("Deleting confidence flags for transcription %d", transcription_id)
+    result = await session.execute(
+        delete(ConfidenceFlag).where(
+            ConfidenceFlag.transcription_id == transcription_id
+        )
+    )
+    await session.commit()
+    logger.info(
+        "Deleted %d confidence flag(s) for transcription %d",
+        result.rowcount,
+        transcription_id,
+    )
+    return result.rowcount

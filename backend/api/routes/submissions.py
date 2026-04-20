@@ -1,7 +1,15 @@
 import logging
 from datetime import UTC, datetime
 
+from db.crud.confidence_flags import (
+    delete_confidence_flags_by_transcription_id,
+    get_confidence_flags_by_transcription_id,
+)
 from db.crud.courses import is_student_enrolled
+from db.crud.grading import (
+    get_transcription_by_submission_id,
+    update_transcription_text,
+)
 from db.crud.submissions import (
     create_submission,
     delete_submission,
@@ -21,7 +29,12 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
-from schemas import SubmissionBase, TestCase
+from schemas import (
+    ApproveTranscriptionRequest,
+    PendingReviewResponse,
+    SubmissionBase,
+    TestCase,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -128,6 +141,114 @@ async def get_student_submissions(
 ):
     logger.debug("Fetching submissions for student %d", current_user.id)
     return await get_submissions_by_student_id(session, current_user.id)
+
+
+@router.get(
+    "/{submission_id}/pending-review",
+    response_model=PendingReviewResponse,
+)
+async def get_pending_review(
+    submission_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.student)),
+):
+    logger.debug(
+        "Student %d fetching pending review for submission %d",
+        current_user.id,
+        submission_id,
+    )
+    submission = await get_submission_by_id(session, submission_id)
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if submission.student_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if submission.state != SubmissionState.awaiting_student_approval:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Submission is not awaiting approval (state={submission.state.value})",
+        )
+
+    transcription = await get_transcription_by_submission_id(session, submission_id)
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    flags = await get_confidence_flags_by_transcription_id(session, transcription.id)
+    return PendingReviewResponse(
+        submission_id=submission.id,
+        transcription_id=transcription.id,
+        transcribed_text=transcription.transcribed_text,
+        flags=flags,
+    )
+
+
+@router.post("/{submission_id}/approve-transcription")
+async def approve_transcription(
+    submission_id: int,
+    body: ApproveTranscriptionRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.student)),
+):
+    logger.info(
+        "Student %d approving transcription for submission %d",
+        current_user.id,
+        submission_id,
+    )
+    submission = await get_submission_by_id(session, submission_id)
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if submission.student_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if submission.state != SubmissionState.awaiting_student_approval:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Submission is not awaiting approval (state={submission.state.value})",
+        )
+
+    transcription = await get_transcription_by_submission_id(session, submission_id)
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    approved_text = body.approved_text
+    await update_transcription_text(session, transcription.id, approved_text)
+    await delete_confidence_flags_by_transcription_id(session, transcription.id)
+    await update_submission_state(session, submission.id, SubmissionState.processing)
+
+    assignment = await get_assignment_by_id(session, submission.assignment_id)
+    rubric_json = assignment.rubric_json if assignment else {}
+
+    test_cases = await get_testcases_by_question_id(
+        session, submission.question_id, submission.assignment_id
+    )
+    if not test_cases:
+        test_cases_list = [TestCase(input="", expected_output="")]
+    else:
+        test_cases_list = [
+            TestCase(input=tc.input, expected_output=tc.expected_output)
+            for tc in test_cases
+        ]
+
+    background_tasks.add_task(
+        start_job_process,
+        submission_id=submission.id,
+        question_id=submission.question_id,
+        assignment_id=submission.assignment_id,
+        student_id=submission.student_id,
+        image_url=None,
+        java_code=approved_text,
+        test_cases=test_cases_list,
+        rubric_json=rubric_json,
+    )
+
+    logger.info(
+        "Submission %d approved by student %d; grading resumed",
+        submission.id,
+        current_user.id,
+    )
+    return {
+        "message": "Transcription approved; grading in progress",
+        "submission_id": submission.id,
+    }
 
 
 @router.get("/{submission_id}", response_model=SubmissionBase)
