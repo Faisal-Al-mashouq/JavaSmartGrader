@@ -44,7 +44,9 @@ def _make_app() -> FastAPI:
     return app
 
 
-def _student_overrides(app: FastAPI, monkeypatch: pytest.MonkeyPatch, user=STUDENT_USER):
+def _student_overrides(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch, user=STUDENT_USER
+):
     import api.auth as auth_mod
 
     async def fake_get_user_by_id(session, user_id: int):
@@ -138,9 +140,7 @@ class TestGetPendingReview:
         mock_get_transcription.return_value = FAKE_TRANSCRIPTION
         mock_get_flags.return_value = [FAKE_FLAG]
 
-        resp = client.get(
-            "/submissions/200/pending-review", headers=_auth_header()
-        )
+        resp = client.get("/submissions/200/pending-review", headers=_auth_header())
         assert resp.status_code == 200
         body = resp.json()
         assert body["submission_id"] == 200
@@ -154,9 +154,7 @@ class TestGetPendingReview:
         _, client = self._setup(monkeypatch)
         mock_get_submission.return_value = None
 
-        resp = client.get(
-            "/submissions/999/pending-review", headers=_auth_header()
-        )
+        resp = client.get("/submissions/999/pending-review", headers=_auth_header())
         assert resp.status_code == 404
 
     @patch(f"{_ROUTE}.get_submission_by_id", new_callable=AsyncMock)
@@ -174,9 +172,7 @@ class TestGetPendingReview:
         _, client = self._setup(monkeypatch)
         mock_get_submission.return_value = FAKE_SUBMISSION_GRADED
 
-        resp = client.get(
-            "/submissions/200/pending-review", headers=_auth_header()
-        )
+        resp = client.get("/submissions/200/pending-review", headers=_auth_header())
         assert resp.status_code == 409
 
     @patch(f"{_ROUTE}.get_transcription_by_submission_id", new_callable=AsyncMock)
@@ -188,9 +184,7 @@ class TestGetPendingReview:
         mock_get_submission.return_value = FAKE_SUBMISSION_AWAITING
         mock_get_transcription.return_value = None
 
-        resp = client.get(
-            "/submissions/200/pending-review", headers=_auth_header()
-        )
+        resp = client.get("/submissions/200/pending-review", headers=_auth_header())
         assert resp.status_code == 404
 
 
