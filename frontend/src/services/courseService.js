@@ -75,12 +75,6 @@ export const createQuestion = (assignmentId, questionText) =>
 export const deleteQuestion = (assignmentId, questionId) =>
   api.delete(`/assignments/${assignmentId}/questions/${questionId}`);
 
-/** PUT /assignments/{assignmentId}/questions/{questionId}/marks — query: marks */
-export const updateQuestionMarks = (assignmentId, questionId, marks) =>
-  api.put(`/assignments/${assignmentId}/questions/${questionId}/marks`, null, {
-    params: { marks },
-  });
-
 /** POST .../questions/{questionId}/testcases — query: input_data, expected_output */
 export const addTestcase = (
   assignmentId,

@@ -12,13 +12,11 @@ async def create_question(
     session: AsyncSession,
     assignment_id: int,
     question_text: str,
-    marks: int = 0,
 ) -> Question:
     logger.info("Creating question for assignment %d", assignment_id)
     question = Question(
         assignment_id=assignment_id,
         question_text=question_text,
-        marks=marks,
     )
     session.add(question)
     await session.commit()

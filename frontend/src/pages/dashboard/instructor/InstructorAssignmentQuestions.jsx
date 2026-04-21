@@ -9,7 +9,6 @@ import {
   getQuestionTestcases,
   addTestcase,
   deleteTestcase,
-  updateQuestionMarks,
 } from "../../../services/courseService";
 
 export default function InstructorAssignmentQuestions() {
@@ -25,7 +24,6 @@ export default function InstructorAssignmentQuestions() {
   const [savingQ, setSavingQ] = useState(false);
   const [tcDraft, setTcDraft] = useState({});
   const [showAdd, setShowAdd] = useState(false);
-  const [marksDraft, setMarksDraft] = useState({});
 
   const loadAll = useCallback(async () => {
     const [aRes, qRes] = await Promise.all([
@@ -38,12 +36,11 @@ export default function InstructorAssignmentQuestions() {
     setAssignment(aRes.data);
     const qs = qRes.data;
     setQuestions(qs);
-    setMarksDraft(Object.fromEntries(qs.map((q) => [q.id, q.marks ?? 0])));
     const tcEntries = await Promise.all(
       qs.map(async (q) => {
         const r = await getQuestionTestcases(aid, q.id);
         return [q.id, r.data];
-      })
+      }),
     );
     setTestcasesByQ(Object.fromEntries(tcEntries));
   }, [cid, aid]);
@@ -56,13 +53,19 @@ export default function InstructorAssignmentQuestions() {
         await loadAll();
       } catch (e) {
         if (!cancelled) {
-          setError(e?.response?.data?.detail ?? e?.message ?? "Could not load questions.");
+          setError(
+            e?.response?.data?.detail ??
+              e?.message ??
+              "Could not load questions.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [cid, aid, loadAll]);
 
   const handleAddQuestion = async (e) => {
@@ -105,18 +108,6 @@ export default function InstructorAssignmentQuestions() {
     }
   };
 
-  const handleSaveMarks = async (qid) => {
-    const val = Math.max(0, Number(marksDraft[qid]) || 0);
-    setMarksDraft((prev) => ({ ...prev, [qid]: val }));
-    setError("");
-    try {
-      await updateQuestionMarks(aid, qid, val);
-      setQuestions((prev) => prev.map((q) => q.id === qid ? { ...q, marks: val } : q));
-    } catch (err) {
-      setError(err.response?.data?.detail ?? "Could not save marks.");
-    }
-  };
-
   const handleDeleteTc = async (qid, tcid) => {
     setError("");
     try {
@@ -127,8 +118,6 @@ export default function InstructorAssignmentQuestions() {
     }
   };
 
-  const totalMarks = questions.reduce((sum, q) => sum + (q.marks ?? 0), 0);
-
   if (!Number.isFinite(cid) || !Number.isFinite(aid)) {
     return <p className="text-red-600 text-sm">Invalid link.</p>;
   }
@@ -136,30 +125,31 @@ export default function InstructorAssignmentQuestions() {
   return (
     <div className="flex flex-col lg:flex-row gap-8 lg:items-start max-w-6xl">
       <div className="flex-1 min-w-0 space-y-6">
-
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Questions</p>
+            <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">
+              Questions
+            </p>
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {assignment?.title ?? "Assignment"}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-              Each question can include test cases with expected input and output.
+              Each question can include test cases with expected input and
+              output.
             </p>
-            {!loading && questions.length > 0 && (
-              <p className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-300">
-                Total marks:{" "}
-                <span className="text-indigo-600 dark:text-indigo-400">{totalMarks}</span>
-              </p>
-            )}
           </div>
-          <InstructorNavButton to={`/instructor/courses/${cid}/assignments/${aid}`} variant="primary">
+          <InstructorNavButton
+            to={`/instructor/courses/${cid}/assignments/${aid}`}
+            variant="primary"
+          >
             ← Assignment
           </InstructorNavButton>
         </div>
 
         {error && (
-          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-4 py-3">{error}</p>
+          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-4 py-3">
+            {error}
+          </p>
         )}
 
         {loading ? (
@@ -167,12 +157,30 @@ export default function InstructorAssignmentQuestions() {
         ) : questions.length === 0 ? (
           <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl py-16 flex flex-col items-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-7 h-7 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">No questions yet</p>
-            <p className="text-xs text-slate-400">Use <strong className="text-slate-500 dark:text-slate-300">+ Add question</strong> on the right.</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">
+              No questions yet
+            </p>
+            <p className="text-xs text-slate-400">
+              Use{" "}
+              <strong className="text-slate-500 dark:text-slate-300">
+                + Add question
+              </strong>{" "}
+              on the right.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -184,38 +192,34 @@ export default function InstructorAssignmentQuestions() {
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                      <span className="text-xs font-extrabold text-white">{idx + 1}</span>
+                      <span className="text-xs font-extrabold text-white">
+                        {idx + 1}
+                      </span>
                     </div>
                     <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                       {q.question_text}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={0}
-                        value={marksDraft[q.id] ?? q.marks ?? 0}
-                        onChange={(e) =>
-                          setMarksDraft((prev) => ({ ...prev, [q.id]: e.target.value }))
-                        }
-                        onBlur={() => handleSaveMarks(q.id)}
-                        className="w-16 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] px-2 py-1 text-xs text-center font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        title="Marks for this question"
-                      />
-                      <span className="text-xs text-slate-400">pts</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                      title="Delete question"
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteQuestion(q.id)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Delete question"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
                 <div className="px-6 py-4 space-y-3 bg-slate-50 dark:bg-white/[0.02]">
@@ -223,7 +227,9 @@ export default function InstructorAssignmentQuestions() {
                     Test cases
                   </p>
                   {(testcasesByQ[q.id] ?? []).length === 0 ? (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">No test cases yet.</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      No test cases yet.
+                    </p>
                   ) : (
                     <ul className="space-y-2">
                       {(testcasesByQ[q.id] ?? []).map((tc) => (
@@ -234,11 +240,15 @@ export default function InstructorAssignmentQuestions() {
                           <div className="space-y-1 min-w-0">
                             <p>
                               <span className="text-slate-400">in:</span>{" "}
-                              <span className="text-slate-700 dark:text-slate-300 break-all">{tc.input}</span>
+                              <span className="text-slate-700 dark:text-slate-300 break-all">
+                                {tc.input}
+                              </span>
                             </p>
                             <p>
                               <span className="text-slate-400">out:</span>{" "}
-                              <span className="text-slate-700 dark:text-slate-300 break-all">{tc.expected_output}</span>
+                              <span className="text-slate-700 dark:text-slate-300 break-all">
+                                {tc.expected_output}
+                              </span>
                             </p>
                           </div>
                           <button
@@ -261,7 +271,11 @@ export default function InstructorAssignmentQuestions() {
                       onChange={(e) =>
                         setTcDraft((prev) => ({
                           ...prev,
-                          [q.id]: { ...prev[q.id], in: e.target.value, out: prev[q.id]?.out ?? "" },
+                          [q.id]: {
+                            ...prev[q.id],
+                            in: e.target.value,
+                            out: prev[q.id]?.out ?? "",
+                          },
                         }))
                       }
                     />
@@ -272,7 +286,11 @@ export default function InstructorAssignmentQuestions() {
                       onChange={(e) =>
                         setTcDraft((prev) => ({
                           ...prev,
-                          [q.id]: { ...prev[q.id], out: e.target.value, in: prev[q.id]?.in ?? "" },
+                          [q.id]: {
+                            ...prev[q.id],
+                            out: e.target.value,
+                            in: prev[q.id]?.in ?? "",
+                          },
                         }))
                       }
                     />
@@ -294,7 +312,10 @@ export default function InstructorAssignmentQuestions() {
       <aside className="lg:w-52 shrink-0 flex flex-col gap-3 lg:sticky lg:top-24">
         <button
           type="button"
-          onClick={() => { setShowAdd((v) => !v); setError(""); }}
+          onClick={() => {
+            setShowAdd((v) => !v);
+            setError("");
+          }}
           className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/[0.1] text-slate-700 dark:text-slate-200 bg-white dark:bg-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-colors"
         >
           {showAdd ? "Close" : "+ Add question"}

@@ -58,7 +58,6 @@ async def _verify_instructor_owns_assignment(
 async def create_new_question(
     assignment_id: int,
     question_text: str,
-    marks: int = 0,
     session: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(UserRole.instructor)),
 ):
@@ -73,7 +72,6 @@ async def create_new_question(
             session=session,
             assignment_id=assignment_id,
             question_text=question_text,
-            marks=marks,
         )
         logger.info(
             "Question created (id=%d) for assignment %d", question.id, assignment_id
@@ -164,30 +162,6 @@ async def update_question_details(
         session, question_id, assignment_id, question_text=question_text
     )
     logger.info("Question %d updated successfully", question_id)
-    return updated
-
-
-@router.put("/{question_id}/marks", response_model=QuestionBase)
-async def update_question_marks(
-    assignment_id: int,
-    question_id: int,
-    marks: int,
-    session: AsyncSession = Depends(get_db),
-    current_user=Depends(require_role(UserRole.instructor)),
-):
-    logger.info(
-        "Instructor %d setting marks=%d for question %d in assignment %d",
-        current_user.id,
-        marks,
-        question_id,
-        assignment_id,
-    )
-    await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
-    question = await get_question_by_id(session, question_id, assignment_id)
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-    updated = await update_question(session, question_id, assignment_id, marks=marks)
-    logger.info("Marks updated for question %d", question_id)
     return updated
 
 
