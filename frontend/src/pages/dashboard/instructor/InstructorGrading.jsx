@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyCourses, getCourseAssignments } from "../../../services/courseService";
 import { getAssignmentSubmissions } from "../../../services/submissionService";
-import { getAIFeedback, getTranscription, addGrade, updateGrade, getConfidenceFlags, resolveConfidenceFlag } from "../../../services/gradingService";
+import { getAIFeedback, getTranscription, addGrade, updateGrade, publishGrade, getConfidenceFlags, resolveConfidenceFlag } from "../../../services/gradingService";
 
 /* ── Highlighted OCR code ───────────────────────────────────────────── */
 function HighlightedCode({ text, flags, onResolve }) {

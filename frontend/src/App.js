@@ -15,6 +15,7 @@ import StudentCourses from "./pages/dashboard/student/StudentCourses";
 import StudentSubmissions from "./pages/dashboard/student/StudentSubmissions";
 import StudentAssignmentsFull from "./pages/dashboard/student/StudentAssignmentsFull";
 import StudentUpload from "./pages/dashboard/student/StudentUpload";
+import StudentOCRReview from "./pages/dashboard/student/StudentOCRReview";
 
 /* Instructor */
 import InstructorLayout from "./layout/InstructorLayout";
@@ -58,6 +59,7 @@ function App() {
                   element={<StudentAssignmentsFull />}
                 />
                 <Route path="submissions" element={<StudentSubmissions />} />
+                <Route path="submissions/:submissionId/review" element={<StudentOCRReview />} />
                 <Route path="upload" element={<StudentUpload />} />
               </Route>
 
