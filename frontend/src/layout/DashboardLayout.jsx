@@ -11,8 +11,8 @@ const NavLink = ({ to, exact, children }) => {
       to={to}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
         isActive
-          ? "bg-blue-600 text-white shadow-sm"
-          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
+          ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm"
+          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white"
       }`}
     >
       {children}
@@ -75,7 +75,7 @@ export default function DashboardLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3 min-w-[200px]">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -94,7 +94,7 @@ export default function DashboardLayout() {
                 <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
                   Java Smart Grader
                 </p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                <p className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold">
                   Student Portal
                 </p>
               </div>
@@ -142,7 +142,7 @@ export default function DashboardLayout() {
 
               {/* User Info */}
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-sm ring-2 ring-blue-100 dark:ring-blue-900">
+                <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full flex items-center justify-center shadow-sm ring-2 ring-indigo-100 dark:ring-indigo-900/40">
                   <span className="text-xs font-bold text-white">
                     {initials}
                   </span>

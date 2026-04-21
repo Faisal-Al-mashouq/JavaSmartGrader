@@ -405,7 +405,7 @@ export default function StudentSubmissions() {
               onChange={(e) =>
                 selectCourse(e.target.value ? Number(e.target.value) : null)
               }
-              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -425,7 +425,7 @@ export default function StudentSubmissions() {
                 selectAssignment(e.target.value ? Number(e.target.value) : null)
               }
               disabled={loadingAssignments || assignments.length === 0}
-              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
             >
               {assignments.length === 0 ? (
                 <option value="">No assignments</option>
@@ -454,7 +454,7 @@ export default function StudentSubmissions() {
             <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+                  <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-1">
                     {selectedAssignment ? "Assignment" : ""}
                   </p>
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">

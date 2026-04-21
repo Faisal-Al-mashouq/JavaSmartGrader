@@ -7,7 +7,7 @@ function CourseCard({ course, onOpen }) {
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2">
+          <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-2">
             Course
           </p>
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight truncate">
@@ -29,7 +29,7 @@ function CourseCard({ course, onOpen }) {
         <button
           type="button"
           onClick={() => onOpen(course.id)}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all active:scale-[0.98]"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-semibold shadow-sm transition-all active:scale-[0.98]"
         >
           View assignments
         </button>
@@ -96,7 +96,7 @@ export default function StudentCourses() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by course name…"
-          className="w-full px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 

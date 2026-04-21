@@ -11,7 +11,7 @@ from db.crud.assignments import (
 from db.crud.courses import get_course_by_id, is_student_enrolled
 from db.models import UserRole
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import AssignmentBase
+from schemas import AssignmentBase, RubricUpdate
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -196,3 +196,35 @@ async def remove_assignment(
         ) from None
     logger.info("Assignment %d deleted successfully", assignment_id)
     return {"message": "Assignment deleted successfully"}
+
+
+@router.get("/{assignment_id}/rubric")
+async def get_assignment_rubric(
+    assignment_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
+    logger.debug("Fetching rubric for assignment %d", assignment_id)
+    assignment = await _verify_instructor_owns_assignment(
+        session, assignment_id, current_user.id
+    )
+    return {"criteria": assignment.rubric_json.get("criteria", [])}
+
+
+@router.put("/{assignment_id}/rubric")
+async def update_assignment_rubric(
+    assignment_id: int,
+    body: RubricUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(UserRole.instructor)),
+):
+    logger.info(
+        "Instructor %d updating rubric for assignment %d",
+        current_user.id,
+        assignment_id,
+    )
+    await _verify_instructor_owns_assignment(session, assignment_id, current_user.id)
+    rubric_json = {"criteria": [c.model_dump() for c in body.criteria]}
+    updated = await update_assignment(session, assignment_id, rubric_json=rubric_json)
+    logger.info("Rubric updated for assignment %d", assignment_id)
+    return {"criteria": updated.rubric_json.get("criteria", [])}
