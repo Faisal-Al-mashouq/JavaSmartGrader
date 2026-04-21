@@ -1,7 +1,9 @@
 from datetime import datetime
 
 from db.models import SubmissionState
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from .confidence_flags import ConfidenceFlagBase
 
 
 class SubmissionBase(BaseModel):
@@ -14,3 +16,14 @@ class SubmissionBase(BaseModel):
     submitted_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ApproveTranscriptionRequest(BaseModel):
+    approved_text: str = Field(min_length=1)
+
+
+class PendingReviewResponse(BaseModel):
+    submission_id: int
+    transcription_id: int
+    transcribed_text: str | None
+    flags: list[ConfidenceFlagBase]

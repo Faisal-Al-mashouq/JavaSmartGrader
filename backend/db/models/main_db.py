@@ -31,6 +31,7 @@ class UserRole(enum.Enum):
 class SubmissionState(enum.Enum):
     submitted = "submitted"
     processing = "processing"
+    awaiting_student_approval = "awaiting_student_approval"
     graded = "graded"
     failed = "failed"
 
