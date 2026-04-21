@@ -161,7 +161,7 @@ export default function StudentAssignments() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by assignment or course name…"
-          className="w-full px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -192,7 +192,7 @@ export default function StudentAssignments() {
             <div className="space-y-6">
               {grouped.map(({ course, items }) => (
                 <div key={course.id}>
-                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2 px-1">
+                  <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-2 px-1">
                     {course.name}
                   </p>
                   <ul className="space-y-2">
@@ -207,7 +207,7 @@ export default function StudentAssignments() {
                             onClick={() => selectRow(course, assignment)}
                             className={`w-full text-left rounded-2xl border px-4 py-3.5 transition-all duration-150 ${
                               active
-                                ? "border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 ring-1 ring-blue-500/30"
+                                ? "border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30"
                                 : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-600"
                             }`}
                           >
@@ -271,7 +271,7 @@ function AssignmentPanel({
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
-        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+        <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-1">
           {course.name}
         </p>
         <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -452,7 +452,7 @@ function QuestionSubmit({ assignmentId, questionId }) {
         className={`rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
           file
             ? "border-slate-200 dark:border-slate-600 p-3"
-            : "border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 p-6"
+            : "border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 p-6"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -523,7 +523,7 @@ function QuestionSubmit({ assignmentId, questionId }) {
             type="button"
             disabled={stage === "submitting"}
             onClick={handleSubmit}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 disabled:opacity-60 text-white text-xs font-bold shadow-sm"
           >
             {stage === "submitting" ? "Submitting…" : "Submit answer"}
           </button>

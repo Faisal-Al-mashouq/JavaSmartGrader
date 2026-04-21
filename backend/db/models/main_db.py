@@ -149,6 +149,7 @@ class Question(Base):
         ForeignKey("assignments.id"), nullable=False, primary_key=True
     )
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    marks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     assignment: Mapped["Assignment"] = relationship(back_populates="questions")
     submissions: Mapped[list["Submission"]] = relationship(

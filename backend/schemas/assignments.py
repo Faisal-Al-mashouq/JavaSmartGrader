@@ -3,6 +3,16 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class RubricCriterion(BaseModel):
+    key: str
+    label: str
+    weight: int
+
+
+class RubricUpdate(BaseModel):
+    criteria: list[RubricCriterion]
+
+
 class AssignmentBase(BaseModel):
     id: int
     course_id: int

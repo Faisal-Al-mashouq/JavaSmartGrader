@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import InstructorNavButton from "../../../components/InstructorNavButton";
+import { getRubric, saveRubric } from "../../../services/rubricService";
 
 const DEFAULT_CRITERIA = [
   { key: "correctness",  label: "Correctness",  weight: 40 },
@@ -20,19 +21,39 @@ export default function InstructorAssignmentRubric() {
     DEFAULT_CRITERIA.map((c) => ({ ...c }))
   );
   const [saved, setSaved] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     if (!Number.isFinite(aid)) return;
-    const stored = localStorage.getItem(STORAGE_KEY(aid));
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed.criteria) && parsed.criteria.length > 0) {
-        setCriteria(parsed.criteria);
-      }
-    } catch {
-      // ignore
-    }
+    getRubric(aid)
+      .then((res) => {
+        const remote = res.data?.criteria;
+        if (Array.isArray(remote) && remote.length > 0) {
+          setCriteria(remote);
+          return;
+        }
+        // fall back to localStorage if backend has no criteria yet
+        const stored = localStorage.getItem(STORAGE_KEY(aid));
+        if (!stored) return;
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed.criteria) && parsed.criteria.length > 0) {
+            setCriteria(parsed.criteria);
+          }
+        } catch { /* ignore */ }
+      })
+      .catch(() => {
+        // backend unavailable — fall back to localStorage
+        const stored = localStorage.getItem(STORAGE_KEY(aid));
+        if (!stored) return;
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed.criteria) && parsed.criteria.length > 0) {
+            setCriteria(parsed.criteria);
+          }
+        } catch { /* ignore */ }
+        setLoadError("Could not load rubric from server. Showing locally saved data.");
+      });
   }, [aid]);
 
   const total = criteria.reduce((sum, c) => sum + c.weight, 0);
@@ -66,8 +87,16 @@ export default function InstructorAssignmentRubric() {
 
   const handleSave = () => {
     if (!canSave) return;
-    localStorage.setItem(STORAGE_KEY(aid), JSON.stringify({ criteria }));
-    setSaved(true);
+    saveRubric(aid, criteria)
+      .then(() => {
+        localStorage.setItem(STORAGE_KEY(aid), JSON.stringify({ criteria }));
+        setSaved(true);
+      })
+      .catch(() => {
+        // backend unavailable — still save locally
+        localStorage.setItem(STORAGE_KEY(aid), JSON.stringify({ criteria }));
+        setSaved(true);
+      });
   };
 
   const totalColor =
@@ -111,6 +140,13 @@ export default function InstructorAssignmentRubric() {
           </InstructorNavButton>
         </div>
       </div>
+
+      {/* Load error banner */}
+      {loadError && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-4 py-2">
+          {loadError}
+        </p>
+      )}
 
       {/* Criteria card */}
       <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl overflow-hidden">

@@ -9,6 +9,7 @@ import {
   getQuestionTestcases,
   addTestcase,
   deleteTestcase,
+  updateQuestionMarks,
 } from "../../../services/courseService";
 
 export default function InstructorAssignmentQuestions() {
@@ -24,6 +25,7 @@ export default function InstructorAssignmentQuestions() {
   const [savingQ, setSavingQ] = useState(false);
   const [tcDraft, setTcDraft] = useState({});
   const [showAdd, setShowAdd] = useState(false);
+  const [marksDraft, setMarksDraft] = useState({});
 
   const loadAll = useCallback(async () => {
     const [aRes, qRes] = await Promise.all([
@@ -36,6 +38,7 @@ export default function InstructorAssignmentQuestions() {
     setAssignment(aRes.data);
     const qs = qRes.data;
     setQuestions(qs);
+    setMarksDraft(Object.fromEntries(qs.map((q) => [q.id, q.marks ?? 0])));
     const tcEntries = await Promise.all(
       qs.map(async (q) => {
         const r = await getQuestionTestcases(aid, q.id);
@@ -102,6 +105,18 @@ export default function InstructorAssignmentQuestions() {
     }
   };
 
+  const handleSaveMarks = async (qid) => {
+    const val = Math.max(0, Number(marksDraft[qid]) || 0);
+    setMarksDraft((prev) => ({ ...prev, [qid]: val }));
+    setError("");
+    try {
+      await updateQuestionMarks(aid, qid, val);
+      setQuestions((prev) => prev.map((q) => q.id === qid ? { ...q, marks: val } : q));
+    } catch (err) {
+      setError(err.response?.data?.detail ?? "Could not save marks.");
+    }
+  };
+
   const handleDeleteTc = async (qid, tcid) => {
     setError("");
     try {
@@ -111,6 +126,8 @@ export default function InstructorAssignmentQuestions() {
       setError(err.response?.data?.detail ?? "Could not delete test case.");
     }
   };
+
+  const totalMarks = questions.reduce((sum, q) => sum + (q.marks ?? 0), 0);
 
   if (!Number.isFinite(cid) || !Number.isFinite(aid)) {
     return <p className="text-red-600 text-sm">Invalid link.</p>;
@@ -129,6 +146,12 @@ export default function InstructorAssignmentQuestions() {
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
               Each question can include test cases with expected input and output.
             </p>
+            {!loading && questions.length > 0 && (
+              <p className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                Total marks:{" "}
+                <span className="text-indigo-600 dark:text-indigo-400">{totalMarks}</span>
+              </p>
+            )}
           </div>
           <InstructorNavButton to={`/instructor/courses/${cid}/assignments/${aid}`} variant="primary">
             ← Assignment
@@ -167,16 +190,32 @@ export default function InstructorAssignmentQuestions() {
                       {q.question_text}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteQuestion(q.id)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
-                    title="Delete question"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        value={marksDraft[q.id] ?? q.marks ?? 0}
+                        onChange={(e) =>
+                          setMarksDraft((prev) => ({ ...prev, [q.id]: e.target.value }))
+                        }
+                        onBlur={() => handleSaveMarks(q.id)}
+                        className="w-16 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] px-2 py-1 text-xs text-center font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        title="Marks for this question"
+                      />
+                      <span className="text-xs text-slate-400">pts</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                      title="Delete question"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="px-6 py-4 space-y-3 bg-slate-50 dark:bg-white/[0.02]">

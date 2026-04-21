@@ -1,5 +1,7 @@
 from .assignments import (
     AssignmentBase,
+    RubricCriterion,
+    RubricUpdate,
 )
 from .confidence_flags import (
     ConfidenceFlagBase,
@@ -32,6 +34,8 @@ from .users import (
 
 __all__ = [
     "AssignmentBase",
+    "RubricCriterion",
+    "RubricUpdate",
     "ConfidenceFlagBase",
     "CourseBase",
     "GenerateReportBase",

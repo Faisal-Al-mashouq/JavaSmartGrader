@@ -164,7 +164,7 @@ export default function StudentUpload() {
         </div>
         <Link
           to="/dashboard/courses"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-semibold shadow-sm transition-all"
         >
           Go to courses
         </Link>
@@ -220,7 +220,7 @@ export default function StudentUpload() {
                 setResult(null);
                 handleRemove();
               }}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm transition-all active:scale-95"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-bold shadow-sm transition-all active:scale-95"
             >
               Submit another
             </button>
@@ -258,7 +258,7 @@ export default function StudentUpload() {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 space-y-3">
-        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+        <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide">
           {courseName || "Course"}
         </p>
         <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
@@ -268,7 +268,7 @@ export default function StudentUpload() {
           <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
             Question{" "}
             {loadingQ && (
-              <span className="normal-case font-normal text-blue-500 ml-1">
+              <span className="normal-case font-normal text-indigo-500 ml-1">
                 loading…
               </span>
             )}
@@ -282,7 +282,7 @@ export default function StudentUpload() {
             <select
               value={questionId}
               onChange={(e) => setQuestionId(e.target.value)}
-              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {questions.map((q, i) => (
                 <option key={q.id} value={q.id}>
@@ -306,7 +306,7 @@ export default function StudentUpload() {
                 ? `/dashboard/assignments?course=${courseId}`
                 : "/dashboard/courses"
             }
-            className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+            className="text-indigo-500 dark:text-indigo-400 font-medium hover:underline"
           >
             Choose a different assignment
           </Link>
@@ -327,8 +327,8 @@ export default function StudentUpload() {
               file
                 ? "border-slate-200 dark:border-slate-600 p-4 cursor-default"
                 : dragging
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-copy p-10"
-                  : "border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer p-10"
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 cursor-copy p-10"
+                  : "border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer p-10"
             }`}
         >
           {preview ? (
@@ -350,10 +350,10 @@ export default function StudentUpload() {
           ) : (
             <>
               <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${dragging ? "bg-blue-100 dark:bg-blue-900/40" : "bg-slate-100 dark:bg-slate-700"}`}
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${dragging ? "bg-indigo-100 dark:bg-indigo-900/40" : "bg-slate-100 dark:bg-slate-700"}`}
               >
                 <svg
-                  className={`w-7 h-7 transition-colors ${dragging ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`}
+                  className={`w-7 h-7 transition-colors ${dragging ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -407,7 +407,7 @@ export default function StudentUpload() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={stage === "submitting"}
-                className="flex-[2] py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-70 active:scale-95 text-white text-sm font-bold shadow-sm transition-all duration-150 flex items-center justify-center gap-2"
+                className="flex-[2] py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 disabled:opacity-70 active:scale-95 text-white text-sm font-bold shadow-sm transition-all duration-150 flex items-center justify-center gap-2"
               >
                 {stage === "submitting" ? (
                   <>
@@ -456,7 +456,7 @@ export default function StudentUpload() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 active:scale-95 text-white text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2"
             >
               Choose file
             </button>
@@ -493,7 +493,7 @@ function Row({ label, value, highlight }) {
         {label}
       </span>
       <span
-        className={`text-xs font-semibold text-right ${highlight ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}`}
+        className={`text-xs font-semibold text-right ${highlight ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}
       >
         {value}
       </span>
