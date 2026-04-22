@@ -201,10 +201,19 @@ async def update_grade(
 
 async def publish_grade(session: AsyncSession, submission_id: int) -> Grade | None:
     logger.info("Publishing grade for submission %d", submission_id)
-    await session.execute(
+    result = await session.execute(
         update(Grade)
-        .where(Grade.submission_id == submission_id)
+        .where(
+            Grade.submission_id == submission_id,
+            Grade.published_at.is_(None),
+        )
         .values(published_at=datetime.now(UTC))
     )
     await session.commit()
+    if result.rowcount == 0:
+        logger.warning(
+            "Publish skipped for submission %d: grade missing or already published",
+            submission_id,
+        )
+        return None
     return await get_grade_by_submission_id(session, submission_id)
