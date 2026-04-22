@@ -17,7 +17,7 @@ const stateToStatus = (state, grade) => {
     {
       submitted: "Processing",
       processing: "Processing",
-      awaiting_student_approval: "Needs Your Review",
+      awaiting_student_approval: "Awaiting Approval",
       failed: "Failed",
     }[state] ?? state
   );
@@ -30,7 +30,7 @@ const STATUS_CLS = {
     "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
   "In Review":
     "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
-  "Needs Your Review":
+  "Awaiting Approval":
     "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
   Failed:
     "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
@@ -42,7 +42,7 @@ const STATUS_DOT = {
   Processing: "bg-blue-500 animate-pulse",
   Published: "bg-emerald-500",
   "In Review": "bg-indigo-500",
-  "Needs Your Review": "bg-amber-500 animate-pulse",
+  "Awaiting Approval": "bg-amber-500 animate-pulse",
   Failed: "bg-red-500",
   "Not submitted": "bg-slate-400",
 };
@@ -585,13 +585,27 @@ export default function StudentSubmissions() {
                         <div className="mt-3">
                           <button
                             type="button"
-                            onClick={() => navigate(`/dashboard/submissions/${sub.id}/review`)}
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/submissions/${sub.id}/review`,
+                              )
+                            }
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors active:scale-95 shadow-sm"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
                             </svg>
-                            Review OCR
+                            Review Code
                           </button>
                         </div>
                       )}

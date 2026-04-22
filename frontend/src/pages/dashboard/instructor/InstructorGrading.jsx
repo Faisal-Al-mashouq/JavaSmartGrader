@@ -1,12 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMyCourses, getCourseAssignments } from "../../../services/courseService";
+import {
+  getMyCourses,
+  getCourseAssignments,
+} from "../../../services/courseService";
 import { getAssignmentSubmissions } from "../../../services/submissionService";
-import { getAIFeedback, getTranscription, addGrade, updateGrade, publishGrade, getConfidenceFlags, resolveConfidenceFlag } from "../../../services/gradingService";
+import {
+  getAIFeedback,
+  getTranscription,
+  getGrade,
+  addGrade,
+  updateGrade,
+  publishGrade,
+  getConfidenceFlags,
+  resolveConfidenceFlag,
+} from "../../../services/gradingService";
 
 /* ── Highlighted OCR code ───────────────────────────────────────────── */
 function HighlightedCode({ text, flags, onResolve }) {
   const [openFlagId, setOpenFlagId] = useState(null);
-  const [resolving,  setResolving]  = useState(null);
+  const [resolving, setResolving] = useState(null);
 
   // Build coordinate → flag lookup
   const flagMap = {};
@@ -38,12 +50,15 @@ function HighlightedCode({ text, flags, onResolve }) {
           if (separators[wi]) parts.push(separators[wi]);
 
           const coord = `line:${lineIdx}:word:${wi}`;
-          const flag  = flagMap[coord];
+          const flag = flagMap[coord];
 
           if (flag) {
-            const isOpen      = openFlagId === flag.id;
+            const isOpen = openFlagId === flag.id;
             const suggestions = flag.suggestions
-              ? flag.suggestions.split(",").map((s) => s.trim()).filter(Boolean)
+              ? flag.suggestions
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
               : [];
 
             parts.push(
@@ -58,7 +73,8 @@ function HighlightedCode({ text, flags, onResolve }) {
                 {isOpen && (
                   <span className="absolute top-full left-0 z-50 mt-1 bg-slate-800 border border-white/[0.12] rounded-lg shadow-2xl py-1 min-w-[130px] block">
                     <span className="block text-[10px] text-slate-500 px-3 py-1 border-b border-white/[0.06]">
-                      {Math.round(Number(flag.confidence_score) * 100)}% confidence
+                      {Math.round(Number(flag.confidence_score) * 100)}%
+                      confidence
                     </span>
                     {suggestions.map((s, si) => (
                       <button
@@ -73,7 +89,7 @@ function HighlightedCode({ text, flags, onResolve }) {
                     ))}
                   </span>
                 )}
-              </span>
+              </span>,
             );
           } else {
             parts.push(tokens[wi]);
@@ -124,9 +140,32 @@ function ScoreRing({ score, max }) {
   );
 }
 
+function parseInstructorGuidance(guidance) {
+  if (!guidance) return null;
+  if (typeof guidance === "object") return guidance;
+  if (typeof guidance !== "string") return null;
+  try {
+    return JSON.parse(guidance);
+  } catch {
+    return null;
+  }
+}
+
 /* ── AI Panel ───────────────────────────────────────────────────────── */
 function AIGradingPanel({ sub, onPublished, onFlagResolved }) {
   const fb = sub.aiFeedback;
+  const parsedInstructorGuidance = parseInstructorGuidance(
+    fb?.instructor_guidance,
+  );
+  const rubricRows = parsedInstructorGuidance?.rubric_breakdown ?? [];
+  const feedbackBlock = parsedInstructorGuidance?.feedback ?? {};
+  const issues = feedbackBlock?.issues ?? [];
+  const suggestions = feedbackBlock?.suggestions ?? [];
+  const nextSteps = feedbackBlock?.next_steps ?? [];
+  const confidence =
+    typeof parsedInstructorGuidance?.confidence === "number"
+      ? Math.round(parsedInstructorGuidance.confidence * 100)
+      : null;
   const [overrideMode, setOverrideMode] = useState(false);
   const [manualScore, setManualScore] = useState("");
   const [manualFb, setManualFb] = useState("");
@@ -298,7 +337,9 @@ function AIGradingPanel({ sub, onPublished, onFlagResolved }) {
             {showCode && (sub.confidenceFlags ?? []).length > 0 && (
               <p className="text-[11px] text-red-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-                {sub.confidenceFlags.length} low-confidence word{sub.confidenceFlags.length > 1 ? "s" : ""} flagged — click to fix
+                {sub.confidenceFlags.length} low-confidence word
+                {sub.confidenceFlags.length > 1 ? "s" : ""} flagged — click to
+                fix
               </p>
             )}
             {showCode && !sub.transcription?.transcribed_text && (
@@ -334,9 +375,101 @@ function AIGradingPanel({ sub, onPublished, onFlagResolved }) {
             <p className="text-xs font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wide mb-2">
               Instructor Guidance (from AI)
             </p>
-            <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
-              {fb.instructor_guidance}
-            </p>
+            {parsedInstructorGuidance ? (
+              <div className="space-y-3 text-sm text-amber-900 dark:text-amber-200">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center rounded-full border border-amber-300 dark:border-amber-500/30 px-2 py-0.5 font-semibold">
+                    Score: {parsedInstructorGuidance.total_score ?? "—"} /{" "}
+                    {parsedInstructorGuidance.max_score ?? "—"}
+                  </span>
+                  {confidence != null && (
+                    <span className="inline-flex items-center rounded-full border border-amber-300 dark:border-amber-500/30 px-2 py-0.5 font-semibold">
+                      Confidence: {confidence}%
+                    </span>
+                  )}
+                </div>
+
+                {feedbackBlock?.summary && (
+                  <p className="leading-relaxed">{feedbackBlock.summary}</p>
+                )}
+
+                {rubricRows.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+                      Rubric Breakdown
+                    </p>
+                    <ul className="space-y-1.5">
+                      {rubricRows.map((item, idx) => (
+                        <li
+                          key={`${item.criterion_id_or_name ?? "criterion"}-${idx}`}
+                          className="leading-relaxed"
+                        >
+                          <span className="font-semibold">
+                            {item.criterion_id_or_name ??
+                              `Criterion ${idx + 1}`}
+                            :
+                          </span>{" "}
+                          {item.earned_points ?? 0}/{item.max_points ?? 0}{" "}
+                          {item.rationale ? `- ${item.rationale}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {issues.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+                      Key Issues
+                    </p>
+                    <ul className="space-y-1.5 list-disc pl-5">
+                      {issues.map((issue, idx) => (
+                        <li key={`issue-${idx}`} className="leading-relaxed">
+                          {issue?.description ?? "Issue detected."}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {suggestions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+                      Suggested Instructor Actions
+                    </p>
+                    <ul className="space-y-1.5 list-disc pl-5">
+                      {suggestions.map((suggestion, idx) => (
+                        <li
+                          key={`suggestion-${idx}`}
+                          className="leading-relaxed"
+                        >
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {nextSteps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+                      Next Steps
+                    </p>
+                    <ul className="space-y-1.5 list-disc pl-5">
+                      {nextSteps.map((step, idx) => (
+                        <li key={`step-${idx}`} className="leading-relaxed">
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+                {fb.instructor_guidance}
+              </p>
+            )}
           </div>
         )}
 
@@ -481,46 +614,63 @@ export default function InstructorGrading() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const coursesRes  = await getMyCourses();
-      const courses     = coursesRes.data;
+      const coursesRes = await getMyCourses();
+      const courses = coursesRes.data;
 
       const assignmentsByCoursePairs = await Promise.all(
         courses.map((c) =>
           getCourseAssignments(c.id)
             .then((r) => r.data.map((a) => ({ ...a, course: c })))
-            .catch(() => [])
-        )
+            .catch(() => []),
+        ),
       );
       const allAssignments = assignmentsByCoursePairs.flat();
 
       const subsByAssignmentPairs = await Promise.all(
         allAssignments.map((a) =>
           getAssignmentSubmissions(a.id)
-            .then((r) => r.data.map((s) => ({ ...s, assignment: a, course: a.course })))
-            .catch(() => [])
-        )
+            .then((r) =>
+              r.data.map((s) => ({ ...s, assignment: a, course: a.course })),
+            )
+            .catch(() => []),
+        ),
       );
-      const allSubs = subsByAssignmentPairs.flat();
-      allSubs.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+      const allSubs = subsByAssignmentPairs
+        .flat()
+        // Student-approval items belong to student review flow, not instructor grading.
+        .filter((s) => s.state !== "awaiting_student_approval");
+      allSubs.sort(
+        (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at),
+      );
 
-      const gradedSubs     = allSubs.filter((s) => s.state === "graded");
-      const processingList = allSubs.filter((s) => s.state === "submitted" || s.state === "processing");
+      const gradedSubs = allSubs.filter((s) => s.state === "graded");
+      const processingList = allSubs.filter(
+        (s) => s.state === "submitted" || s.state === "processing",
+      );
 
       const enriched = await Promise.all(
         gradedSubs.map(async (s) => {
-          const [fbRes, tRes] = await Promise.all([
+          const [fbRes, tRes, gRes] = await Promise.all([
             getAIFeedback(s.id).catch(() => null),
             getTranscription(s.id).catch(() => null),
+            getGrade(s.id).catch(() => null),
           ]);
           const transcription = tRes?.data ?? null;
+          const grade = gRes?.data ?? null;
           let confidenceFlags = [];
           if (transcription?.id) {
             confidenceFlags = await getConfidenceFlags(transcription.id)
               .then((r) => r.data)
               .catch(() => []);
           }
-          return { ...s, aiFeedback: fbRes?.data ?? null, transcription, confidenceFlags };
-        })
+          return {
+            ...s,
+            aiFeedback: fbRes?.data ?? null,
+            transcription,
+            confidenceFlags,
+            grade,
+          };
+        }),
       );
 
       setAiGraded(enriched);
@@ -532,7 +682,9 @@ export default function InstructorGrading() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handlePublished = (submissionId, grade) => {
     setPublished((prev) => ({ ...prev, [submissionId]: grade }));
@@ -540,7 +692,12 @@ export default function InstructorGrading() {
 
   const totalDone = Object.keys(published).length;
   const totalAll = aiGraded.length + processing.length;
-  const pendingReview = aiGraded.filter((s) => !(s.id in published));
+  const pendingReview = aiGraded.filter(
+    (s) => !s.grade?.published_at && !(s.id in published),
+  );
+  const reviewedCount = aiGraded.filter(
+    (s) => s.grade?.published_at || s.id in published,
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -585,14 +742,14 @@ export default function InstructorGrading() {
               Session Progress
             </p>
             <p className="text-sm font-bold text-slate-900 dark:text-white">
-              {totalDone} / {aiGraded.length} AI-graded reviewed
+              {reviewedCount} / {aiGraded.length} AI-graded reviewed
             </p>
           </div>
           <div className="w-full h-2.5 bg-slate-100 dark:bg-white/[0.05] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
               style={{
-                width: `${aiGraded.length > 0 ? Math.round((totalDone / aiGraded.length) * 100) : 0}%`,
+                width: `${aiGraded.length > 0 ? Math.round((reviewedCount / aiGraded.length) * 100) : 0}%`,
               }}
             />
           </div>
@@ -616,7 +773,12 @@ export default function InstructorGrading() {
             AI-Graded — Awaiting Your Review ({pendingReview.length})
           </h2>
           {pendingReview.map((sub) => (
-            <AIGradingPanel key={sub.id} sub={sub} onPublished={handlePublished} onFlagResolved={load} />
+            <AIGradingPanel
+              key={sub.id}
+              sub={sub}
+              onPublished={handlePublished}
+              onFlagResolved={load}
+            />
           ))}
         </div>
       )}

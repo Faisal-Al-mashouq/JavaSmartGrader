@@ -14,6 +14,7 @@ const stateToStatus = (state, grade) => {
     {
       submitted: "Processing",
       processing: "Processing",
+      awaiting_student_approval: "Awaiting Student Approval",
       failed: "Failed",
     }[state] ?? state
   );
@@ -24,6 +25,8 @@ const STATUS_LIGHT = {
   Published: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   "In Review": "bg-indigo-50 text-indigo-700 border border-indigo-200",
   Processing: "bg-blue-50 text-blue-700 border border-blue-200",
+  "Awaiting Student Approval":
+    "bg-amber-50 text-amber-700 border border-amber-200",
   Failed: "bg-red-50 text-red-700 border border-red-200",
 };
 const STATUS_DARK = {
@@ -32,12 +35,15 @@ const STATUS_DARK = {
   "In Review":
     "dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
   Processing: "dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  "Awaiting Student Approval":
+    "dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
   Failed: "dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
 };
 const STATUS_DOT = {
   Published: "bg-emerald-500",
   "In Review": "bg-indigo-500",
   Processing: "bg-blue-500",
+  "Awaiting Student Approval": "bg-amber-500",
   Failed: "bg-red-500",
 };
 
@@ -177,6 +183,7 @@ export default function StudentHome() {
   const STATUSES = [
     "All Statuses",
     "Processing",
+    "Awaiting Student Approval",
     "In Review",
     "Published",
     "Failed",

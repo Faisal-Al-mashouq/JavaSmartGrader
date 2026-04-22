@@ -1,11 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getPendingReview, approveTranscription } from "../../../services/submissionService";
+import {
+  getPendingReview,
+  approveTranscription,
+} from "../../../services/submissionService";
 
 function FlagBadge({ flag }) {
   const pct = Math.round(Number(flag.confidence_score) * 100);
   const suggestions = flag.suggestions
-    ? flag.suggestions.split(",").map((s) => s.trim()).filter(Boolean)
+    ? flag.suggestions
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   return (
@@ -31,7 +37,10 @@ function FlagBadge({ flag }) {
       )}
       {flag.coordinates && (
         <p className="text-[10px] text-red-400 dark:text-red-500 font-mono">
-          {flag.coordinates.replace(/line:(\d+):word:(\d+)/, "Line $1, Word $2")}
+          {flag.coordinates.replace(
+            /line:(\d+):word:(\d+)/,
+            "Line $1, Word $2",
+          )}
         </p>
       )}
     </div>
@@ -74,7 +83,9 @@ export default function StudentOCRReview() {
     }
   }, [submissionId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleApprove = async () => {
     if (!text.trim()) {
@@ -87,7 +98,9 @@ export default function StudentOCRReview() {
       await approveTranscription(submissionId, text);
       setDone(true);
     } catch (e) {
-      setSubmitError(e.response?.data?.detail ?? "Failed to approve. Please try again.");
+      setSubmitError(
+        e.response?.data?.detail ?? "Failed to approve. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -98,8 +111,18 @@ export default function StudentOCRReview() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center shadow-lg">
-          <svg className="w-10 h-10 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-10 h-10 text-emerald-600 dark:text-emerald-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
         <div className="text-center">
@@ -107,7 +130,8 @@ export default function StudentOCRReview() {
             Transcription Approved!
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-            Your code has been submitted for grading. You'll be notified when results are ready.
+            Your code has been submitted for grading. You'll be notified when
+            results are ready.
           </p>
         </div>
         <button
@@ -124,7 +148,9 @@ export default function StudentOCRReview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-slate-400 dark:text-slate-500 text-sm">Loading OCR data…</p>
+        <p className="text-slate-400 dark:text-slate-500 text-sm">
+          Loading OCR data…
+        </p>
       </div>
     );
   }
@@ -134,12 +160,24 @@ export default function StudentOCRReview() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
-          <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-8 h-8 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
         <div className="text-center">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{error}</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            {error}
+          </h2>
         </div>
         <button
           onClick={() => navigate("/dashboard/submissions")}
@@ -160,21 +198,32 @@ export default function StudentOCRReview() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <p className="text-xs font-semibold text-amber-500 dark:text-amber-400 uppercase tracking-widest mb-1">
-            OCR Review
+            Code Review
           </p>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Review Your Code
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Submission #{submissionId} · Check the extracted text, fix any mistakes, then approve.
+            Submission #{submissionId} · Check the extracted text, fix any
+            mistakes, then approve.
           </p>
         </div>
         <button
           onClick={() => navigate("/dashboard/submissions")}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/[0.1] text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           Back
         </button>
@@ -182,13 +231,25 @@ export default function StudentOCRReview() {
 
       {/* Info banner */}
       <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl px-5 py-4 flex gap-3">
-        <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="w-5 h-5 text-amber-500 shrink-0 mt-0.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
-          The text below was automatically extracted from your handwritten submission.
-          Words highlighted in the <span className="font-semibold">Low-Confidence Words</span> panel
-          may have been misread — please review and correct them directly in the editor before approving.
+          The text below was automatically extracted from your handwritten
+          submission. Words highlighted in the{" "}
+          <span className="font-semibold">Low-Confidence Words</span> panel may
+          have been misread — please review and correct them directly in the
+          editor before approving.
         </p>
       </div>
 
@@ -198,8 +259,18 @@ export default function StudentOCRReview() {
           <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-100 dark:border-white/[0.06] bg-slate-50 dark:bg-white/[0.03] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                <svg
+                  className="w-4 h-4 text-slate-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  />
                 </svg>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Extracted Code
@@ -226,8 +297,18 @@ export default function StudentOCRReview() {
 
           {submitError && (
             <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               {submitError}
             </p>
@@ -241,16 +322,41 @@ export default function StudentOCRReview() {
           >
             {submitting ? (
               <>
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  />
                 </svg>
                 Submitting…
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 Approve &amp; Submit for Grading
               </>
@@ -275,8 +381,18 @@ export default function StudentOCRReview() {
             <div className="p-4 space-y-3 max-h-[520px] overflow-y-auto">
               {flags.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
-                  <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-8 h-8 text-emerald-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     All words were read with high confidence.
@@ -290,11 +406,14 @@ export default function StudentOCRReview() {
 
           {/* Tips card */}
           <div className="bg-white dark:bg-slate-900/70 dark:backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-xl p-4 space-y-2">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Tips</p>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+              Tips
+            </p>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               <li className="flex gap-2">
                 <span className="text-indigo-500 font-bold shrink-0">1.</span>
-                Find each flagged word in the editor and correct it if it was misread.
+                Find each flagged word in the editor and correct it if it was
+                misread.
               </li>
               <li className="flex gap-2">
                 <span className="text-indigo-500 font-bold shrink-0">2.</span>
@@ -302,7 +421,11 @@ export default function StudentOCRReview() {
               </li>
               <li className="flex gap-2">
                 <span className="text-indigo-500 font-bold shrink-0">3.</span>
-                Once satisfied, click <span className="font-semibold text-emerald-600 dark:text-emerald-400">Approve</span> to send to grading.
+                Once satisfied, click{" "}
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Approve
+                </span>{" "}
+                to send to grading.
               </li>
             </ul>
           </div>

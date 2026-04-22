@@ -222,7 +222,12 @@ async def publish_submission_grade(
         raise HTTPException(status_code=403, detail="Forbidden")
     if existing_grade.final_grade is None:
         raise HTTPException(status_code=400, detail="Cannot publish an empty grade")
+    if existing_grade.published_at is not None:
+        raise HTTPException(status_code=409, detail="Grade already published")
 
     published_grade = await publish_grade(session=session, submission_id=submission_id)
+    if not published_grade:
+        # Covers concurrent publish attempts where another request wins the race.
+        raise HTTPException(status_code=409, detail="Grade already published")
     logger.info("Grade published for submission %d", submission_id)
     return published_grade
