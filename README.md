@@ -13,7 +13,40 @@ JavaSmartGrader/
 └── README.md         # This file — component docs live under backend/*/README.md
 ```
 
-## Quick Start
+## Environment setup
+
+Copy the example env files once, then fill in secrets and paths. Run these from the **repository root**:
+
+```bash
+# Compose variable substitution (sandbox bind-mount path)
+cp .env.example .env
+
+# Backend API + workers
+cp backend/.env.example backend/.env
+```
+
+| File | Purpose |
+|------|---------|
+| `.env` | Read by `docker compose` — currently `SANDBOX_HOST_TMP_PATH` only |
+| `backend/.env` | API and workers (`pydantic-settings`); see `backend/settings.py` |
+| `backend/.env.local` | Optional overlay when `APP_ENV=local` (not used inside Compose images by default) |
+
+**Quick fill checklist** (`backend/.env`):
+
+- `JWT_SECRET_KEY` — any long random string for local dev
+- `DATABASE_URL` / `ASYNC_DATABASE_URL` — Postgres (see [Docker Compose](#run-with-docker-compose-local) for in-stack URLs)
+- `REDIS_ENDPOINT` — `redis://localhost:6379` on the host; `redis://redis:6379` inside Compose
+- `S3_*` — bucket and credentials (AWS or MinIO; Compose does not start object storage)
+- `API_AZURE`, `API_GEMINI` — OCR pipeline (Azure Document Intelligence + Gemini)
+- `OPENAI_API_KEY`, `OPENAI_MODEL` — AI grader (`API_KEY` / `MODEL` are accepted aliases)
+
+Set `SANDBOX_HOST_TMP_PATH` in the root `.env` to an **absolute** path, e.g. `/Users/you/JavaSmartGrader/backend/sandbox/tmp`, then create the directory:
+
+```bash
+mkdir -p backend/sandbox/tmp
+```
+
+## Quick Start (host)
 
 ### Prerequisites
 
@@ -22,7 +55,7 @@ JavaSmartGrader/
 - Node.js 18+
 - Redis
 - PostgreSQL
-- Docker (required for Java sandbox execution; optional Compose stack for Redis/Postgres/workers — see `docker-compose.yml` at the repo root)
+- Docker (required for Java sandbox execution; optional Compose stack for Redis/Postgres/workers — see below)
 - Object storage: S3-compatible bucket (e.g. MinIO locally) for student submission images; see `backend/.env.example`
 
 ### 1) Backend
@@ -49,9 +82,64 @@ npm start
 
 Frontend runs at [http://localhost:3000](http://localhost:3000).
 
-## Environment Notes
+## Run with Docker Compose (local)
 
-- Backend settings are loaded from `backend/.env` (or `backend/.env.local` when `APP_ENV=local`) via `pydantic-settings`; start from `backend/.env.example`.
+Runs Redis, Postgres, the FastAPI API, and separate OCR / sandbox / AI grader worker containers from `backend/Dockerfile`. The API container runs Alembic migrations on startup (`backend/scripts/docker-db-init.sh`).
+
+### Prerequisites
+
+- Docker Engine (and Docker Desktop on macOS/Windows)
+- Env files from [Environment setup](#environment-setup)
+- Host path for `SANDBOX_HOST_TMP_PATH` created (`mkdir -p backend/sandbox/tmp`)
+- S3-compatible storage still configured in `backend/.env` (not included in Compose)
+
+### 1) Configure env for the stack
+
+Root `.env` — set the sandbox mount (absolute path):
+
+```bash
+SANDBOX_HOST_TMP_PATH=/absolute/path/to/JavaSmartGrader/backend/sandbox/tmp
+```
+
+`backend/.env` — point at Compose service hostnames and the Postgres credentials defined in `docker-compose.yml`:
+
+```bash
+DATABASE_URL=postgresql://jsg_user:jsg_secure_password@postgres:5432/jsg_db
+ASYNC_DATABASE_URL=postgresql+asyncpg://jsg_user:jsg_secure_password@postgres:5432/jsg_db
+REDIS_ENDPOINT=redis://redis:6379
+APP_ENV=dev
+```
+
+Fill in `JWT_SECRET_KEY`, `S3_*`, and provider keys as in the checklist above.
+
+### 2) Build and start
+
+From the repository root:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Detached mode: `docker compose up -d`.
+
+| Service | Port / access |
+|---------|----------------|
+| API | [http://localhost:8000](http://localhost:8000) — [http://localhost:8000/docs](http://localhost:8000/docs) |
+| Postgres | `localhost:5432` (`jsg_user` / `jsg_secure_password` / `jsg_db`) |
+| Redis | `localhost:6379` |
+
+The **sandbox** service mounts the host Docker socket so it can run compiler/executor images; keep Docker running on the host.
+
+Stop and remove containers: `docker compose down`. Add `-v` to drop the Postgres volume.
+
+### 3) Frontend (optional)
+
+With the API up on port 8000, start the React app on the host (`cd frontend && npm start`) — see `frontend/README.md`.
+
+## Environment notes
+
+- Backend settings load from `backend/.env`, or `backend/.env.local` when `APP_ENV=local` (`backend/settings.py`).
 - Core keys commonly needed:
   - `DATABASE_URL` / `ASYNC_DATABASE_URL`
   - `REDIS_ENDPOINT`, `QUEUE_NAMESPACE` (default `jsg.v1`)
@@ -59,9 +147,10 @@ Frontend runs at [http://localhost:3000](http://localhost:3000).
   - Per-pipeline concurrency: `MAIN_MAX_CONCURRENCY`, `OCR_MAX_CONCURRENCY`, `SANDBOX_MAX_CONCURRENCY`, `AI_GRADING_MAX_CONCURRENCY`
   - `JWT_SECRET_KEY`
   - `S3_*` / `STORAGE_BACKEND` for uploads (API stores object keys on submissions; OCR reads images from the bucket)
-  - Provider keys (`API_AZURE`, `API_GEMINI`, `API_KEY` / `MODEL` for the AI grader, etc.) when grading/OCR flows require them
+  - `API_AZURE`, `API_GEMINI`, `GEMINI_MODEL` for OCR
+  - `OPENAI_API_KEY`, `OPENAI_MODEL` for the AI grader (aliases `API_KEY`, `MODEL`)
 
-## Documentation Index
+## Documentation index
 
 - Backend: `backend/README.md`
 - API routes: `backend/api/README.md`

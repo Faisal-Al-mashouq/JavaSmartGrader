@@ -19,7 +19,7 @@ Python 3.12 FastAPI backend for JavaSmartGrader, including:
 - Docker
 - S3-compatible storage (configure `S3_*` in `.env`; use `S3_ENDPOINT_URL` for MinIO in dev)
 
-Optional: from the repository root, `docker compose up` builds `backend/Dockerfile` targets and starts Redis, Postgres, the API, and worker services (see `docker-compose.yml`).
+Optional: run the full stack with Docker Compose from the repository root — env files, Postgres/Redis URLs, and build commands are documented in the root `README.md` (**Run with Docker Compose**).
 
 ## Install
 
