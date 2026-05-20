@@ -34,6 +34,21 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - WDS_SOCKET_PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+
   ocr:
     build:
       context: ./backend

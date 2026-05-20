@@ -43,7 +43,8 @@ function RubricBlock({ data }) {
     return (
       <ul className="space-y-2">
         {criteria.map((c, idx) => {
-          const name = c.criterion ?? c.name ?? `Criterion ${idx + 1}`;
+          const name =
+            c.label ?? c.criterion ?? c.name ?? c.key ?? `Criterion ${idx + 1}`;
           const desc = c.desc ?? c.description ?? null;
           const weight = c.weight ?? c.max ?? null;
           return (
