@@ -1,0 +1,9 @@
+{
+  "name": "javasmartgrader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repository root. The deployable web client lives in ./frontend; the API lives in ./backend.",
+  "scripts": {
+    "build": "npm --prefix frontend ci --ignore-scripts && npm --prefix frontend run build"
+  }
+}

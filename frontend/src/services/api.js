@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000", // future FastAPI
+  // Set REACT_APP_API_BASE_URL at build time to point at the deployed FastAPI backend.
+  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:8000",
 });
 
 // attach token automatically

@@ -157,6 +157,129 @@ def test_parser_rejects_invalid_json() -> None:
         parse_and_validate_json("not-json")
 
 
+def test_parser_accepts_json_wrapped_in_markdown_fence() -> None:
+    parsed = parse_and_validate_json(f"```json\n{_valid_json(submission_id=102)}\n```")
+    validate_submission_id(parsed, 102)
+    assert parsed["submission_id"] == 102
+
+
+def test_parser_normalizes_common_llm_shape_mistakes() -> None:
+    payload = _build_valid_payload(submission_id=103)
+    payload["rubric_breakdown"][0]["criterion_id_or_name"] = [
+        "custom_a",
+        "custom_b",
+    ]
+    payload["feedback"] = {
+        "issues": payload["feedback"]["issues"],
+        "suggestions": payload["feedback"]["suggestions"],
+        "next_steps": payload["feedback"]["next_steps"],
+    }
+    payload["error_classification"] = {
+        "handwritten_ocr_suspected": False,
+        "syntax_or_compile": False,
+        "runtime": False,
+        "logic": True,
+        "notes": "Logic issue.",
+    }
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 103)
+    assert parsed["rubric_breakdown"][0]["criterion_id_or_name"] == "custom_a, custom_b"
+    assert parsed["feedback"]["summary"]
+    assert parsed["error_classification"]["handwriting_ocr_suspected"] is False
+
+
+def test_parser_normalizes_top_level_error_notes_and_missing_evidence() -> None:
+    payload = _build_valid_payload(submission_id=104)
+    payload["rubric_breakdown"] = [
+        {
+            "criterion_id_or_name": "correctness",
+            "earned_points": 8.5,
+            "max_points": 10,
+            "rationale": "Mostly correct output behavior.",
+        }
+    ]
+    payload["error_classification_notes"] = "OCR may have affected identifiers."
+    del payload["error_classification"]["notes"]
+
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 104)
+    assert (
+        parsed["rubric_breakdown"][0]["evidence_from_code_or_logs"]
+        == "Mostly correct output behavior."
+    )
+    assert parsed["error_classification"]["notes"] == (
+        "OCR may have affected identifiers."
+    )
+
+
+def test_parser_normalizes_confidence_and_evidence_typos() -> None:
+    payload = _build_valid_payload(submission_id=105)
+    del payload["confidence"]
+    payload["feedback_score"] = 0.76
+    payload["feedback"]["confidence"] = 0.85
+    payload["rubric_breakdown"][0] = {
+        "criterion_id_or_name": "correctness",
+        "earned_points": 8.5,
+        "max_points": 10,
+        "rationale": "Mostly correct output behavior.",
+        "e_evidence_from_code_or_logs": "compiled_ok: True",
+    }
+
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 105)
+    assert parsed["confidence"] == 0.76
+    assert parsed["feedback"].get("confidence") is None
+    assert (
+        parsed["rubric_breakdown"][0]["evidence_from_code_or_logs"]
+        == "compiled_ok: True"
+    )
+
+
+def test_parser_normalizes_fractional_max_score_when_total_is_points() -> None:
+    payload = _build_valid_payload(submission_id=106, total_score=66, max_score=95)
+    payload["max_score"] = 0.95
+
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 106)
+    assert parsed["max_score"] == 95
+
+
+def test_parser_normalizes_root_next_steps_and_missing_error_classification() -> None:
+    payload = _build_valid_payload(submission_id=107)
+    payload["next_steps"] = payload["feedback"].pop("next_steps")
+    del payload["error_classification"]
+
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 107)
+    assert parsed["feedback"]["next_steps"] == [
+        "Add tests for boundary cases.",
+    ]
+    assert parsed["error_classification"]["handwriting_ocr_suspected"] is False
+
+
+def test_parser_unwraps_nested_rubric_wrapper_and_hoists_confidence() -> None:
+    payload = _build_valid_payload(submission_id=108)
+    inner_items = payload["rubric_breakdown"]
+    payload["rubric_breakdown"] = [
+        {
+            "criterion_id_or_name": "wrapper",
+            "earned_points": 0,
+            "max_points": 0,
+            "rationale": "wrapper",
+            "confidence": 0.75,
+            "error_classification": payload.pop("error_classification"),
+            "rubric_breakdown": inner_items,
+        }
+    ]
+    del payload["confidence"]
+
+    parsed = parse_and_validate_json(json.dumps(payload))
+    validate_submission_id(parsed, 108)
+    assert parsed["confidence"] == 0.75
+    assert len(parsed["rubric_breakdown"]) == 1
+    assert parsed["rubric_breakdown"][0]["criterion_id_or_name"] == "correctness"
+
+
 def test_validate_submission_id_mismatch() -> None:
     parsed = parse_and_validate_json(_valid_json(submission_id=7))
     with pytest.raises(JSONValidationError):
