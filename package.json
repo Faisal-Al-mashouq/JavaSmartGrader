@@ -1,0 +1,9 @@
+{
+  "name": "javasmartgrader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repository root. The deployable web client lives in ./frontend; the API lives in ./backend. The build script emits the static site to ./dist for Cloudflare Pages.",
+  "scripts": {
+    "build": "npm --prefix frontend ci --ignore-scripts && BUILD_PATH=../dist npm --prefix frontend run build"
+  }
+}

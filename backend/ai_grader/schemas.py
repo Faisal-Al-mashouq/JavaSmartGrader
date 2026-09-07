@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from pydantic import (
+    AliasChoices,
     BaseModel,
     ConfigDict,
+    Field,
     StrictBool,
     StrictFloat,
     StrictInt,
@@ -93,7 +95,12 @@ class ErrorClassification(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    handwriting_ocr_suspected: StrictBool
+    handwriting_ocr_suspected: StrictBool = Field(
+        validation_alias=AliasChoices(
+            "handwriting_ocr_suspected",
+            "handwritten_ocr_suspected",
+        ),
+    )
     syntax_or_compile: StrictBool
     runtime: StrictBool
     logic: StrictBool

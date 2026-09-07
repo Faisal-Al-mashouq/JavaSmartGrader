@@ -138,6 +138,7 @@ class LLMClient:
                 },
             ],
             "temperature": self._settings.temperature,
+            "response_format": {"type": "json_object"},
         }
 
         try:
